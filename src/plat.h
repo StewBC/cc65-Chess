@@ -15,7 +15,7 @@ char plat_Menu(char **menuItems, char height, char *scroller);
 void plat_DrawBoard(char clearLog);
 void plat_DrawSquare(char position);
 void plat_ShowSideToGoLabel(char side);
-void plat_Highlight(char position, char color);
+void plat_Highlight(char position, char color, char cursor);
 void plat_ShowMessage(char *str, char color);
 void plat_ClearMessage();
 void plat_AddToLogWin();

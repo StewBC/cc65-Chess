@@ -94,7 +94,7 @@ void human_ProcessToggle(int keyMask, char side, char tile)
 			{
 				attacker = gpAttackBoard[offset+i];
 				if(gShowAttacks[side] & SET_BIT(attack))
-					plat_Highlight(attacker,2+attack);
+					plat_Highlight(attacker,2+attack,0);
 				else
 					plat_DrawSquare(attacker);
 			}
@@ -136,11 +136,11 @@ char human_Play(char side)
 				// If a piece is selected, see if the second tile, under the cursor, is
 				// a valid move-to tile
 				validMove = board_findInList(gPossibleMoves, gNumMoves, gTile[1]);
-				plat_Highlight(gTile[1], validMove ? HCOLOR_ATTACK : HCOLOR_INVALID);
+				plat_Highlight(gTile[1], validMove ? HCOLOR_ATTACK : HCOLOR_INVALID,1);
 			}
 
 			// Show the cursor
-			plat_Highlight(gTile[0], selector ? HCOLOR_SELECTED : NONE == gPiece[0] || gColor[0] != side ? HCOLOR_EMPTY : gNumMoves ? HCOLOR_VALID : HCOLOR_INVALID);
+			plat_Highlight(gTile[0], selector ? HCOLOR_SELECTED : NONE == gPiece[0] || gColor[0] != side ? HCOLOR_EMPTY : gNumMoves ? HCOLOR_VALID : HCOLOR_INVALID,1);
 		}
 
 		// If the cursor moved and the toggle-show-attackers/defenders states were on for this side,
