@@ -95,8 +95,8 @@ void plat_Init()
     // Add the A..H and 1..8 tile-keys
     for(i=0; i<8; ++i)
     {
-        plat_Drawchar(3+i*BOARD_PIECE_WIDTH,0,  ROP_CPY,i+'A');
-        plat_Drawchar(0,21+i*BOARD_PIECE_HEIGHT,ROP_CPY,i+'1');
+        plat_Drawchar(3+i*BOARD_PIECE_WIDTH,0,                ROP_CPY,i+'A');
+        plat_Drawchar(0,SCREEN_HEIGHT-17-i*BOARD_PIECE_HEIGHT,ROP_CPY,i+'1');
     }
 
     // Setting this to 0 will not show the "Quit" option in the main menu
