@@ -362,7 +362,7 @@ void plat_ShowSideToGoLabel(char side)
 }
 
 /*-----------------------------------------------------------------------*/
-void plat_Highlight(char position, char color)
+void plat_Highlight(char position, char color, char)
 {
 	char y = position / 8, x = position & 7;
 	
