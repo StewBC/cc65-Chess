@@ -1,5 +1,8 @@
+0.   Updates
 
-I.   Introduction
+Jan 2020 - Oliver Schmidt created a beautiful Apple II port. See IX below.
+
+I.   Introduction (Feb 14, 2014)
 
 I started playing chess about 3 months ago and this got me wondering how
 difficult it would be to make a computer chess game.  I decided to try and
@@ -185,5 +188,82 @@ Feel free to send me an email if you have any comments.  If you do make a port
 or something else, I would love to hear about it!
 
 swessels@email.com
-
+Feb 14, 2014
 Thank you!
+
+
+IX.    Apple II Specific Version Information
+
+General display uses the Apple II hires mode accessed via custom asm
+functions.
+
+Menu display uses the 4 line bottom text option of the Apple II hires mode via
+cc65 CONIO functions.
+
+All hires access is byte aligned, therefore the horizontal resolution is 40
+(bytes).
+
+Hires access is done via simple (binary) ROPs (raster operations) by using
+actual 6502 (immediate) opcodes.
+
+The C64 and Curses implementation both make heavy use of colors while Apple II
+implementation mustn't depend on (but may benefit from) colors. Therefore the
+user-operated cursor inverts the border of the current field. It's hard to find
+a compromise between making the cursor visible well and showing the piece
+"under" the cursor well. Additionally it is desirable to show different cursor
+states (empty, invalid, valid). The approach chosen is to have different
+thicknesses of the inverted border:
+
+Valid: Thin
+Invalid: Medium
+Empty: Thick
+
+When it comes to showing attackers/defenders (via the keys 'a'/'d') there's no
+alternative to resorting to colors:
+
+Attackers: Red
+Defenders: Green
+
+So the only field display variant left is the piece selected for moving. Instead
+of introducing a third type of highlighting (beside border inversion and
+coloring) it is simply colored Magenta. The reasoning:
+
+On a monochrome display the user won't have much fun showing attackers/defenders
+anyway. And without showing those the selected piece is the only colored (aka
+striped) piece making it clearly visible.
+
+On a color display a third color (beside attackers/defenders) works just fine.
+
+As the Apple II doesn't have cursor-up and cursor-down keys the keys 'o' and 'l'
+work as alternatives to the those cursor keys.
+
+Oliver Schmidt
+Jan 19, 2020
+
+
+X.     Apple II Build Instructions
+
+To build the Apple II version use the make command line:
+make TARGETS=apple2 OPTIONS=optspeed
+
+How you build a disc image is dependent on your system.  In the apple2 folder is
+a disc template and using Apple Commander, the following commands would work
+(provided Apple Commander is added to the Apple 2 folder for these examples).
+There is a build.cmd file that contains the below "instructions" as well.
+
+copy apple2\template.dsk cc65-Chess.dsk
+
+java -jar apple2\AppleCommander-win64-1.5.0.jar -p  cc65-Chess.dsk chess.system
+sys < \cc65\target\apple2\util\loader.system
+
+java -jar apple2\AppleCommander-win64-1.5.0.jar -as cc65-Chess.dsk chess
+bin < cc65-Chess.apple2
+
+NOTES:
+1) The path to the loader.system depends on where you have cc65
+installed. You will need to replace \cc65\target\apple2\util\loader.system with
+your own local path to the cc65 provided loader.system.
+2) The lines starting with java are single lines (no line breaks - the redirect
+"<" is all on the same line).
+3) Find AppleCommander here (I used Version 1.5.0):
+https://github.com/AppleCommander/AppleCommander/releases
