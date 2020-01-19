@@ -9,7 +9,7 @@
 
 # Space or comma separated list of cc65 supported target platforms to build for.
 # Default: c64 (lowercase!)
-TARGETS :=
+TARGETS := c64 apple2
 
 # Name of the final, single-file executable.
 # Default: name of the current dir with target name appended
@@ -36,6 +36,7 @@ ASFLAGS =
 # Additional linker flags and options.
 # Default: none
 LDFLAGS =
+cc65-Chess.apple2: LDFLAGS += --start-addr 0x4000 -Wl -D -Wl __HIMEM__=0xBF00
 
 # Path to the directory containing C and ASM sources.
 # Default: src
