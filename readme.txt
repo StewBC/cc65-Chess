@@ -245,25 +245,33 @@ X.     Apple II Build Instructions
 
 To build the Apple II version use the make command line:
 make TARGETS=apple2 OPTIONS=optspeed
+The OPTIONS=optspeed will be remembered and need only be given once.
 
-How you build a disc image is dependent on your system.  In the apple2 folder is
-a disc template and using Apple Commander, the following commands would work
-(provided Apple Commander is added to the Apple 2 folder for these examples).
-There is a build.cmd file that contains the below "instructions" as well.
+To make the disc image, set an environment variable to point at apple commander
+(see notes) and then use the command:
+make TARGETS=apple2 dsk
 
-copy apple2\template.dsk cc65-Chess.dsk
+If you want to edit the code and get into some iterative development/testing,
+you can edit the Makefile and fill in the commands commands neccesary to launch
+an emulator as well.  Look for apple2_EMUCMD and set that as neccesary.  The
+simplest is to call test.sh or test.bat and fill in a complete command in the
+batch file or shell script.  However you choose to do this, once done, you can
+do everything with the command:
+make TARGETS=apple2 dsk test
 
-java -jar apple2\AppleCommander-win64-1.5.0.jar -p  cc65-Chess.dsk chess.system
-sys < \cc65\target\apple2\util\loader.system
-
-java -jar apple2\AppleCommander-win64-1.5.0.jar -as cc65-Chess.dsk chess
-bin < cc65-Chess.apple2
+You could also edit the Makefile and change the line TARGETS := c64 apple2 to
+include only the apple2 in which case you can omit the TARGETS=apple2 part form
+all make commands.
 
 NOTES:
-1) The path to the loader.system depends on where you have cc65
-installed. You will need to replace \cc65\target\apple2\util\loader.system with
-your own local path to the cc65 provided loader.system.
-2) The lines starting with java are single lines (no line breaks - the redirect
-"<" is all on the same line).
-3) Find AppleCommander here (I used Version 1.5.0):
-https://github.com/AppleCommander/AppleCommander/releases
+1) Find AppleCommander here (I used Version 1.5.0):
+https://github.com/AppleCommander/AppleCommander/releases 
+2) Set the environment variable (or change the Makefile-dsk.md) to point at the
+apple commander jar file.  Here's how it's done for different shell's:
+ Powershell:
+   $env:AC = "command to apple commander.jar"
+ cmd.exe 
+   set AC="command to apple commander.jar"
+ bash (Unix or MacOS terminal):
+   export AC="command to apple commander.jar"
+
