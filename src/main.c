@@ -17,8 +17,8 @@
 
 /*-----------------------------------------------------------------------*/
 // Internal function Prototype
-void mainLoop();
-void init();
+void mainLoop(void);
+void init(void);
 
 /*-----------------------------------------------------------------------*/
 int main()

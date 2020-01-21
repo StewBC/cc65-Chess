@@ -33,7 +33,7 @@ void cpu_InitPieceData(char side);
 void cpu_HolisticScore(char side);
 int cpu_SourceScore(char position);
 int cpu_DestScore(char position, char destination);
-void cpu_ScorePieceMoves();
+void cpu_ScorePieceMoves(void);
 int cpu_FindBestOpponentMove(char side, char *from, char *to);
 int cpu_ScorePieceSubTree(char level, char side, signed char sign, char src, char dst);
 

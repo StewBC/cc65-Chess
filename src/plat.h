@@ -9,18 +9,18 @@
 #ifndef _PLAT_H_
 #define _PLAT_H_
 
-void plat_Init();
-void plat_UpdateScreen();
+void plat_Init(void);
+void plat_UpdateScreen(void);
 char plat_Menu(char **menuItems, char height, char *scroller);
 void plat_DrawBoard(char clearLog);
 void plat_DrawSquare(char position);
 void plat_ShowSideToGoLabel(char side);
 void plat_Highlight(char position, char color, char cursor);
 void plat_ShowMessage(char *str, char color);
-void plat_ClearMessage();
-void plat_AddToLogWin();
-void plat_AddToLogWinTop();
+void plat_ClearMessage(void);
+void plat_AddToLogWin(void);
+void plat_AddToLogWinTop(void);
 int plat_ReadKeys(char blocking);
-void plat_Shutdown();
+void plat_Shutdown(void);
 
 #endif //_PLAT_H_

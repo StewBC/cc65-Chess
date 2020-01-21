@@ -9,8 +9,8 @@
 #ifndef _BOARD_H_
 #define _BOARD_H_
 
-void board_Init();
-void board_PlacePieceAttacks();
+void board_Init(void);
+void board_PlacePieceAttacks(void);
 void board_GeneratePossibleMoves(char position, char addDefenceMove);
 char board_ProcessAction(void);
 void board_ProcessEnPassant(char state);

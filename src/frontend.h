@@ -10,8 +10,8 @@
 #define _FRONTEND_H_
 
 char frontend_Menu(char activeGame);
-char frontend_GetPromotion();
-void frontend_FormatLogString();
+char frontend_GetPromotion(void);
+void frontend_FormatLogString(void);
 void frontend_LogMove(char atTop);
 
 #endif //_FRONTEND_H_
