@@ -269,9 +269,9 @@ https://github.com/AppleCommander/AppleCommander/releases
 2) Set the environment variable (or change the Makefile-dsk.md) to point at the
 apple commander jar file.  Here's how it's done for different shell's:
  Powershell:
-   $env:AC = "command to apple commander.jar"
+   $env:AC = "path to apple commander.jar"
  cmd.exe 
-   set AC="command to apple commander.jar"
+   set AC="path to apple commander.jar"
  bash (Unix or MacOS terminal):
-   export AC="command to apple commander.jar"
+   export AC="path to apple commander.jar"
 
