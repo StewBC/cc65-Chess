@@ -51,6 +51,11 @@ can defend the selected tile.  All three of these options basically give a
 visual representation of the Attack DB.  The colors are: For attackers Cyan
 and for defenders Red.
 
+Lastly, the game has an Undo/Redo stack that tracks the last 254 moves. Pressing
+u will undo the last move and r will redo the last move.  In an AI/Human game,
+the undo will undo the last AI and human player move, so the human player can
+make a different move.
+
 
 III.  Distribution
 
