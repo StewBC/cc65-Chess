@@ -52,7 +52,7 @@ visual representation of the Attack DB.  The colors are: For attackers Cyan
 and for defenders Red.
 
 Lastly, the game has an Undo/Redo stack that tracks the last 254 moves. Pressing
-u will undo the last move and r will redo the last move.  In an AI/Human game,
+U will undo the last move and R will redo the last move.  In an AI/Human game,
 the undo will undo the last AI and human player move, so the human player can
 make a different move.
 
@@ -223,7 +223,7 @@ Valid: Thin
 Invalid: Medium
 Empty: Thick
 
-When it comes to showing attackers/defenders (via the keys 'a'/'d') there's no
+When it comes to showing attackers/defenders (via the keys A / D) there's no
 alternative to resorting to colors:
 
 Attackers: Red
@@ -239,7 +239,7 @@ striped) piece making it clearly visible.
 
 On a color display a third color (beside attackers/defenders) works just fine.
 
-As the Apple II doesn't have cursor-up and cursor-down keys the keys 'o' and 'l'
+As the Apple II doesn't have cursor-up and cursor-down keys the keys O and L
 work as alternatives to the those cursor keys.
 
 Oliver Schmidt
