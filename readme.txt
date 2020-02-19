@@ -2,6 +2,8 @@
 
 Jan 2020 - Oliver Schmidt created a beautiful Apple II port. See IX below.
 
+There is a Commodore 64 .PRG and an Apple II .DSK file in the release tab.
+
 I.   Introduction (Feb 14, 2014)
 
 I started playing chess about 3 months ago and this got me wondering how
@@ -277,6 +279,6 @@ apple commander jar file.  Here's how it's done for different shell's:
    $env:AC = "path to apple commander.jar"
  cmd.exe 
    set AC="path to apple commander.jar"
- bash (Unix or MacOS terminal):
+ bash (Unix or macOS terminal):
    export AC="path to apple commander.jar"
 
