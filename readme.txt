@@ -244,6 +244,8 @@ On a color display a third color (beside attackers/defenders) works just fine.
 As the Apple II doesn't have cursor-up and cursor-down keys the keys O and L
 work as alternatives to the those cursor keys.
 
+There's a video showing the Apple II version here: https://youtu.be/PPy-cg4ghDY
+
 Oliver Schmidt
 Jan 19, 2020
 
