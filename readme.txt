@@ -1,5 +1,7 @@
 0.   Updates
 
+May 2020 - [raxiss] created a nice Oric-1/Atmos/Telestrat port. See X below.
+
 Jan 2020 - Oliver Schmidt created a beautiful Apple II port. See IX below.
 
 There is a Commodore 64 .PRG and an Apple II .DSK file in the release tab.
@@ -28,7 +30,7 @@ The colors here refer to the C64 version.  The terminal version has a minimal
 working display but does try to somewhat match the colors of the C64.
 
 The user controls an on-screen cursor.  The cursor changes color to indicate
-a state.  The colors for selection are: 
+a state.  The colors for selection are:
   Green - the piece can be selected
   Red - The piece cannot be selected as it doesn't have valid moves
   Purple - Empty tile or piece on the other side
@@ -47,9 +49,9 @@ and down cursor keys to change the selection.
 While a side is under human control, there are a few more options.  Press B to
 toggle on/off a state showing on every tile how many of both black and white's
 pieces can attack that tile.  Pressing A will toggle a highlight of all of the
-pieces on the opposing side that attack the selected tile.  Pressing D will 
+pieces on the opposing side that attack the selected tile.  Pressing D will
 toggle a highlight of all the pieces on the side currently playing's side that
-can defend the selected tile.  All three of these options basically give a 
+can defend the selected tile.  All three of these options basically give a
 visual representation of the Attack DB.  The colors are: For attackers Cyan
 and for defenders Red.
 
@@ -274,13 +276,21 @@ all make commands.
 
 NOTES:
 1) Find AppleCommander here (I used Version 1.5.0):
-https://github.com/AppleCommander/AppleCommander/releases 
+https://github.com/AppleCommander/AppleCommander/releases
 2) Set the environment variable (or change the Makefile-dsk.md) to point at the
 apple commander jar file.  Here's how it's done for different shell's:
  Powershell:
    $env:AC = "path to apple commander.jar"
- cmd.exe 
+ cmd.exe
    set AC="path to apple commander.jar"
  bash (Unix or macOS terminal):
    export AC="path to apple commander.jar"
 
+XI.    Oric Build Instructions
+To build the Oric-1/Atmos/Telestrat version set the environment variable CC65_HOME
+with the path to the base cc65 directory i.e: export CC65_HOME=${HOME}/cc65
+
+and use the make command line:
+make TARGETS=oric CC65TARGET=atmos OPTIONS=optspeed tap
+
+This will create a ready to run TAP file: cc65-Chess.tap
