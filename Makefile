@@ -9,7 +9,7 @@
 
 # Space or comma separated list of cc65 supported target platforms to build for.
 # Default: c64 (lowercase!)
-TARGETS := c64 apple2
+TARGETS := c64 apple2 oric
 
 # Name of the final, single-file executable.
 # Default: name of the current dir with target name appended
@@ -61,7 +61,7 @@ POSTEMUCMD :=
 
 # On Windows machines VICE emulators may not be available in the PATH by default.
 # In such case, please set the variable below to point to directory containing
-# VICE emulators. 
+# VICE emulators.
 #VICE_HOME := "C:\Program Files\WinVICE-2.2-x86\"
 VICE_HOME :=
 
