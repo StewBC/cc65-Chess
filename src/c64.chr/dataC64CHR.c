@@ -1,5 +1,5 @@
 /*
- *	data.c
+ *	dataC64CHR.c
  *	cc65 Chess
  *
  *	Created by Stefan Wessels, February 2014.
@@ -7,7 +7,7 @@
  */
 
 #include "../types.h"
-#include "data.h"
+#include "dataC64CHR.h"
 
 /*-----------------------------------------------------------------------*/
 // C64 specific graphics for the chess pieces

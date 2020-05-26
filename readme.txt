@@ -1,10 +1,11 @@
 0.   Updates
 
-May 2020 - [raxiss] created a nice Oric-1/Atmos/Telestrat port. See X below.
-
-Jan 2020 - Oliver Schmidt created a beautiful Apple II port. See IX below.
-
-There is a Commodore 64 .PRG and an Apple II .DSK file in the release tab.
+* May 2020 - Advanced Build instructions at XI.
+* May 2020 - I created a version for the Commander X16 (R37).
+* May 2020 - I created a graphics version for the C64.
+* May 2020 - [raxiss] created a nice Oric-1/Atmos/Telestrat port.
+* Jan 2020 - Oliver Schmidt created a beautiful Apple II port. See IX below.
+* There are images for all platforms in the releases tab.
 
 I.   Introduction (Feb 14, 2014)
 
@@ -252,45 +253,78 @@ Oliver Schmidt
 Jan 19, 2020
 
 
-X.     Apple II Build Instructions
+XI.    Build Instructions
 
-To build the Apple II version use the make command line:
-make TARGETS=apple2 OPTIONS=optspeed
-The OPTIONS=optspeed will be remembered and need only be given once.
+All of the 8-Bit versions of cc65 Chess can be built using make.  
 
-To make the disc image, set an environment variable to point at apple commander
-(see notes) and then use the command:
-make TARGETS=apple2 dsk
+I recommend the game be built for speed, which also results in smaller file and
+is essential for all targets.  This is done by using the OPTIONS=optspeed
+command line to make.  See examples below.
 
-If you want to edit the code and get into some iterative development/testing,
-you can edit the Makefile and fill in the commands commands neccesary to launch
-an emulator as well.  Look for apple2_EMUCMD and set that as neccesary.  The
-simplest is to call test.sh or test.bat and fill in a complete command in the
-batch file or shell script.  However you choose to do this, once done, you can
-do everything with the command:
-make TARGETS=apple2 dsk test
+When you type make (using GNU Make) the default behaviour is to make all of the
+versions. Currently, that means the following (cc65 target name in brackets):
 
-You could also edit the Makefile and change the line TARGETS := c64 apple2 to
-include only the apple2 in which case you can omit the TARGETS=apple2 part form
-all make commands.
+* Commodore 64 HiRes (c64)
+* Commodore 64 Multicolor Text (c64.chr)
+* Apple 2 (apple2)
+* Oric-1/Atmos/Telestrat (atmos)
+* Commander X16 (cx16)
 
-NOTES:
-1) Find AppleCommander here (I used Version 1.5.0):
-https://github.com/AppleCommander/AppleCommander/releases
-2) Set the environment variable (or change the Makefile-dsk.md) to point at the
-apple commander jar file.  Here's how it's done for different shell's:
- Powershell:
-   $env:AC = "path to apple commander.jar"
- cmd.exe
-   set AC="path to apple commander.jar"
- bash (Unix or macOS terminal):
-   export AC="path to apple commander.jar"
+Most platforms have an additional step that can be performed, which is to make a
+program (prg), disk (dsk) or tape (tap) file.  Do make again, but with dsk
+(Apple 2 dsk), tap (Oric tape), prg (C64 prg), cprg (c64.chr prg) or cxprg (cX16
+prg) on the command line.
 
-XI.    Oric Build Instructions
-To build the Oric-1/Atmos/Telestrat version set the environment variable CC65_HOME
-with the path to the base cc65 directory i.e: export CC65_HOME=${HOME}/cc65
+The two steps can be combined into a single make command, by using "all" as the
+first target, i.e: 
+make OPTIONS=optspeed all dsk tap prg cprg cxprg
 
-and use the make command line:
-make TARGETS=oric CC65TARGET=atmos OPTIONS=optspeed tap
+Makeing a terminal version (using curses) - See IV (b) above.
 
-This will create a ready to run TAP file: cc65-Chess.tap
+Examples:
+1) Make everything, and then make the dsk and tap files for the Apple and Oric.
+
+make OPTIONS=optspeed
+
+This will make the following files:
+cc65-Chess.apple2
+cc65-Chess.atmos
+cc65-Chess.c64
+cc65-Chess.c64.chr
+cc65-Chess.cx16
+
+make dsk tap prg cprg cxprg
+
+This will make the following files:
+cc65-Chess.tap
+cc65-Chess.dsk
+cc65-Chess-c64.prg
+cc65-Chess-chr.prg
+cc65-Chess-cx16.prg
+
+Once you have used the OPTIONS=optspeed on the command-line, you do not have to
+use it again since the options are saved in a file called Makefile.options.
+
+2) Build just one version (let's say the Oric)
+
+make OPTIONS=optspeed TARGETS=atmos tap
+This will create a ready to run TAP file named cc65-Chess.tap
+
+3) You can also start an emulator directly from make with the test command-line.
+
+make OPTIONS=optspeed atmos test
+
+This last command example is a good way of callimg make to build and test any of
+the targets by itself, provided you have configured an emulator in the Makefile.
+In this case, it will call the emulator with cc65-Chess.atmos but Oricutron
+doesn't mind that the exytension isn't .tap.
+
+Look for _EMUCMD in the Makefile.  You may have to specify a full path to the
+emulator, and in some cases you may need to change the test: command itself. For
+example, to run AppleWin I removed the $< from $(EMUCMD) $< in the test:
+section, because AppleWin did not like the extra (cc64-Chess.apple2) file being
+passed, and I had to give it the full path to cc64-Chess.dsk as part of apple2_EMUCMD.
+
+Lastly - the CX16 and C64 versions use the same piece defenitions that Oliver
+Schmidt added for the Apple II, and kindly agreed to let me use for these
+versions as well.  See genPieces.cpp in the specific src folder for more details.

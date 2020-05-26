@@ -1,5 +1,5 @@
 /*
- *	plat64.c
+ *	platC64CHR.c
  *	cc65 Chess
  *
  *	Created by Stefan Wessels, February 2014.
@@ -14,7 +14,7 @@
 #include "../undo.h"
 #include "../frontend.h"
 #include "../plat.h"
-#include "data.h"
+#include "dataC64CHR.h"
 
 /*-----------------------------------------------------------------------*/
 // System locations

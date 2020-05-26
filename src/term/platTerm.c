@@ -267,7 +267,7 @@ void plat_ClearMessage()
 }
 
 /*-----------------------------------------------------------------------*/
-// This function can/will gange the gTile and related global variables so
+// This function can/will change the gTile and related global variables so
 // caution is needed
 void plat_AddToLogWin()
 {

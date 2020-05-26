@@ -1,4 +1,4 @@
-TAP = cc65-Chess.tap
+CXPRG = cc65-Chess-cx16.prg
 
 # Unix or Windows
 ifeq ($(shell echo),)
@@ -7,10 +7,10 @@ else
 	CP = copy $(subst /,\,$1)
 endif
 
-REMOVES += $(TAP)
+REMOVES += $(CXPRG)
 
-.PHONY: tap
-tap: $(TAP)
+.PHONY: cxprg
+cxprg: $(CXPRG)
 
-$(TAP): cc65-chess.atmos
+$(CXPRG): cc65-chess.cx16
 	$(call CP, $< $@)

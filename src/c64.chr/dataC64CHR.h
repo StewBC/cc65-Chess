@@ -1,5 +1,5 @@
 /*
- *	data.h
+ *	dataC64CHR.h
  *	cc65 Chess
  *
  *	Created by Stefan Wessels, February 2014.

@@ -1,3 +1,4 @@
+/.vscode/
 /obj/
 /Makefile.options
 /cc65-chess.*
