@@ -162,7 +162,7 @@ void plat_showStrXY(char fore, char back, char x, char y, char* str)
 	// Something messes up the cursor but this seems to work to 
 	// keep it hidden
 	*CURS_FLAG = 1;
-
+}
 
 /*-----------------------------------------------------------------------*/
 // Use the frameBuffer API to draw the pieces.  The GRAPH api
