@@ -1,5 +1,6 @@
 0.   Updates
 
+* Jul 2020 - Added a version for the Atari.
 * May 2020 - Advanced Build instructions at XI.
 * May 2020 - I created a version for the Commander X16 (R37).
 * May 2020 - I created a graphics version for the C64.
@@ -257,9 +258,11 @@ XI.    Build Instructions
 
 All of the 8-Bit versions of cc65 Chess can be built using make.  
 
-I recommend the game be built for speed, which also results in smaller file and
-is essential for all targets.  This is done by using the OPTIONS=optspeed
-command line to make.  See examples below.
+I recommend the game be built for speed on almost all targets, which also
+results in smaller file and is essential for all targets.  This is done by
+using the OPTIONS=optspeed command line to make.  For the Atari, it is
+essential to use OPTIONS=optsize as the 48K Atari really needs the extra 
+1K of memory.
 
 When you type make (using GNU Make) the default behaviour is to make all of the
 versions. Currently, that means the following (cc65 target name in brackets):
@@ -269,50 +272,54 @@ versions. Currently, that means the following (cc65 target name in brackets):
 * Apple 2 (apple2)
 * Oric-1/Atmos/Telestrat (atmos)
 * Commander X16 (cx16)
+* Atari (atari - Needs at least 48K, tested on Atari 800 48K)
 
 Most platforms have an additional step that can be performed, which is to make a
-program (prg), disk (dsk) or tape (tap) file.  Do make again, but with dsk
-(Apple 2 dsk), tap (Oric tape), prg (C64 prg), cprg (c64.chr prg) or cxprg (cX16
-prg) on the command line.
+program (prg), disk (dsk, atr) or tape (tap) file.  Do make again, but with dsk
+(Apple 2 dsk), atr (Atari disk), tap (Oric tape), prg (C64 prg), cprg (c64.chr
+prg) or cxprg (cX16 prg) on the command line.
 
 The two steps can be combined into a single make command, by using "all" as the
 first target, i.e: 
-make OPTIONS=optspeed all dsk tap prg cprg cxprg
+make OPTIONS=optsize all dsk atr tap prg cprg cxprg
 
-Makeing a terminal version (using curses) - See IV (b) above.
+Making a terminal version (using curses) - See IV (b) above.
 
 Examples:
-1) Make everything, and then make the dsk and tap files for the Apple and Oric.
+1) Make everything, and then make the images for all platforms.
 
-make OPTIONS=optspeed
+make OPTIONS=optsize
 
 This will make the following files:
 cc65-Chess.apple2
+cc65-Chess.atari
 cc65-Chess.atmos
 cc65-Chess.c64
 cc65-Chess.c64.chr
 cc65-Chess.cx16
 
-make dsk tap prg cprg cxprg
+make dsk atr tap prg cprg cxprg
 
 This will make the following files:
 cc65-Chess.tap
+cc65-Chess.atr
 cc65-Chess.dsk
 cc65-Chess-c64.prg
 cc65-Chess-chr.prg
 cc65-Chess-cx16.prg
 
-Once you have used the OPTIONS=optspeed on the command-line, you do not have to
-use it again since the options are saved in a file called Makefile.options.
+Once you have used the OPTIONS=optsize (or OPTIONS=optspeed) on the
+command-line, you do not have to use it again since the options are
+saved in a file called Makefile.options.
 
 2) Build just one version (let's say the Oric)
 
-make OPTIONS=optspeed TARGETS=atmos tap
+make OPTIONS=optsize TARGETS=atmos tap
 This will create a ready to run TAP file named cc65-Chess.tap
 
 3) You can also start an emulator directly from make with the test command-line.
 
-make OPTIONS=optspeed atmos test
+make OPTIONS=optsize atmos test
 
 This last command example is a good way of callimg make to build and test any of
 the targets by itself, provided you have configured an emulator in the Makefile.
@@ -325,6 +332,6 @@ example, to run AppleWin I removed the $< from $(EMUCMD) $< in the test:
 section, because AppleWin did not like the extra (cc64-Chess.apple2) file being
 passed, and I had to give it the full path to cc64-Chess.dsk as part of apple2_EMUCMD.
 
-Lastly - the CX16 and C64 versions use the same piece defenitions that Oliver
+Lastly - the Atari, CX16 and C64 versions use the same piece defenitions that Oliver
 Schmidt added for the Apple II, and kindly agreed to let me use for these
 versions as well.  See genPieces.cpp in the specific src folder for more details.

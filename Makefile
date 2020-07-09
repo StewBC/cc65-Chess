@@ -9,7 +9,7 @@
 
 # Space or comma separated list of cc65 supported target platforms to build for.
 # Default: c64 (lowercase!)
-TARGETS := apple2 atmos c64 c64.chr cx16
+TARGETS := apple2 atari atmos c64 c64.chr cx16
 
 # Name of the final, single-file executable.
 # Default: name of the current dir with target name appended
@@ -67,6 +67,7 @@ VICE_HOME :=
 CX16_HOME := 
 AWIN_HOME := 
 ORIC_HOME := 
+ATARI_HOME :=
 
 # Options state file name. You should not need to change this, but for those
 # rare cases when you feel you really need to name it differently - here you are
@@ -157,7 +158,7 @@ plus4_EMUCMD := $(VICE_HOME)xplus4 -TEDdsize -autoload
 c16_EMUCMD := $(VICE_HOME)xplus4 -ramsize 16 -TEDdsize -autoload
 cbm510_EMUCMD := $(VICE_HOME)xcbm2 -model 510 -VICIIdsize -autoload
 cbm610_EMUCMD := $(VICE_HOME)xcbm2 -model 610 -Crtcdsize -autoload
-atari_EMUCMD := atari800 -windowed -xl -pal -nopatchall -run
+atari_EMUCMD := $(ATARI_HOME)Altirra64 /defprofile:800 /disk cc65-Chess.atr
 cx16_EMUCMD := $(CX16_HOME)x16emu -run -prg
 apple2_EMUCMD := $(AWIN_HOME)AppleWin.exe -d1 
 atmos_EMUCMD := $(ORIC_HOME)Oricutron.exe -t 
