@@ -1,5 +1,6 @@
 0.   Updates
 
+* Oct 2023 - Added a version for the Plus4.
 * Jul 2020 - Added a version for the Atari.
 * May 2020 - Advanced Build instructions at XI.
 * May 2020 - I created a version for the Commander X16 (R37).

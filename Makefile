@@ -149,11 +149,11 @@ TARGETOBJDIR := $(OBJDIR)/$(TARGETS)
 
 # Default emulator commands and options for particular targets.
 # Set EMUCMD to override.
-c64_EMUCMD := $(VICE_HOME)x64 -kernal kernal -VICIIdsize -autostart
+c64_EMUCMD := $(VICE_HOME)x64sc -kernal kernal -VICIIdsize -autostart
 c128_EMUCMD := $(VICE_HOME)x128 -kernal kernal -VICIIdsize -autoload
 vic20_EMUCMD := $(VICE_HOME)xvic -kernal kernal -VICdsize -autoload
 pet_EMUCMD := $(VICE_HOME)xpet -Crtcdsize -autoload
-plus4_EMUCMD := $(VICE_HOME)xplus4 -TEDdsize -autoload
+plus4_EMUCMD := $(VICE_HOME)xplus4 -TEDdsize -autostart
 # So far there is no x16 emulator in VICE (why??) so we have to use xplus4 with -memsize option
 c16_EMUCMD := $(VICE_HOME)xplus4 -ramsize 16 -TEDdsize -autoload
 cbm510_EMUCMD := $(VICE_HOME)xcbm2 -model 510 -VICIIdsize -autoload
