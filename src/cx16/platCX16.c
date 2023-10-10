@@ -97,7 +97,7 @@ char plat_TimeExpired(unsigned int aTime, char *timerInit);
 void clearTextLayer(int x, int y, int w, int h)
 {
 	int sx, sw;
-	unsigned int offset = y * 256;	// lines have a stride of 256
+	unsigned long offset = 0x1B000 + y * 256;	// lines have a stride of 256
 	
 	// Double width for characters - character then color
 	x *= 2;
@@ -118,6 +118,11 @@ void clearTextLayer(int x, int y, int w, int h)
 		// Skip to the start of the next area to fill
 		offset += 256 - w;
 	}
+	// long i;
+	// for(i=0x1B000; i < 0x1EBFF; i+=2) {
+	// 	vpoke(32,i);
+	// 	vpoke(0,i+1);
+	// }
 }
 
 /*-----------------------------------------------------------------------*/
@@ -210,7 +215,7 @@ void plat_Init()
 	VIA1.pra = 0;
 
 	// Video mode and graphics init
-	sc_vm = videomode(VIDEOMODE_320x200) ;
+	sc_vm = videomode(VIDEOMODE_320x240) ;
 	clearTextLayer(0, 0, 40, 25);
 	plat_setColors(COLOR_WHITE, COLOR_WHITE, COLOR_GREEN);
 	__asm__("jsr GRAPH_CLEAR");
