@@ -12,5 +12,5 @@ REMOVES += $(TAP)
 .PHONY: tap
 tap: $(TAP)
 
-$(TAP): cc65-chess.atmos
+$(TAP): cc65-Chess.atmos
 	$(call CP, $< $@)
