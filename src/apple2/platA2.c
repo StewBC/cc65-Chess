@@ -215,7 +215,7 @@ void plat_DrawSquare(char position)
     if(piece)
     {
         rop = blackWhite ? ROP_INV : ROP_CPY;
-        inv = blackWhite ^ (piece & PIECE_WHITE) != 0;
+        inv = blackWhite ^ !((piece & PIECE_WHITE) != 0);
     }
     else
     {
