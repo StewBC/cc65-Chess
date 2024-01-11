@@ -504,29 +504,29 @@ void plat_Shutdown(void)
 static char* scrptr = (char*)(0xbb80+25*40);
 static char inverse = 0x00;
 
-void clrmenu(void)
+static void clrmenu(void)
 {
   memset((void*)(0xbb80+25*40), 0x20, 3*40);
   scrptr = (char*)(0xbb80+25*40);
 }
 
-void cputs(char* s)
+static void cputs(char* s)
 {
   while(s && *s)
     *scrptr++ = inverse | *s++;
 }
 
-void gotoxy(int x, int y)
+static void gotoxy(int x, int y)
 {
   scrptr = (char*)(0xbb80+(25+y)*40+x);
 }
 
-void revers(char flag)
+static void revers(char flag)
 {
   inverse = flag? 0x80:0x00;
 }
 
-void cprintf(char* fmt, char* s)
+static void cprintf(char* fmt, char* s)
 {
   static char temp[64];
   sprintf(temp, fmt, s);
