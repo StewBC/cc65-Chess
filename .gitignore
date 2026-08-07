@@ -5,6 +5,7 @@
 /cc65-Chess*.*
 /chess.po
 /scratch/
+/atari.atr/
 
 # native test binaries and their debug info
 /tests/chesstest

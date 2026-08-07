@@ -8,7 +8,7 @@ ATR = cc65-Chess.atr
 # ATARIDOS = ataridos
 ATARIDOSTYPE = Dos25
 ATARIDSK = atari.atr
-DIR2ATR ?= dir2atr.exe
+DIR2ATR ?= dir2atr
 
 # Unix or Windows
 ifeq ($(shell echo),)
