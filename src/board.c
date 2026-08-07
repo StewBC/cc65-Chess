@@ -26,10 +26,13 @@ char board_CheckLineAttack(char t1, char t2, char side);
 void board_UpdateAttackGrid(int offset, char side);
 
 /*-----------------------------------------------------------------------*/
-// board_UpdateAttackGrid may add entries (behind the king in a line 
+// board_UpdateAttackGrid may add entries (behind the king in a line
 // attack, for example) and these variables track those changes so they
-// can easily be undone
-static int	si_fixupTable[(8*2)+7+6];
+// can easily be undone.
+// Worst case is 2 entries for each of the 8 pawns, plus the tiles that get
+// revealed behind the king by each attacker.  There can be 2 attackers (a
+// double check) and a full-length line can reveal 7 tiles
+static int	si_fixupTable[(8*2)+(2*7)];
 static char sc_numFixes;
 
 /*-----------------------------------------------------------------------*/
@@ -263,27 +266,43 @@ void board_GenKingMoves(char position, char addDefenceMove)
 {
 	char okayToCastle[2] = {0,0}, y = position / 8, x = position & 7;
 
+	// Casteling is a move, it is never an attack or a defence, so it must not
+	// be generated while the attack DB is being built (addDefenceMove).  If it
+	// is, the king ends up listed as covering tiles 2 files away that it can
+	// never actually reach.
 	// If the king hasn't moved (| PIECE_MOVED == 0)
-	if(KING == (gpChessBoard[position] & (PIECE_DATA | PIECE_MOVED)))
+	if(!addDefenceMove && KING == (gpChessBoard[position] & (PIECE_DATA | PIECE_MOVED)))
 	{
-		// and the rook hasn't moved
-		if(ROOK == (gpChessBoard[position-4] & (PIECE_DATA | PIECE_MOVED)))
+		// Offset of the enemy's attacks on the king's own tile.  Neighbouring
+		// tiles sit exactly ATTACK_WIDTH apart in the DB, so the tiles the king
+		// would cross are reached without another giAttackBoardOffset lookup
+		char *king = &gpChessBoard[position];
+		int offset = giAttackBoardOffset[position][1 - ((*king & PIECE_WHITE) >> 7)];
+
+		// A king may not castle out of check.  The rook needs no color test -
+		// a rook of the other side could only have got to the corner by moving,
+		// which sets PIECE_MOVED and so already fails the ROOK == test below.
+		// NONE is 0 so the tiles in between are OR'ed to test them in one go
+		if(!gpAttackBoard[offset])
 		{
-			// and there are 3 open spaces between them, then
-			// casteling is possible
-			board_LoadMoves(x, y, -1,  0, 3, addDefenceMove);
-			if(3 == gNumMoves)
-				okayToCastle[0] = 1;
-			gNumMoves = 0;
-		}
-		
-		if(ROOK == (gpChessBoard[position+3] & (PIECE_DATA | PIECE_MOVED)))
-		{
-			// on this side, 2 open spaces is all that's needed
-			board_LoadMoves(x, y,  1,  0, 2, addDefenceMove);
-			if(2 == gNumMoves)
-				okayToCastle[1] = 1;
-			gNumMoves = 0;
+			// and the rook hasn't moved
+			if(ROOK == (king[-4] & (PIECE_DATA | PIECE_MOVED)))
+			{
+				// The 3 tiles between the king and the rook must be empty, and
+				// the king may not cross a tile that is under attack.  The tile
+				// the king lands on is checked by board_ProcessAction
+				if(NONE == (king[-1] | king[-2] | king[-3]) &&
+				   !gpAttackBoard[offset-ATTACK_WIDTH])
+					okayToCastle[0] = 1;
+			}
+
+			if(ROOK == (king[3] & (PIECE_DATA | PIECE_MOVED)))
+			{
+				// on this side, 2 open tiles is all that's needed
+				if(NONE == (king[1] | king[2]) &&
+				   !gpAttackBoard[offset+ATTACK_WIDTH])
+					okayToCastle[1] = 1;
+			}
 		}
 	}
 
@@ -326,6 +345,13 @@ char board_ProcessAction(void)
 	// Get the king's tile and an offset to the king's attackers
 	char kingTile = gKingData[gColor[0]];
 
+	// gTile[2] and gTile[3] describe the extra piece movement this move causes
+	// (the rook when casteling, the taken pawn on en passant).  Clear them so
+	// that leftovers from a previous, or an abandoned, move can't be read as
+	// belonging to this move - undo_AddMove works out that a move was an en
+	// passant take purely from these two
+	gTile[2] = gTile[3] = NULL_TILE;
+
 	// If the king is moving onto a tile under attack the move is invalid
 	// Can't move into check
 	if(KING == gPiece[0] && gpAttackBoard[giAttackBoardOffset[gTile[1]][1-gColor[0]]])
@@ -367,7 +393,9 @@ char board_ProcessAction(void)
 		{
 			if(gEPPawn == gTile[1])
 			{
-				gpChessBoard[gTile[2]] = PAWN | ((1-gColor[0]) ? PIECE_WHITE : 0);
+				// A pawn that can be taken en passant just made a double step
+				// so it has to go back with its moved bit set
+				gpChessBoard[gTile[2]] = PAWN | PIECE_MOVED | ((1-gColor[0]) ? PIECE_WHITE : 0);
 				gTile[2] = NULL_TILE;
 			}
 			else if(gTile[1] < 8 || gTile[1] > 55)
@@ -402,7 +430,6 @@ char board_ProcessAction(void)
 	// If the opposing king is in check
 	if(gpAttackBoard[giAttackBoardOffset[gKingData[1-gColor[0]]][gColor[0]]])
 	{
-		sc_numFixes = 0;
 		// Check if that king is in check-mate
 		return board_CheckForMate(1-gColor[0]);
 	}
@@ -623,8 +650,10 @@ void board_ProcessEnPassant(char state)
 				gTile[2] = gTile[0] + 1;
 			else
 				gTile[2] = gTile[0] - 1;
-			
-			gpChessBoard[gTile[2]] = PAWN | ((1-gColor[0]) ? PIECE_WHITE : 0);
+
+			// The pawn being put back made a double step to become takeable
+			// en passant, so it has to keep its moved bit
+			gpChessBoard[gTile[2]] = PAWN | PIECE_MOVED | ((1-gColor[0]) ? PIECE_WHITE : 0);
 			gEPPawn = gTile[1];
 		break;
 			
@@ -687,11 +716,15 @@ void board_ProcessCastling(char a, char b)
 }
 
 /*-----------------------------------------------------------------------*/
-// This is called to see if the king on "side" is in check-mate
+// This is called to see if the king on "side" is in check-mate.
+// board_UpdateAttackGrid adds entries to the attack DB that have to come back
+// out again before this returns, so every way out of here goes through the
+// cleanup label - miss one and the attack DB stays inflated for the rest of
+// the turn, which throws off the display, the move validation and the AI
 char board_CheckForMate(char side)
 {
 	int offset;
-	char i, tile, other = 1-side;
+	char i, tile, other = 1-side, outcome = OUTCOME_CHECKMATE;
 
 	// Look at the king's attackers
 	tile = gKingData[side];
@@ -699,30 +732,34 @@ char board_CheckForMate(char side)
 
 	// Make gAttackBoard contain all needed attacks and defences
 	// to determine a check mate state
+	sc_numFixes = 0;
 	board_UpdateAttackGrid(offset, side);
-	
+
 	// See where the king might hide
 	board_GeneratePossibleMoves(tile, 0);
 
-	// This also triggers if the attacker has no backup and the 
+	// This also triggers if the attacker has no backup and the
 	// king can take it
 	for(i=0; i<gNumMoves; ++i)
 	{
 		offset = giAttackBoardOffset[gPossibleMoves[i]][other];
 		if(!gpAttackBoard[offset])
-			return OUTCOME_CHECK;
+		{
+			outcome = OUTCOME_CHECK;
+			goto cleanup;
+		}
 	}
 
 	// Go back to the attackers of the king
 	offset = giAttackBoardOffset[tile][other];
-	
+
 	// If there's more than one attacker then it's mate
 	if(gpAttackBoard[offset] > 1)
-		return OUTCOME_CHECKMATE;
+		goto cleanup;
 
 	// There's only 1 attacker, so work with it
 	tile = gpAttackBoard[offset+1];
-	
+
 	// Deal with a knight attacker here as there is no "interruptable path"
 	// between a horse attacker and the king
 	if(KNIGHT == (gpChessBoard[tile] & PIECE_DATA))
@@ -730,26 +767,26 @@ char board_CheckForMate(char side)
 		// Get an offset to the defenders ("attackers" on same side as king)
 		offset = giAttackBoardOffset[tile][side];
 
-		// See if the Horse can be taken by any defenders
+		// See if the Horse can be taken by any defenders, otherwise it's mate
 		if(gpAttackBoard[offset])
-			return OUTCOME_CHECK;
+			outcome = OUTCOME_CHECK;
 
-		// If not then it's check-mate
-		return OUTCOME_CHECKMATE;
+		goto cleanup;
 	}
 
 	// See if the attacker can be eliminated or the path between the attacker
 	// and the king can be blocked
-	i = board_CheckLineAttack(tile, gKingData[side], side);
-	
-	// Clean up changes it made to the attack DB in board_UpdateAttackGrid
+	outcome = board_CheckLineAttack(tile, gKingData[side], side);
+
+cleanup:
+	// Clean up changes board_UpdateAttackGrid made to the attack DB
 	while(sc_numFixes)
 	{
 		--sc_numFixes;
 		--gpAttackBoard[si_fixupTable[sc_numFixes]];
 	}
 
-	return i;
+	return outcome;
 }
 
 /*-----------------------------------------------------------------------*/

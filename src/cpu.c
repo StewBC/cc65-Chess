@@ -168,7 +168,7 @@ void cpu_HolisticScore(char side)
 					offset = giAttackBoardOffset[nTile][1-side];
 					scratch = gpAttackBoard[offset];
 					// if the pawn can move because the square isn't under attack or is well defended
-					if(!scratch || scratch < giAttackBoardOffset[nTile][side])
+					if(!scratch || scratch < gpAttackBoard[giAttackBoardOffset[nTile][side]])
 					{
 						scratch = (nTile / 8);
 						if(side)
