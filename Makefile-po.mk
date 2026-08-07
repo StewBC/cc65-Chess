@@ -30,9 +30,9 @@ $(NAME).system:
 
 $(PO): $(PROGRAM).apple2 $(NAME).system
 	$(call CP, apple2/template.po $@)
-	$(call CP, $(PROGRAM).apple2 $(NAME)#060803)
+	$(call CP, $(PROGRAM).apple2 $(NAME)#064000)
 	# Always use an explicit forward slash '/' for ProDOS.
 	$(NO_CONV) $(CA) addfile $(NAME).po /$(subst -,.,$(PROGRAM)) $(NAME).system#FF2000
-	$(NO_CONV) $(CA) addfile $(NAME).po /$(subst -,.,$(PROGRAM)) $(NAME)#060803
+	$(NO_CONV) $(CA) addfile $(NAME).po /$(subst -,.,$(PROGRAM)) $(NAME)#064000
 	$(RM) $(NAME).system#FF2000
-	$(RM) $(NAME)#060803
+	$(RM) $(NAME)#064000
