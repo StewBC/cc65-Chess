@@ -12,9 +12,7 @@
 .include "apple2.inc"
 .include "zeropage.inc"
 
-.import popa, popax
-
-VERSION := $FBB3
+.import popa, popax, _videomode, _allow_lowercase
 
 
 .rodata
@@ -41,16 +39,12 @@ _hires_Pieces:
 
 .proc   _hires_Init
 
-        bit     $C082       ; Switch in ROM
-
-        lda     VERSION     ; Needs ROM
-        cmp     #$06        ; Apple //e ?
-        bne     :+
-
         lda     #$15        ; Turn off 80-column firmware
-        jsr     $C300       ; Needs ROM (see $CEF4)
+        ldx     #$00        ; videomode() takes an unsigned, so A/X
+        jsr     _videomode
 
-:       bit     $C080       ; Back to LC bank 2 for R/O
+        lda     #$00        ; Disable lowercase as we use revers()
+        jsr     _allow_lowercase
 
         bit     TXTCLR
         bit     MIXCLR
