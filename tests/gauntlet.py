@@ -5,8 +5,8 @@ cc65 Chess - test support
 
 Plays the four skill levels against a ladder of reference opponents and turns
 the scores into Elo differences with error bars.  Drives either fastchess or
-c-chess-cli; pass whichever is installed with --cli and the runner is worked
-out from its name.
+c-chess-cli, whichever it finds; the argument shapes differ and the rest does
+not.
 
 Two things this is careful about, because both were got wrong in Phase 4 by
 trusting a short match:
@@ -31,16 +31,90 @@ nominal movetime that the engine ignores on purpose - see the header of
 tests/uci.c.  The margin is enormous (seconds against milliseconds), and any
 game actually lost on time is reported rather than quietly averaged in.
 
-  ./gauntlet.py --cli ~/Develop/github/external/fastchess/fastchess \\
-                --sf $(brew --prefix stockfish)/bin/stockfish
+The match runner and Stockfish are found automatically - in tools/, then on
+PATH, then in the usual package-manager prefixes.  Nothing here needs an
+absolute path.  --which reports what was found, with versions, which is worth
+recording alongside any figure: a different major version of Stockfish moves
+every number in doc/strength.md.
+
+  ./gauntlet.py --which
+  ./gauntlet.py --games 512
 """
 
 import argparse
 import math
 import os
 import re
+import shutil
 import subprocess
 import sys
+from pathlib import Path
+
+TESTS = Path(__file__).resolve().parent
+REPO = TESTS.parent
+TOOLS = REPO / "tools"
+
+# in preference order.  a local copy under tools/ wins over one on PATH, so a
+# pinned build can be used without disturbing whatever is installed system wide
+RUNNERS = ["fastchess", "c-chess-cli"]
+BREW_PREFIXES = ["/opt/homebrew/opt", "/usr/local/opt"]
+
+INSTALL_HELP = """
+  fastchess     https://github.com/Disservin/fastchess
+  c-chess-cli   https://github.com/lucasart/c-chess-cli
+  stockfish     brew install stockfish | apt install stockfish
+
+Put a build under tools/<name>/ or anywhere on PATH.  See tools/README.md."""
+
+
+def find_tool(name, explicit=None):
+    """tools/ first, then PATH, then the usual package prefixes."""
+    if explicit:
+        if Path(explicit).is_file() or shutil.which(explicit):
+            return explicit
+        sys.exit(f"{name}: not found at {explicit!r}")
+
+    local = TOOLS / name / name
+    if local.is_file() and os.access(local, os.X_OK):
+        return str(local)
+
+    found = shutil.which(name)
+    if found:
+        return found
+
+    for prefix in BREW_PREFIXES:
+        candidate = Path(prefix) / name / "bin" / name
+        if candidate.is_file():
+            return str(candidate)
+    return None
+
+
+def find_runner(explicit=None):
+    if explicit:
+        return find_tool(os.path.basename(explicit), explicit)
+    for name in RUNNERS:
+        found = find_tool(name)
+        if found:
+            return found
+    return None
+
+
+def tool_version(path, is_engine=False):
+    """A UCI engine answers "uci"; a match runner answers --version."""
+    try:
+        if is_engine:
+            out = subprocess.run([path], input="uci\nquit\n", capture_output=True,
+                                 text=True, timeout=10).stdout
+            for line in out.splitlines():
+                if line.startswith("id name "):
+                    return line[8:].strip()
+            return "unknown"
+        out = subprocess.run([path, "--version"], capture_output=True,
+                             text=True, timeout=10)
+        return (out.stdout + out.stderr).strip().splitlines()[0]
+    except Exception:
+        return "unknown"
+
 
 # c-chess-cli prints a running score line; fastchess prints a block at the end
 CCC_SCORE = re.compile(r"^Score of (.+?) vs (.+?): (\d+) - (\d+) - (\d+)")
@@ -111,6 +185,7 @@ class Runner:
                 "-rounds", str(max(1, games // 2)), "-repeat",
                 "-openings", f"file={book}", "format=epd", "order=sequential",
                 "-concurrency", str(concurrency),
+                "-autosaveinterval", "0",
             ]
             if pgn:
                 cmd += ["-pgnout", f"file={pgn}", "notation=san"]
@@ -163,7 +238,12 @@ class Runner:
 
 def run_match(runner, *args):
     cmd = runner.build(*args)
-    res = subprocess.run(cmd, capture_output=True, text=True)
+    # run from tests/ rather than from wherever the user is standing.  fastchess
+    # drops a resume file into its working directory whatever you tell it, and
+    # -config is a *load* directive that will happily clobber the engine setup
+    # if you try to use it to redirect the write.  every path handed to the
+    # runner is absolute, so the working directory is free to be chosen
+    res = subprocess.run(cmd, capture_output=True, text=True, cwd=TESTS)
     return runner.parse(res.stdout + res.stderr)
 
 
@@ -188,11 +268,16 @@ def report(level, label, w, l, d, reported, ptnml, timelosses):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cli", default=os.environ.get("MATCH_CLI", "fastchess"),
-                    help="fastchess or c-chess-cli; the runner is inferred")
-    ap.add_argument("--sf", default=os.environ.get("SF", "stockfish"))
-    ap.add_argument("--uci", default="./uci")
-    ap.add_argument("--book", default="book.epd")
+    ap.add_argument("--cli", default=os.environ.get("MATCH_CLI"),
+                    help="fastchess or c-chess-cli; found automatically if omitted")
+    ap.add_argument("--sf", default=os.environ.get("SF"))
+    ap.add_argument("--which", action="store_true",
+                    help="report the tools found, with versions, and exit")
+    # relative to this script rather than to the shell's cwd, so the whole
+    # thing runs from anywhere.  the absolute path also tells both runners
+    # which directory to start the engine in
+    ap.add_argument("--uci", default=str(TESTS / "uci"))
+    ap.add_argument("--book", default=str(TESTS / "book.epd"))
     ap.add_argument("--games", type=int, default=256)
     ap.add_argument("--concurrency", type=int, default=os.cpu_count() or 4)
     ap.add_argument("--levels", default="1,2,3,4")
@@ -209,13 +294,36 @@ def main():
     def ints(csv):
         return [int(x) for x in csv.split(",") if x.strip()]
 
-    runner = Runner(args.cli)
+    cli = find_runner(args.cli)
+    sf = find_tool("stockfish", args.sf)
+
+    if args.which:
+        for label, path, engine in (("match runner", cli, False),
+                                    ("stockfish", sf, True)):
+            if path:
+                print(f"{label:>13}: {path}\n{'':>13}  {tool_version(path, engine)}")
+            else:
+                print(f"{label:>13}: NOT FOUND")
+        print(f"{'engine':>13}: {args.uci} "
+              f"{'(built)' if Path(args.uci).exists() else '(run: make uci)'}")
+        print(f"{'book':>13}: {args.book} "
+              f"{'(present)' if Path(args.book).exists() else '(MISSING)'}")
+        return
+
+    if not cli or not sf:
+        missing = [n for n, p in (("a match runner", cli), ("stockfish", sf)) if not p]
+        sys.exit(f"could not find {' and '.join(missing)}.{INSTALL_HELP}")
+
+    runner = Runner(cli)
     sf_common = ["option.Threads=1", "option.Hash=16"]
     levels = ints(args.levels)
     nodes = ints(args.nodes)
 
-    print(f"runner: {os.path.basename(args.cli)}"
-          f"{' (pentanomial intervals)' if runner.fastchess else ''}")
+    # the versions belong with the numbers: a figure is only reproducible
+    # against the same opponent that produced it
+    print(f"runner: {os.path.basename(cli)} - {tool_version(cli)}"
+          f"{'  (pentanomial intervals)' if runner.fastchess else ''}")
+    print(f"opponent: {tool_version(sf, True)}")
 
     if nodes:
         print(f"{args.games} games a pairing, {args.book}, "
@@ -227,13 +335,15 @@ def main():
             for n in nodes:
                 pgn = None
                 if args.pgn_dir:
-                    os.makedirs(args.pgn_dir, exist_ok=True)
-                    pgn = os.path.join(args.pgn_dir, f"L{level}-sf{n}.pgn")
+                    # absolute, because the runner is started in tests/
+                    pgn_dir = Path(args.pgn_dir).resolve()
+                    pgn_dir.mkdir(parents=True, exist_ok=True)
+                    pgn = str(pgn_dir / f"L{level}-sf{n}.pgn")
 
                 report(level, f"SF nodes={n}", *run_match(
                     runner,
                     args.uci, [f"name=cc65-L{level}", f"option.Skill={level}"],
-                    args.sf, [f"name=SF-n{n}", f"nodes={n}"] + sf_common,
+                    sf, [f"name=SF-n{n}", f"nodes={n}"] + sf_common,
                     args.games, args.book, args.concurrency, pgn))
             print()
 
@@ -251,7 +361,7 @@ def main():
                 report(level, f"SF Elo {rating}", *run_match(
                     runner,
                     args.uci, [f"name=cc65-L{level}", f"option.Skill={level}"],
-                    args.sf, [f"name=SF-{rating}", f"tc={args.anchor_tc}",
+                    sf, [f"name=SF-{rating}", f"tc={args.anchor_tc}",
                               "option.UCI_LimitStrength=true",
                               f"option.UCI_Elo={rating}"] + sf_common,
                     args.anchor_games, args.book, args.concurrency, None))

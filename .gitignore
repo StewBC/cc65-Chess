@@ -16,8 +16,12 @@
 *.prg
 *.o
 
-# fastchess writes its resume state next to the engines
+# fastchess drops a resume file wherever it is invoked.  the gauntlet disables
+# it, but a hand-run match will still leave one
+/config.json
 /tests/config.json
 
-# match runners and reference engines: fetched locally, never vendored
-/tools/
+# match runners and reference engines: fetched locally, never vendored.
+# the README explaining what belongs here is the one thing that is tracked
+/tools/*
+!/tools/README.md
