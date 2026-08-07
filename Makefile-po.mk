@@ -1,17 +1,23 @@
 NAME = chess
 PO = $(NAME).po
 
-CA ?= cadius
+CA ?= cadius-145
 
-# Unix or Windows
-ifeq ($(shell echo),)
-	CP = cp $1
-	MV = mv
-	RM = rm
+# 1. ROBUST SHELL DETECTION
+# Check if GNU Make is routing commands through a Unix shell (like sh.exe or bash)
+ifneq ($(findstring sh,$(SHELL)),)
+    # Unix Shell environment (Linux, macOS, WSL, or Windows via Git Bash / MSYS / sh.exe)
+    CP = cp $1
+    MV = mv
+    RM = rm -f
+    # Set this to stop Unix shells on Windows from mangling ProDOS paths
+    NO_CONV = MSYS_NO_PATHCONV=1
 else
-	CP = copy $(subst /,\,$1)
-	MV = ren
-	RM = del
+    # Pure Windows Native Shell (CMD or PowerShell without sh.exe in %PATH%)
+    CP = copy $(subst /,\,$1)
+    MV = ren
+    RM = del /Q
+    NO_CONV =
 endif
 
 REMOVES += $(PO)
@@ -24,8 +30,9 @@ $(NAME).system:
 
 $(PO): $(PROGRAM).apple2 $(NAME).system
 	$(call CP, apple2/template.po $@)
-	$(MV) $(PROGRAM).apple2 $(NAME)#060803
-	$(CA) addfile $(NAME).po /$(subst -,.,$(PROGRAM)) $(NAME).system#FF2000
-	$(CA) addfile $(NAME).po /$(subst -,.,$(PROGRAM)) $(NAME)#060803
+	$(call CP, $(PROGRAM).apple2 $(NAME)#060803)
+	# Always use an explicit forward slash '/' for ProDOS.
+	$(NO_CONV) $(CA) addfile $(NAME).po /$(subst -,.,$(PROGRAM)) $(NAME).system#FF2000
+	$(NO_CONV) $(CA) addfile $(NAME).po /$(subst -,.,$(PROGRAM)) $(NAME)#060803
 	$(RM) $(NAME).system#FF2000
 	$(RM) $(NAME)#060803
