@@ -1,7 +1,23 @@
 # cc65 Chess — Engine Rework Plan
 
-A working document. Each item below starts with a checkbox: `[ ]` not done, `[X]` done.
-Tick items as they land. Phases are ordered by dependency, not by importance.
+> **What this document is.** The working journal the engine rework was planned and run
+> from, written before the work started and updated as each phase landed. It is published
+> as-is rather than tidied into a report, because the interesting part is not the plan —
+> it is the places where a measurement arrived and demolished it.
+>
+> Read it for that. The hot path was predicted wrong and the prediction is still here with
+> the profile that killed it. A pin-set optimisation was designed, argued for, and then
+> dropped on evidence. Two evaluation terms were accepted on one measurement and removed on
+> a better one. An overflow that no test on a desktop could ever reproduce was found by
+> reading arithmetic against a 16-bit `int`. None of that was edited out.
+>
+> `doc/engine.md` describes the engine that came out of this and is the better starting
+> point if you want to understand the code. `doc/strength.md` measures how well it plays.
+> The durable rules distilled from the journal live in `AGENTS.md` at the repo root; this
+> file is the history, not the standing instructions.
+>
+> Checkboxes are as they stood when the work paused: `[ ]` not done, `[X]` done. Phases are
+> ordered by dependency, not by importance.
 
 Phase 1 ends in a deliberate review gate — the first real measurement of engine speed on
 8-bit hardware lands there, and several numbers in this document are expected to move as a
