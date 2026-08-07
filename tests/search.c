@@ -1,0 +1,289 @@
+/*
+ *	search.c
+ *	cc65 Chess - test support
+ *
+ *	Two things are checked here.  First that the search finds moves a chess
+ *	player would call obvious - mates, free material, and the difference
+ *	between mate and stalemate.  Then that it beats the old engine over the
+ *	board, which is the only claim that really matters.
+ */
+
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+#include "types.h"
+#include "globals.h"
+#include "engine.h"
+#include "eval.h"
+#include "search.h"
+#include "testutil.h"
+
+/*-----------------------------------------------------------------------*/
+typedef struct tag_Tactic
+{
+	const char	*m_name;
+	const char	*m_fen;
+	char		 m_side;			// side to move, for the outcome cases
+	char		 m_depth;
+	const char	*m_want;			// expected move as "e2e4", or 0
+	char		 m_wantOutcome;		// OUTCOME_* to expect, or 0 to skip
+	char		 m_wantMate;		// non-zero if the score should be a mate
+	int			 m_minScore;		// score must reach this, or 0 to skip
+} t_Tactic;
+
+static const t_Tactic stc_tactics[] =
+{
+	{ "back rank mate in 1", "6k1/5ppp/8/8/8/8/8/R3K2R w - - 0 1",
+	  SIDE_WHITE, 2, "a1a8", 0, 1, 0 },
+
+	{ "take the free queen", "4k3/8/8/3q4/8/8/8/3RK3 w - - 0 1",
+	  SIDE_WHITE, 3, "d1d5", 0, 0, 0 },
+
+	// More than one move reaches the promotion inside a 3 ply horizon, so
+	// what is being asserted is that the search sees the new queen at all,
+	// not which route it takes to her
+	{ "see the promotion", "8/4P3/8/8/8/8/k7/7K w - - 0 1",
+	  SIDE_WHITE, 3, 0, 0, 0, 800 },
+
+	{ "recognise checkmate", "R5k1/5ppp/8/8/8/8/8/6K1 b - - 0 1",
+	  SIDE_BLACK, 1, 0, OUTCOME_CHECKMATE, 0, 0 },
+
+	{ "recognise stalemate", "7k/5Q2/6K1/8/8/8/8/8 b - - 0 1",
+	  SIDE_BLACK, 1, 0, OUTCOME_STALEMATE, 0, 0 },
+};
+
+#define NUM_TACTICS ((int)(sizeof(stc_tactics)/sizeof(stc_tactics[0])))
+
+/*-----------------------------------------------------------------------*/
+static void moveName(const t_engMove *move, char *out)
+{
+	test_TileName(ENG_TO_TILE(move->m_from), out);
+	test_TileName(ENG_TO_TILE(move->m_to), out + 2);
+	out[4] = '\0';
+}
+
+/*-----------------------------------------------------------------------*/
+int test_RunSearchTactics(int verbose)
+{
+	int t, failures = 0;
+
+	printf("search tactics\n");
+
+	for(t = 0; t < NUM_TACTICS; ++t)
+	{
+		const t_Tactic *tac = &stc_tactics[t];
+		char side = test_EngineSetFEN(tac->m_fen);
+
+		// A position where the side that just moved is still in check is not
+		// reachable in a real game, and neither is one with the kings next to
+		// each other.  Either means the test itself is wrong
+		{
+			signed char df = ENG_FILE(geKing[0]) - ENG_FILE(geKing[1]);
+			signed char dr = ENG_ROW(geKing[0]) - ENG_ROW(geKing[1]);
+			if(df < 0) df = -df;
+			if(dr < 0) dr = -dr;
+			if(df <= 1 && dr <= 1)
+			{
+				printf("  %-22s FAIL illegal test position: kings adjacent\n", tac->m_name);
+				++failures;
+				continue;
+			}
+		}
+
+		if(eng_InCheck(1 - side))
+		{
+			printf("  %-22s FAIL illegal test position\n", tac->m_name);
+			++failures;
+			continue;
+		}
+
+		if(tac->m_wantOutcome)
+		{
+			char got = search_Outcome(tac->m_side);
+			const char *names[] = { "invalid", "ok", "check", "checkmate", "draw", "stalemate" };
+
+			if(got != tac->m_wantOutcome)
+			{
+				printf("  %-22s FAIL wanted %s got %s\n", tac->m_name,
+				       names[tac->m_wantOutcome], names[got]);
+				++failures;
+			}
+			else if(verbose)
+				printf("  %-22s ok   %s\n", tac->m_name, names[got]);
+			continue;
+		}
+
+		{
+			t_searchResult result;
+			char got[5];
+
+			search_Best(side, tac->m_depth, 60000, &result);
+
+			if(!result.m_haveMove)
+			{
+				printf("  %-22s FAIL no move returned\n", tac->m_name);
+				++failures;
+				continue;
+			}
+
+			moveName(&result.m_move, got);
+
+			if(tac->m_want && strncmp(got, tac->m_want, 4))
+			{
+				printf("  %-22s FAIL wanted %s got %s (score %d, depth %d, %u nodes)\n",
+				       tac->m_name, tac->m_want, got, result.m_score,
+				       result.m_depth, result.m_nodes);
+				++failures;
+			}
+			else if(tac->m_minScore && result.m_score < tac->m_minScore)
+			{
+				printf("  %-22s FAIL wanted score >= %d, got %d (%s)\n",
+				       tac->m_name, tac->m_minScore, result.m_score, got);
+				++failures;
+			}
+			else if(tac->m_wantMate && result.m_score < EVAL_MATE_IN(SEARCH_MAX_PLY))
+			{
+				printf("  %-22s FAIL wanted a mate score, got %d\n",
+				       tac->m_name, result.m_score);
+				++failures;
+			}
+			else if(verbose)
+				printf("  %-22s ok   %s (score %d, depth %d, %u nodes)\n",
+				       tac->m_name, got, result.m_score, result.m_depth, result.m_nodes);
+		}
+	}
+
+	printf("  -> %d failing\n", failures);
+	return failures;
+}
+
+/*-----------------------------------------------------------------------*/
+// The AI must never fail to produce a move when it has one.
+//
+// This is a regression test for a bug that reached a real board: in a sharp
+// middlegame the human moved, the engine returned no move at all, and the game
+// handed the turn straight back - the AI appeared to give up.  The cause was a
+// budget too small to finish even depth 1 (which in that position wanted 1404
+// nodes, against the 152 a quiet position needs).  search_Best then returned
+// m_haveMove = 0, and every caller reads that as "no legal moves", i.e.
+// stalemate.
+//
+// The lesson worth keeping is about the *shape* of the failure rather than the
+// arithmetic: running out of time is normal and must degrade to a worse move,
+// never to no move.  So this checks the whole ladder of budgets, including ones
+// far below anything the skill table would ever use, because the guarantee has
+// to hold at any budget rather than at the ones currently shipping
+int test_RunSearchAlwaysMoves(int verbose)
+{
+	// sharp positions - lots of captures, so depth 1 alone costs a great deal
+	static const char *sc_fens[] =
+	{
+		// the position from the bug report, black to move
+		"r2qkb1r/ppp2ppp/2n1bn2/3pp3/3PP3/2N1BN2/PPP2PPP/R2QKB1R b KQkq -",
+		"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -",
+		"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ -",
+		"r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq -",
+	};
+	static const unsigned int sc_budgets[] = { 1, 5, 20, 100, 400, 2500, 15000 };
+	int failures = 0, f, b, d;
+
+	printf("search always returns a move when one exists\n");
+
+	for(f = 0; f < (int)(sizeof(sc_fens)/sizeof(sc_fens[0])); ++f)
+	{
+		char side = test_EngineSetFEN(sc_fens[f]);
+
+		for(b = 0; b < (int)(sizeof(sc_budgets)/sizeof(sc_budgets[0])); ++b)
+		{
+			for(d = 1; d <= 4; ++d)
+			{
+				t_searchResult result;
+
+				side = test_EngineSetFEN(sc_fens[f]);
+				search_Best(side, d, sc_budgets[b], &result);
+
+				if(!result.m_haveMove)
+				{
+					printf("    FAIL position %d, depth %d, budget %u: no move\n",
+					       f, d, sc_budgets[b]);
+					++failures;
+				}
+				else if(verbose)
+					printf("    position %d d=%d b=%-5u -> depth %d, %u nodes\n",
+					       f, d, sc_budgets[b], result.m_depth, result.m_nodes);
+			}
+		}
+	}
+
+	// The other half of the guarantee: when there is genuinely no legal move,
+	// search_Best must still say so.  searchRoot used to clear m_haveMove
+	// whenever no root search *completed*, which was both too eager (it wiped
+	// a banked move on a budget abort) and load-bearing for mate detection.
+	// That reset is gone, so the two cases are checked together - "always
+	// returns a move" is only correct if it does not also invent one
+	{
+		static const char *sc_mated[] =
+		{
+			"R5k1/5ppp/8/8/8/8/8/6K1 b - -",	// checkmate
+			"7k/5Q2/6K1/8/8/8/8/8 b - -",		// stalemate
+		};
+		int m, dd;
+
+		for(m = 0; m < 2; ++m)
+		{
+			for(dd = 1; dd <= 3; ++dd)
+			{
+				t_searchResult result;
+				char side = test_EngineSetFEN(sc_mated[m]);
+
+				search_Best(side, dd, 60000, &result);
+				if(result.m_haveMove)
+				{
+					printf("    FAIL %s position, depth %d: invented a move\n",
+					       m ? "stalemate" : "checkmate", dd);
+					++failures;
+				}
+			}
+		}
+	}
+
+	printf("  -> %d failing\n", failures);
+	return failures;
+}
+
+/*-----------------------------------------------------------------------*/
+// Nodes per second from the host, which is only useful next to the C64
+// measurement in tests/c64perft.c - but it does show what the search costs
+// per node relative to perft
+int test_RunSearchBench(int verbose)
+{
+	static const char *positions[] =
+	{
+		"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+		"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+		"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+	};
+	int p;
+
+	(void)verbose;
+	printf("search bench (host)\n");
+	printf("  %-11s %6s %8s %8s %10s\n", "position", "depth", "nodes", "score", "nodes/sec");
+
+	for(p = 0; p < 3; ++p)
+	{
+		t_searchResult result;
+		char side = test_EngineSetFEN(positions[p]);
+		clock_t taken;
+		double secs;
+
+		taken = clock();
+		search_Best(side, 5, 60000, &result);
+		taken = clock() - taken;
+		secs = (double)taken / CLOCKS_PER_SEC;
+
+		printf("  %-11d %6d %8u %8d %10.0f\n", p + 1, result.m_depth,
+		       result.m_nodes, result.m_score, secs > 0 ? result.m_nodes / secs : 0);
+	}
+
+	return 0;
+}

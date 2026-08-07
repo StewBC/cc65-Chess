@@ -18,7 +18,6 @@
 #define SIDE_WHITE			1
 #define USER_BLACK			1
 #define USER_WHITE			2
-#define NUM_PIECES_SIDE		16
 #define MAX_PIECE_MOVES		28
 #define NULL_TILE			128
 #define NUM_MOVES_TO_DRAW	50
@@ -31,12 +30,9 @@
 #define HCOLOR_SELECTED		6
 #define HCOLOR_ATTACK		3
 
-#define ATTACK_WIDTH		(2+2*NUM_PIECES_SIDE)
-#define ATTACK_WHITE_OFFSET 17
-
+// PIECE_MOVED is gone: castling rights are a bit mask in the engine now, and
+// pawn double-steps are decided by rank
 #define PIECE_WHITE			SET_BIT(7)
-#define PIECE_MOVED			SET_BIT(6)
-#define PIECE_EXTRA_DATA	(PIECE_WHITE | PIECE_MOVED)
 #define PIECE_DATA			(SET_BIT(0) | SET_BIT(1) | SET_BIT(2))
 
 #define INPUT_UP			SET_BIT(0)
@@ -54,13 +50,6 @@
 #define INPUT_UNDOREDO		(INPUT_UNDO | INPUT_REDO)
 #define INPUT_MOTION		(INPUT_UP | INPUT_RIGHT | INPUT_DOWN | INPUT_LEFT)
 #define INPUT_TOGGLE		(INPUT_TOGGLE_A | INPUT_TOGGLE_B | INPUT_TOGGLE_D)
-
-#define PAWN_PROMOTE		SET_BIT(1)
-#define PAWN_ENPASSANT		SET_BIT(4)
-
-#define ENPASSANT_TAKE		0
-#define ENPASSANT_UNTAKE	1
-#define ENPASSANT_MAYBE		2
 
 #define OUTCOME_MASK		0x07
 

@@ -33,24 +33,13 @@ int main()
 /*-----------------------------------------------------------------------*/
 void init()
 {
-	char i;
-	int offset;
 	
 	// Init the global variables that aren't initialized anywhere else
 	// (mostly other *_Init() functions, or in mainLoop)
-	gEPPawn = gTile[0] = gTile[1] = gTile[2] = gTile[3] = NULL_TILE;
-	gLogStrBuffer[6] = gShowAttacks[0] = gShowAttacks[1] = gShowAttackBoard = gNumMoves = gPiece[0] = gPiece[1] = gOutcome = gMove[0] = gMove[1] = gColor[0] = gColor[1] = gAI = 0;
-
-	// Init the lookup table for ecery piece on the board to
-	// look up directly in gPAttackBoard how many attackers/defender
-	// there are for the tile, and what tiles they may be
-	offset = 0;
-	for(i=0; i<64; ++i)
-	{
-		giAttackBoardOffset[i][0] = offset;
-		giAttackBoardOffset[i][1] = offset+ATTACK_WHITE_OFFSET;
-		offset += ATTACK_WIDTH;
-	}
+	gTile[0] = gTile[1] = NULL_TILE;
+	gLogStrBuffer[6] = gShowAttacks[0] = gShowAttacks[1] = gShowAttackBoard =
+		gPiece[0] = gPiece[1] = gOutcome = gColor[0] = gColor[1] = 0;
+	gSkillLevel = 0;
 
 	plat_Init();
 }
@@ -67,7 +56,6 @@ void mainLoop()
 		undo_Init();
 		plat_DrawBoard(1);
 		
-		gMoveCounter = 0;
 		gUserMode = 0;
 		activeGame = 0;
 		sideToGo = SIDE_WHITE;

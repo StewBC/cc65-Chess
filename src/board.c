@@ -6,785 +6,197 @@
  *
  */
 
-#include <stdlib.h>
-#include <string.h>
 #include "types.h"
 #include "globals.h"
+#include "engine.h"
+#include "search.h"
+#include "undo.h"
 #include "board.h"
-#include "frontend.h"
-#include "plat.h"
 
 /*-----------------------------------------------------------------------*/
-void board_LoadMoves(char x, char y, char dx, char dy, char n, char addDefenceMove);
-void board_GenPawnMoves(char position, char color, char addDefenceMove);
-void board_GenRookMoves(char position, char addDefenceMove);
-void board_GenKnightMoves(char position, char addDefenceMove);
-void board_GenBishopMoves(char position, char addDefenceMove);
-void board_GenKingMoves(char position, char addDefenceMove);
-void board_GenQueenMoves(char position, char addDefenceMove);
-char board_CheckLineAttack(char t1, char t2, char side);
-void board_UpdateAttackGrid(int offset, char side);
+char	gMoveTiles[MAX_PIECE_MOVES];
+char	gNumMoveTiles;
+
+// Scratch for one square's attackers.  A side can never have more than its
+// sixteen pieces bearing on one tile
+static char	sc_attackers[16];
 
 /*-----------------------------------------------------------------------*/
-// board_UpdateAttackGrid may add entries (behind the king in a line
-// attack, for example) and these variables track those changes so they
-// can easily be undone.
-// Worst case is 2 entries for each of the 8 pawns, plus the tiles that get
-// revealed behind the king by each attacker.  There can be 2 attackers (a
-// double check) and a full-length line can reveal 7 tiles
-static int	si_fixupTable[(8*2)+(2*7)];
-static char sc_numFixes;
-
-/*-----------------------------------------------------------------------*/
-void board_Init()
+void board_Init(void)
 {
-	char i;
-	
-	memset(gpChessBoard,NONE,8*8*sizeof(char));
-				
-	gChessBoard[0][0] = gChessBoard[7][0] = ROOK;
-	gChessBoard[0][1] = gChessBoard[7][1] = KNIGHT;
-	gChessBoard[0][2] = gChessBoard[7][2] = BISHOP;
-	gChessBoard[0][3] = gChessBoard[7][3] = QUEEN;
-	gChessBoard[0][4] = gChessBoard[7][4] = KING;
-	gChessBoard[0][5] = gChessBoard[7][5] = BISHOP;
-	gChessBoard[0][6] = gChessBoard[7][6] = KNIGHT;
-	gChessBoard[0][7] = gChessBoard[7][7] = ROOK;
+	char tile;
 
-	for(i=0; i < 8; ++i)
+	for(tile = 0; tile < 64; ++tile)
 	{
-		gChessBoard[1][i] = PAWN;
-		gChessBoard[6][i] = PAWN | PIECE_WHITE;
-		gChessBoard[7][i] |= PIECE_WHITE;
+		giAttackBoardOffset[tile][SIDE_BLACK] = tile << 1;
+		giAttackBoardOffset[tile][SIDE_WHITE] = (tile << 1) + 1;
 	}
-	
-	gKingData[0] = MK_POS(0,4);
-	gKingData[1] = MK_POS(7,4);
+
+	eng_SetStartPosition();
 
 	// Not part of the board but does need resetting for every game
 	gCursorPos[SIDE_BLACK][1] = gCursorPos[SIDE_WHITE][1] = 4;
 	gCursorPos[SIDE_BLACK][0] = 0;
 	gCursorPos[SIDE_WHITE][0] = 7;
-	
-	board_PlacePieceAttacks();
+
+	gNumMoveTiles = 0;
+	board_SyncDisplay();
 }
 
 /*-----------------------------------------------------------------------*/
-// For every piece on the board, make entries in the attack db of what it
-// is attacking or defending
-void board_PlacePieceAttacks()
+char board_AttackersOf(char tile, char side, char *tiles)
 {
-	char i, j, piece;
+	char count = eng_AttackersOf(ENG_FROM_TILE(tile), side, tiles), i;
 
-	memset(gpAttackBoard,0,8*8*ATTACK_WIDTH);
+	// hand them back in the tile numbers the display works in
+	for(i = 0; i < count; ++i)
+		tiles[i] = ENG_TO_TILE(tiles[i]);
 
-	for(i=0; i<64; ++i)
+	return count;
+}
+
+/*-----------------------------------------------------------------------*/
+// Only done when the whole-board display is on, because it is 128 ray-casts
+// and there is no reason to pay for it otherwise
+static void board_RefreshAttackCounts(void)
+{
+	char tile, sq;
+
+	for(tile = 0; tile < 64; ++tile)
 	{
-		piece = gpChessBoard[i];
-		if(piece != NONE)
-		{
-			char color = (piece & PIECE_WHITE) >> 7;
-			board_GeneratePossibleMoves(i, 1);
-			if(gNumMoves)
-			{
-				for(j=0; j<gNumMoves; ++j)
-				{
-					int offset = giAttackBoardOffset[gPossibleMoves[j]][color];
-					char attackers = gpAttackBoard[offset];
-					gpAttackBoard[offset+1+attackers] = i;
-					++gpAttackBoard[offset];
-				}
-			}
-		}
+		sq = ENG_FROM_TILE(tile);
+		gpAttackBoard[giAttackBoardOffset[tile][SIDE_BLACK]] =
+			eng_AttackersOf(sq, SIDE_BLACK, sc_attackers);
+		gpAttackBoard[giAttackBoardOffset[tile][SIDE_WHITE]] =
+			eng_AttackersOf(sq, SIDE_WHITE, sc_attackers);
 	}
 }
 
 /*-----------------------------------------------------------------------*/
-// For straight-moving pieces, add open tiles or tiles that meet the
-// inclusion criteria to the gPossibleMoves buffer
-void board_LoadMoves(char x, char y, char dx, char dy, char n, char addDefenceMove)
+void board_SyncDisplay(void)
 {
-	char piece, /*color,*/ my_color = gChessBoard[y][x] & PIECE_WHITE;
+	char sq, tile;
 
-	do
+	for(sq = 0; sq < 0x78; ++sq)
 	{
-		x += dx;
-		y += dy;
-		--n;
-		// Don't go over the edge of the board.	 
-		// Unsigned char will wrap at -1 to 255
-		if(x > 7 || y > 7)
-			break;
-
-		piece = gChessBoard[y][x];
-		// color = piece & PIECE_WHITE;
-		// piece &= PIECE_DATA;
-
-		if(NONE == piece || addDefenceMove || my_color != (piece & PIECE_WHITE))
-			gPossibleMoves[gNumMoves++] = MK_POS(y,x);
-
-		// any non-emty tiles ends the scan
-		if(NONE != piece)
-			break;
-			
-	} while(n);
-}
-
-/*-----------------------------------------------------------------------*/
-// position is a tile number 0..63.	 If there's a piece on the tile,
-// it's available moves will be placed in gPossibleMoves.  if 
-// addDefenceMove is non-zero, moves onto friendly pieces and moves
-// by PAWNS to capture are allso added (defence and pawn-take)
-void board_GeneratePossibleMoves(char position, char addDefenceMove)
-{
-	char piece, color;
-
-	// Reset the global counter - used as an index into the
-	// global buffer for tracking moves for a piece
-	gNumMoves = 0;
-
-	piece = gpChessBoard[position];
-	color = (piece & PIECE_WHITE) >> 7;
-	piece &= PIECE_DATA;
-
-	// Call the piece-specific function to generate the list
-	// for the piece at tile "position"
-	switch(piece)
-	{
-		case PAWN:
-		board_GenPawnMoves(position, color, addDefenceMove);
-		break;
-		
-		case ROOK:
-		board_GenRookMoves(position, addDefenceMove);
-		break;
-
-		case KNIGHT:
-		board_GenKnightMoves(position, addDefenceMove);
-		break;
-
-		case BISHOP:
-		board_GenBishopMoves(position, addDefenceMove);
-		break;
-
-		case KING:
-		board_GenKingMoves(position, addDefenceMove);
-		break;
-
-		case QUEEN:
-		board_GenQueenMoves(position, addDefenceMove);
-		break;
-	}
-}
-
-/*-----------------------------------------------------------------------*/
-void board_GenPawnMoves(char position, char sideColor, char addDefenceMove)
-{
-	const signed char cap_x[2] = {-1, 1};
-	char i, nx, piece, color, y = position / 8, x = position & 7;
-	signed char d = sideColor ? -1 : 1;
-	
-	if(y == 0 || y == 7)
-		return;
-	
-	// if addDefenceMove is true, the move forward of a pawn isn't added
-	// becase a pawn doesn't "defend" the next square in that it can't
-	// take the piece there
-	if(!addDefenceMove && NONE == gChessBoard[y+d][x])
-	{
-		gPossibleMoves[gNumMoves++] = MK_POS(y+d,x);
-		if(((sideColor && y == 6) || (!sideColor && y == 1)) && NONE == gChessBoard[y+(2*d)][x])
-			gPossibleMoves[gNumMoves++] = MK_POS(y+(2*d),x);
-	}
-	
-	for(i=0; i<2; ++i)
-	{
-		nx = x + cap_x[i];
-		if(nx > 7)
+		if(ENG_OFFBOARD(sq))
 			continue;
 
-		position = MK_POS(y+d,nx);
-		
-		if(gEPPawn != position)
-		{
-			// Read the piece from the chessboard
-			piece = gChessBoard[y+d][nx];
-			color = (piece & PIECE_WHITE) >> 7;
-			piece &= PIECE_DATA;
-		}
-		else
-		{
-			// Create a fake piece to represent the en passant pawn
-			piece = PAWN;
-			color = 1 - sideColor;
-		}
-	
-		if(addDefenceMove || (NONE != piece && color != sideColor))
-			gPossibleMoves[gNumMoves++] = position;
+		tile = ENG_TO_TILE(sq);
+		gChessBoard[tile >> 3][tile & 7] = geBoard[sq];
+	}
+
+	if(gShowAttackBoard)
+		board_RefreshAttackCounts();
+}
+
+/*-----------------------------------------------------------------------*/
+// Legal, not pseudo-legal: a move that leaves the king in check is not shown
+// to the player as an option at all, so there is no "Invalid" to report any
+// more.  A promotion collapses to a single destination here - which piece it
+// becomes is asked separately
+void board_LegalMovesFrom(char tile)
+{
+	t_engMove moves[MAX_PIECE_MOVES + 4];
+	t_engUndo undo;
+	char from = ENG_FROM_TILE(tile);
+	char piece = geBoard[from];
+	char side, count, i;
+
+	gNumMoveTiles = 0;
+
+	if(NONE == (piece & PIECE_DATA))
+		return;
+
+	side = (piece & PIECE_WHITE) >> 7;
+	count = eng_GenMovesFrom(from, side, moves, MAX_PIECE_MOVES + 4);
+
+	for(i = 0; i < count; ++i)
+	{
+		char to;
+
+		eng_Make(&moves[i], &undo);
+		to = eng_IsAttacked(geKing[side], 1 - side) ? NULL_TILE : ENG_TO_TILE(moves[i].m_to);
+		eng_Unmake(&moves[i], &undo);
+
+		if(NULL_TILE == to)
+			continue;
+
+		// the four promotions share one destination
+		if(!board_findInList(gMoveTiles, gNumMoveTiles, to) &&
+		   gNumMoveTiles < MAX_PIECE_MOVES)
+			gMoveTiles[gNumMoveTiles++] = to;
 	}
 }
 
 /*-----------------------------------------------------------------------*/
-void board_GenRookMoves(char position, char addDefenceMove)
+char board_IsPromotion(char fromTile, char toTile)
 {
-	char y = position / 8, x = position & 7;
+	t_engMove moves[MAX_PIECE_MOVES + 4];
+	char from = ENG_FROM_TILE(fromTile), to = ENG_FROM_TILE(toTile);
+	char piece = geBoard[from];
+	char count, i;
 
-	board_LoadMoves(x, y, -1,  0, 8, addDefenceMove);
-	board_LoadMoves(x, y,  0, -1, 8, addDefenceMove);
-	board_LoadMoves(x, y,  1,  0, 8, addDefenceMove);
-	board_LoadMoves(x, y,  0,  1, 8, addDefenceMove);
+	if(PAWN != (piece & PIECE_DATA))
+		return 0;
+
+	count = eng_GenMovesFrom(from, (piece & PIECE_WHITE) >> 7, moves, MAX_PIECE_MOVES + 4);
+	for(i = 0; i < count; ++i)
+		if(moves[i].m_to == to && (moves[i].m_flags & ENG_MF_PROMO))
+			return 1;
+
+	return 0;
 }
 
 /*-----------------------------------------------------------------------*/
-void board_GenKnightMoves(char position, char addDefenceMove)
+char board_FindMove(char fromTile, char toTile, char promote, t_engMove *move)
 {
-	char y = position / 8, x = position & 7;
-	
-	board_LoadMoves(x, y, -2, -1, 1, addDefenceMove);
-	board_LoadMoves(x, y, -1, -2, 1, addDefenceMove);
-	board_LoadMoves(x, y,  1, -2, 1, addDefenceMove);
-	board_LoadMoves(x, y,  2, -1, 1, addDefenceMove);
-	board_LoadMoves(x, y,  2,  1, 1, addDefenceMove);
-	board_LoadMoves(x, y,  1,  2, 1, addDefenceMove);
-	board_LoadMoves(x, y, -1,  2, 1, addDefenceMove);
-	board_LoadMoves(x, y, -2,  1, 1, addDefenceMove);
+	t_engMove moves[MAX_PIECE_MOVES + 4];
+	char from = ENG_FROM_TILE(fromTile), to = ENG_FROM_TILE(toTile);
+	char piece = geBoard[from];
+	char count, i;
+
+	if(NONE == (piece & PIECE_DATA))
+		return 0;
+
+	count = eng_GenMovesFrom(from, (piece & PIECE_WHITE) >> 7, moves, MAX_PIECE_MOVES + 4);
+
+	for(i = 0; i < count; ++i)
+	{
+		if(moves[i].m_from != from || moves[i].m_to != to)
+			continue;
+		if((moves[i].m_flags & ENG_MF_PROMO) && promote != (moves[i].m_flags & ENG_MF_PROMO))
+			continue;
+
+		*move = moves[i];
+		return 1;
+	}
+
+	return 0;
 }
 
 /*-----------------------------------------------------------------------*/
-void board_GenBishopMoves(char position, char addDefenceMove)
+char board_ApplyMove(const t_engMove *move, char side)
 {
-	char y = position / 8, x = position & 7;
-	
-	board_LoadMoves(x, y, -1, -1, 8, addDefenceMove);
-	board_LoadMoves(x, y,  1, -1, 8, addDefenceMove);
-	board_LoadMoves(x, y,  1,  1, 8, addDefenceMove);
-	board_LoadMoves(x, y, -1,  1, 8, addDefenceMove);
-}
+	t_engUndo undo;
+	char outcome, other = 1 - side;
 
-/*-----------------------------------------------------------------------*/
-void board_GenKingMoves(char position, char addDefenceMove)
-{
-	char okayToCastle[2] = {0,0}, y = position / 8, x = position & 7;
+	eng_Make(move, &undo);
 
-	// Casteling is a move, it is never an attack or a defence, so it must not
-	// be generated while the attack DB is being built (addDefenceMove).  If it
-	// is, the king ends up listed as covering tiles 2 files away that it can
-	// never actually reach.
-	// If the king hasn't moved (| PIECE_MOVED == 0)
-	if(!addDefenceMove && KING == (gpChessBoard[position] & (PIECE_DATA | PIECE_MOVED)))
+	// Check, mate and stalemate all come out of one question now: does the
+	// other side have a legal move, and is it in check
+	outcome = search_Outcome(other);
+
+	if(OUTCOME_OK == outcome)
 	{
-		// Offset of the enemy's attacks on the king's own tile.  Neighbouring
-		// tiles sit exactly ATTACK_WIDTH apart in the DB, so the tiles the king
-		// would cross are reached without another giAttackBoardOffset lookup
-		char *king = &gpChessBoard[position];
-		int offset = giAttackBoardOffset[position][1 - ((*king & PIECE_WHITE) >> 7)];
-
-		// A king may not castle out of check.  The rook needs no color test -
-		// a rook of the other side could only have got to the corner by moving,
-		// which sets PIECE_MOVED and so already fails the ROOK == test below.
-		// NONE is 0 so the tiles in between are OR'ed to test them in one go
-		if(!gpAttackBoard[offset])
-		{
-			// and the rook hasn't moved
-			if(ROOK == (king[-4] & (PIECE_DATA | PIECE_MOVED)))
-			{
-				// The 3 tiles between the king and the rook must be empty, and
-				// the king may not cross a tile that is under attack.  The tile
-				// the king lands on is checked by board_ProcessAction
-				if(NONE == (king[-1] | king[-2] | king[-3]) &&
-				   !gpAttackBoard[offset-ATTACK_WIDTH])
-					okayToCastle[0] = 1;
-			}
-
-			if(ROOK == (king[3] & (PIECE_DATA | PIECE_MOVED)))
-			{
-				// on this side, 2 open tiles is all that's needed
-				if(NONE == (king[1] | king[2]) &&
-				   !gpAttackBoard[offset+ATTACK_WIDTH])
-					okayToCastle[1] = 1;
-			}
-		}
-	}
-
-	if(okayToCastle[0])
-		board_LoadMoves(x, y, -2,  0, 1, addDefenceMove);
-		
-	if(okayToCastle[1])
-		board_LoadMoves(x, y,  2,  0, 1, addDefenceMove);
-		
-	board_LoadMoves(x, y, -1,  0, 1, addDefenceMove);
-	board_LoadMoves(x, y, -1, -1, 1, addDefenceMove);
-	board_LoadMoves(x, y,  0, -1, 1, addDefenceMove);
-	board_LoadMoves(x, y,  1, -1, 1, addDefenceMove);
-	board_LoadMoves(x, y,  1,  0, 1, addDefenceMove);
-	board_LoadMoves(x, y,  1,  1, 1, addDefenceMove);
-	board_LoadMoves(x, y,  0,  1, 1, addDefenceMove);
-	board_LoadMoves(x, y, -1,  1, 1, addDefenceMove);
-}
-
-/*-----------------------------------------------------------------------*/
-void board_GenQueenMoves(char position, char addDefenceMove)
-{
-	char y = position / 8, x = position & 7;
-	
-	board_LoadMoves(x, y, -1,  0, 8, addDefenceMove);
-	board_LoadMoves(x, y, -1, -1, 8, addDefenceMove);
-	board_LoadMoves(x, y,  0, -1, 8, addDefenceMove);
-	board_LoadMoves(x, y,  1, -1, 8, addDefenceMove);
-	board_LoadMoves(x, y,  1,  0, 8, addDefenceMove);
-	board_LoadMoves(x, y,  1,  1, 8, addDefenceMove);
-	board_LoadMoves(x, y,  0,  1, 8, addDefenceMove);
-	board_LoadMoves(x, y, -1,  1, 8, addDefenceMove);
-}
-
-/*-----------------------------------------------------------------------*/
-// This is the function that will move pieces from gTile[0] to gTile[1]
-// if the move is valid.  It will make sure pieces dont' do illegal moves
-char board_ProcessAction(void)
-{
-	// Get the king's tile and an offset to the king's attackers
-	char kingTile = gKingData[gColor[0]];
-
-	// gTile[2] and gTile[3] describe the extra piece movement this move causes
-	// (the rook when casteling, the taken pawn on en passant).  Clear them so
-	// that leftovers from a previous, or an abandoned, move can't be read as
-	// belonging to this move - undo_AddMove works out that a move was an en
-	// passant take purely from these two
-	gTile[2] = gTile[3] = NULL_TILE;
-
-	// If the king is moving onto a tile under attack the move is invalid
-	// Can't move into check
-	if(KING == gPiece[0] && gpAttackBoard[giAttackBoardOffset[gTile[1]][1-gColor[0]]])
-		return OUTCOME_INVALID;
-
-	if(KING == gPiece[0])
-	{
-		kingTile = gTile[1];
-		// See if the King is trying to castle
-		board_ProcessCastling(3, 2);
-	}
-	else if(PAWN == gPiece[0])
-	{
-		if(gEPPawn == gTile[1])
-			board_ProcessEnPassant(ENPASSANT_TAKE);
-		else if(gTile[1] < 8 || gTile[1] > 55)
-		{
-			if(!gAI)
-				gpChessBoard[gTile[0]] = frontend_GetPromotion() | (gpChessBoard[gTile[0]] & PIECE_EXTRA_DATA); 
-			else
-				gpChessBoard[gTile[0]] = QUEEN | (gpChessBoard[gTile[0]] & PIECE_EXTRA_DATA);	
-		}
-	}
-
-	// Make the move effective
-	gpChessBoard[gTile[1]] = gpChessBoard[gTile[0]];
-	gpChessBoard[gTile[0]] = NONE;
-	
-	// Recalculate the attack DB for the post-move board
-	board_PlacePieceAttacks();
-
-	// If the king is (still) under attack, the move isn't valid.  Can't move/leave king in check
-	if(gpAttackBoard[giAttackBoardOffset[kingTile][1-gColor[0]]])
-	{
-		// restore the board, incl. reversing a casteling move or unpromoting a pawn, etc.
-		gpChessBoard[gTile[0]] = gpChessBoard[gTile[1]];
-		gpChessBoard[gTile[1]] = gPiece[1] | (gColor[1] << 7) | gMove[1];
-		if(PAWN == gPiece[0])
-		{
-			if(gEPPawn == gTile[1])
-			{
-				// A pawn that can be taken en passant just made a double step
-				// so it has to go back with its moved bit set
-				gpChessBoard[gTile[2]] = PAWN | PIECE_MOVED | ((1-gColor[0]) ? PIECE_WHITE : 0);
-				gTile[2] = NULL_TILE;
-			}
-			else if(gTile[1] < 8 || gTile[1] > 55)
-				gpChessBoard[gTile[0]] = PAWN | (gpChessBoard[gTile[0]] & PIECE_EXTRA_DATA);
-		}
-		else if(KING == gPiece[0])
-			board_ProcessCastling(2, 3);
-		
-		// Set the attack DB back to how it was before the move was put into effect
-		board_PlacePieceAttacks();
-		// Regenerate the possible moves for the selected piece as it was destroyed by PlacePieceAttacks
-		board_GeneratePossibleMoves(gTile[0], 0);
-		
-		return OUTCOME_INVALID;
-	}
-
-	// Reset the en passant decoy at every move
-	gEPPawn = NULL_TILE;
-	
-	// Update the special king-tile-tracker
-	if(PAWN == gPiece[0])
-	{
-		if(!gMove[0])
-			board_ProcessEnPassant(ENPASSANT_MAYBE);
-	}
-	else if(KING == gPiece[0])
-		gKingData[gColor[0]] = gTile[1];
-	
-	// The move succeeded so mark the piece as having moved
-	gpChessBoard[gTile[1]] |= PIECE_MOVED;
-	
-	// If the opposing king is in check
-	if(gpAttackBoard[giAttackBoardOffset[gKingData[1-gColor[0]]][gColor[0]]])
-	{
-		// Check if that king is in check-mate
-		return board_CheckForMate(1-gColor[0]);
-	}
-	
-	return OUTCOME_OK;
-}
-
-/*-----------------------------------------------------------------------*/
-// Use Bresenham's algorithm to see what tiles lie
-// between the attacker and the king
-// not for use with a knight attacker
-char board_CheckLineAttack(char t1, char t2, char side)
-{
-	int offset;
-	signed char y1, x1, y2, x2, dx, dy, sx, sy, err, e2;
-	char piece, defenders;
-
-	y1 = t1 / 8;
-	x1 = t1 & 7;
-	y2 = t2 / 8;
-	x2 = t2 & 7;
-
-	dx = abs(x2-x1);
-	dy = abs(y2-y1);
-
-	if(x1 < x2)
-		sx = 1; 
-	else 
-		sx = -1;
-
-	if(y1 < y2)
-		sy = 1;
-	else
-		sy = -1;
-
-	err = dx - dy;
-
-	// for every block from the attacker to the king, consider
-	while(1)
-	{
-		if(x1 == x2 && y1 == y2)
-			break;
-
-		offset = giAttackBoardOffset[t1][side];
-
-		// How many of the king's pieces attack this block, and what is on the block
-		defenders = gpAttackBoard[offset];
-		piece = gpChessBoard[t1] & PIECE_DATA;
-
-		if(defenders)
-		{
-			char i;
-
-			// For every defender of the king, see if they can break the check-mate
-			for(i=1; i<=defenders; ++i)
-			{
-				// Who is defending and what tile is the defender on
-				char defTile = gpAttackBoard[offset+i];
-				char defPiece = gpChessBoard[defTile] & PIECE_DATA;
-				
-				if(PAWN == defPiece)
-				{
-					// see if the pawn is in a move or attack position relative to the 
-					// path of the attacker
-					char d1 = (defTile+8), d2 = (defTile-8);
-					
-					// If it's the path, not the attacker self
-					if(NONE == piece)
-					{
-						// if the pawn can move onto the path then it's not check-mate
-						if(d1 == t1 || d2 == t1)
-							return OUTCOME_CHECK;
-					}
-					else
-					{
-						// if it's the attacker itself and the pawn can take it, then
-						// it's not check-mate
-						if(d1 != t1 && d2 != t1)
-							return OUTCOME_CHECK;
-					}
-				}
-				// if the defender is the king and the code is here, it means
-				// the attacker has backup (or the code won't get here) and the 
-				// king can't take the attacker (because he would still be under attack).
-				// For any other defender, the defender can take the attacker and 
-				// it's not check-mate
-				else if(KING != defPiece)
-					return OUTCOME_CHECK;
-			}
-		}
-		
-		e2 = err << 1;
-		if(e2 > -dy) 
-		{
-			err = err - dy;
-			x1 = x1 + sx;
-		}
-		if(e2 <	 dx)
-		{
-			err = err + dx;
-			y1 = y1 + sy;
-		}
-		t1 = MK_POS(y1, x1);
-	}
-	
-	return OUTCOME_CHECKMATE;
-}	
-
-/*-----------------------------------------------------------------------*/
-// Make sure gAttackBoard has all the moves in it that's needed to determine a check-mate
-// Offset is in the attack DB for the attackers of the king on "side"
-void board_UpdateAttackGrid(int offset, char side)
-{
-	char i, j, piece, color, tile, king, attackers, numAttackers, *attackPieces;
-	
-	// Get a handle to the pieces that are attacking the king, causing check
-	numAttackers = gpAttackBoard[offset];
-	attackPieces = &gpAttackBoard[offset+1];
-
-	// Backup the king and remove him from the board
-	tile = gKingData[side];
-	king = gpChessBoard[tile];
-	gpChessBoard[tile] = NONE;
-
-	for(i=0; i<64; ++i)
-	{
-		piece = gpChessBoard[i];
-		if(piece != NONE)
-		{
-			color = (piece & PIECE_WHITE) >> 7;
-			piece &= PIECE_DATA;
-
-			// if the piece is one of the kings' pawns, now a move forward
-			// is also an "attack" (or a defensive move) that can cut the
-			// path from the attacker to the king, so add these moves
-			if(PAWN == piece && color == side)
-			{
-				signed char di, d = side ? -8 : 8;
-				
-				di = i+d;
-				if(di < 0 || di > 63)
-					continue;
-				
-				// Check the square in front of the pawn
-				if(NONE == gpChessBoard[di])
-				{
-					offset = giAttackBoardOffset[di][color];
-					attackers = gpAttackBoard[offset] + 1;
-					gpAttackBoard[offset+attackers] = i;
-					// Keep a log of all modifications so this can be "unwound" at the end
-					// to return gAttackBoard to the in-game state without re-generating from
-					// scratch
-					++gpAttackBoard[offset];
-					si_fixupTable[sc_numFixes++] = offset;
-
-					// and also 2 in front of, if the pawn hasn't moved yet
-					// if(((side && (i >= 48 && i <= 55)) || (!side && (i >= 8 && i <= 15))) && NONE == gpChessBoard[i+(2*d)])
-					if(!(gpChessBoard[i] & PIECE_MOVED) && NONE == gpChessBoard[i+(2*d)])
-					{
-						offset += (d*ATTACK_WIDTH);
-						attackers = gpAttackBoard[offset] + 1;
-						gpAttackBoard[offset+attackers] = i;
-						++gpAttackBoard[offset];
-						si_fixupTable[sc_numFixes++] = offset;
-					}
-				}
-			}
-			// If the piece is an enemy piece, and not a knight
-			else if(color != side && piece != KNIGHT)
-			{
-				// Is the piece directly attacking the king
-				if(board_findInList(attackPieces, numAttackers, i))
-				{
-					// Get a list of all blocks this piece is attacking -
-					// this list will include blocks "behind" the king, since
-					// the king has been removed
-					board_GeneratePossibleMoves(i, 1);
-					j = 0;
-					while(j < gNumMoves)
-					{
-						offset = giAttackBoardOffset[gPossibleMoves[j++]][color];
-						attackers = gpAttackBoard[offset];
-						// See if this tile has already been marked as being attacked by this piece
-						if(!board_findInList(&gpAttackBoard[offset+1], attackers, i))
-						{
-							// If not, mark it as being under attack from this piece -
-							// these are the tiles "behind" the king
-							si_fixupTable[sc_numFixes++] = offset;
-							++gpAttackBoard[offset++];
-							gpAttackBoard[offset+attackers] = i;
-						}
-					}
-				}
-			}
-		}
-	}
-
-	// Put the king back on the board
-	gpChessBoard[tile] = king;
-}
-
-/*-----------------------------------------------------------------------*/
-void board_ProcessEnPassant(char state)
-{
-	switch(state)
-	{
-		case ENPASSANT_TAKE:	// Take the pawn
-			if((gTile[0] & 7) < (gTile[1] & 7))
-				gTile[2] = gTile[0] + 1;
-			else
-				gTile[2] = gTile[0] - 1;
-
-			gpChessBoard[gTile[2]] = NONE;
-		break;
-
-		case ENPASSANT_UNTAKE:	// Reverse 1; Restore the pawn
-			if((gTile[0] & 7) < (gTile[1] & 7))
-				gTile[2] = gTile[0] + 1;
-			else
-				gTile[2] = gTile[0] - 1;
-
-			// The pawn being put back made a double step to become takeable
-			// en passant, so it has to keep its moved bit
-			gpChessBoard[gTile[2]] = PAWN | PIECE_MOVED | ((1-gColor[0]) ? PIECE_WHITE : 0);
-			gEPPawn = gTile[1];
-		break;
-			
-		case ENPASSANT_MAYBE:	// See if the move forwards creates an en passant opportunity
-		{
-			char x0 = (gTile[0] / 8), x1 = (gTile[1] / 8);
-		
-			if(x0 < x1)
-			{
-				if(x0 == x1 - 2)
-					gEPPawn = gTile[0] + 8;
-			}
-			else
-			{
-				if(x0 == x1 + 2)
-					gEPPawn = gTile[0] - 8;
-			}
-		}
-		break;
-	}
-}
-
-/*-----------------------------------------------------------------------*/
-// This moves the rook and marks its move bit if the king is moving
-// to cause a "casteling" move.
-// Can be called with the parameters reversed to undo the casteling, 
-// whcih also clears the move bit on the rook.
-void board_ProcessCastling(char a, char b)
-{
-	gTile[2] = gTile[3] = NULL_TILE;
-	
-	// If the king hasn't moved and is now moving
-	// 2 spaces, it's already known that the rook hasn't moved
-	// because that's the only way this shows up as
-	// a valid move, so no need to check the rook.	The reason
-	// to check the king is to make sure this is the
-	// first move for the king, otherwise this code should
-	// not do anything.
-	if(gTile[1] == gKingMovingTo[gColor[0]][0] && !gMove[0])
-	{
-		gTile[2] = gTile[1] - 2;
-		gTile[3] = gTile[1] + 1;
-	}
-	else if(gTile[1] == gKingMovingTo[gColor[0]][1] && !gMove[0])
-	{
-		gTile[2] = gTile[1] + 1;
-		gTile[3] = gTile[1] - 1;
-	}
-	
-	if(NULL_TILE != gTile[2])
-	{
-		gpChessBoard[gTile[a]] = gpChessBoard[gTile[b]];
-		if(a > b)
-			gpChessBoard[gTile[a]] |= PIECE_MOVED;
-		else
-			gpChessBoard[gTile[a]] &= ~PIECE_MOVED;
-			
-		gpChessBoard[gTile[b]] = NONE;
-	}
-}
-
-/*-----------------------------------------------------------------------*/
-// This is called to see if the king on "side" is in check-mate.
-// board_UpdateAttackGrid adds entries to the attack DB that have to come back
-// out again before this returns, so every way out of here goes through the
-// cleanup label - miss one and the attack DB stays inflated for the rest of
-// the turn, which throws off the display, the move validation and the AI
-char board_CheckForMate(char side)
-{
-	int offset;
-	char i, tile, other = 1-side, outcome = OUTCOME_CHECKMATE;
-
-	// Look at the king's attackers
-	tile = gKingData[side];
-	offset = giAttackBoardOffset[tile][other];
-
-	// Make gAttackBoard contain all needed attacks and defences
-	// to determine a check mate state
-	sc_numFixes = 0;
-	board_UpdateAttackGrid(offset, side);
-
-	// See where the king might hide
-	board_GeneratePossibleMoves(tile, 0);
-
-	// This also triggers if the attacker has no backup and the
-	// king can take it
-	for(i=0; i<gNumMoves; ++i)
-	{
-		offset = giAttackBoardOffset[gPossibleMoves[i]][other];
-		if(!gpAttackBoard[offset])
-		{
+		if(eng_InCheck(other))
 			outcome = OUTCOME_CHECK;
-			goto cleanup;
-		}
+		else if(geHalfmove >= (NUM_MOVES_TO_DRAW * 2))
+			outcome = OUTCOME_DRAW;
 	}
 
-	// Go back to the attackers of the king
-	offset = giAttackBoardOffset[tile][other];
-
-	// If there's more than one attacker then it's mate
-	if(gpAttackBoard[offset] > 1)
-		goto cleanup;
-
-	// There's only 1 attacker, so work with it
-	tile = gpAttackBoard[offset+1];
-
-	// Deal with a knight attacker here as there is no "interruptable path"
-	// between a horse attacker and the king
-	if(KNIGHT == (gpChessBoard[tile] & PIECE_DATA))
-	{
-		// Get an offset to the defenders ("attackers" on same side as king)
-		offset = giAttackBoardOffset[tile][side];
-
-		// See if the Horse can be taken by any defenders, otherwise it's mate
-		if(gpAttackBoard[offset])
-			outcome = OUTCOME_CHECK;
-
-		goto cleanup;
-	}
-
-	// See if the attacker can be eliminated or the path between the attacker
-	// and the king can be blocked
-	outcome = board_CheckLineAttack(tile, gKingData[side], side);
-
-cleanup:
-	// Clean up changes board_UpdateAttackGrid made to the attack DB
-	while(sc_numFixes)
-	{
-		--sc_numFixes;
-		--gpAttackBoard[si_fixupTable[sc_numFixes]];
-	}
+	undo_AddMove(move, &undo, side, outcome);
+	board_SyncDisplay();
 
 	return outcome;
 }

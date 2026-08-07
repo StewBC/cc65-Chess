@@ -4,4 +4,20 @@
 /Makefile.options
 /cc65-Chess*.*
 /chess.po
-/scratch
+/scratch/
+
+# native test binaries and their debug info
+/tests/chesstest
+/tests/uci
+/tests/genbook
+*.dSYM/
+
+# cc65 benchmark builds, and compiler leftovers
+*.prg
+*.o
+
+# fastchess writes its resume state next to the engines
+/tests/config.json
+
+# match runners and reference engines: fetched locally, never vendored
+/tools/

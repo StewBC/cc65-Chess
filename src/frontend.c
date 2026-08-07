@@ -8,6 +8,8 @@
 
 #include "types.h"
 #include "globals.h"
+#include "engine.h"
+#include "search.h"
 #include "plat.h"
 #include "frontend.h"
 
@@ -100,14 +102,10 @@ char frontend_Menu(char activeGame)
 			if(gUserMode != 3)
 			{
 				char skill = plat_Menu(gSkillMenu, MENU_HEIGHT, gszAbout);
+				// The three tuning knobs the old AI had are now one level,
+				// which picks a search depth and a node budget
 				if(skill)
-				{
-					skill -= 1;
-					skill *= 3;
-					gWidth = gSkill[skill];
-					gMaxLevel = gSkill[skill+1];
-					gDeepThoughts = gSkill[skill+2];
-				}
+					gSkillLevel = skill - 1;
 				else
 					outcome = OUTCOME_MENU;
 			}
