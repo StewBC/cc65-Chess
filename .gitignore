@@ -3,3 +3,5 @@
 /obj/
 /Makefile.options
 /cc65-Chess*.*
+/chess.po
+/scratch
