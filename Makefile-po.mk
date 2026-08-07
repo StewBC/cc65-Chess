@@ -1,7 +1,7 @@
 NAME = chess
 PO = $(NAME).po
 
-CA ?= cadius-145
+CA ?= cadius
 
 # 1. ROBUST SHELL DETECTION
 # Check if GNU Make is routing commands through a Unix shell (like sh.exe or bash)
