@@ -19,9 +19,23 @@ directly, and this was discovered the hard way:
 - the attacker **count** for a tile and side — no port ever reads the attacker list
 - `gTile[0]`, `gTile[1]`, `gPiece[1]`, `gColor[0]` — the move log line
 
-**`atari` and `cx16` are not built or tested here** — the tools live on a Windows machine.
-Do not delete them, do not knowingly break them, do not edit their platform files
-speculatively. Both had pre-existing build failures unrelated to the engine work.
+**`cx16` is not built or tested here.** It has a build failure in `src/cx16/platCX16.c`
+that predates the engine work, and its tools live on a Windows machine. Do not delete it, do
+not knowingly break it, do not edit its platform files speculatively.
+
+**`apple2`, `plus4` and `atari` are no longer in that category.** All three build here.
+`apple2` and `plus4` also *run* here — `../a2m-v2` for the Apple II, VICE's `xplus4` binary
+monitor for the Plus/4 — so a change to either can be verified instead of argued (§7 of
+`doc/measuring.md`). `atari` builds to a `.atr` with `dir2atr`, but running it is still
+Altirra on the Windows machine.
+
+**Compiling a target says nothing about whether it runs.** The plus4 build linked inside its
+budget throughout the rework and was broken end to end — by a **cc65 bug**, not ours: in
+bitmap mode `cgetc()` skips its own wait loop (the branch means to skip the cursor drawing)
+and reads a character that is not there, underflowing the Kernal's key count at `$EF`. After
+that every key read returns garbage and the menus drive themselves. `plat_ReadKeys` works
+around it by checking `$EF` before calling `cgetc()`. Prefer running a target over reasoning
+about it.
 
 **Keys must not change.** Cursor keys, RETURN, RUN/STOP, `M`, `B`, `A`, `D`, `U`, `R` keep
 their current meanings. New functionality that needs a key is a red flag — raise it rather
@@ -75,7 +89,13 @@ measured over a real game.
 
 ```bash
 make OPTIONS=optspeed TARGETS=c64
+make TARGETS=apple2 && make po      # bootable chess.po, needs cadius
+make TARGETS=atari  && make atr     # bootable cc65-Chess.atr, needs dir2atr
 ```
+
+The image step is a **second `make`**. `TARGETS=` sets the suffix `$(PROGRAM)` already
+carries, so `make TARGETS=apple2 po` asks for `cc65-Chess.apple2.apple2` and fails, and a
+bare `make po` has no rule to build the binary it needs.
 
 ```bash
 cc -Isrc -lcurses -funsigned-char src/globals.c src/engine.c src/eval.c src/search.c \

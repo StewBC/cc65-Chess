@@ -102,9 +102,11 @@ walks a ray and stops at the edge automatically (`genSlider`).
 
 **The UI never sees a 0x88 square.** `plat.h` and every platform file use the original 0–63
 tile numbering, and `ENG_TO_TILE` / `ENG_FROM_TILE` convert at the boundary. This is a hard
-rule, not a style preference: several ports (atari, cx16, apple2 among them) cannot be built
-or tested on the development machine, and freezing that interface is what let the entire
-engine be replaced without editing a single platform file.
+rule, not a style preference: when the engine was replaced, several ports (atari, cx16 and
+apple2 among them) could not be built or tested on the development machine at all, and
+freezing that interface is what let the entire engine be replaced without editing a single
+platform file. Most of them can be built and run now. The rule stays, because it is what
+made that possible.
 
 ## 1.2 The piece byte
 

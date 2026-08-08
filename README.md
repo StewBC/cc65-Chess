@@ -82,9 +82,9 @@ cc -Isrc -lcurses -funsigned-char src/globals.c src/engine.c src/eval.c src/sear
    src/term/platTerm.c -o /tmp/chessterm
 ```
 
-**Current state:** `c64`, `c64.chr`, `apple2`, `atmos` and `plus4` build and link inside
-their budgets. `atari` and `cx16` have build failures that predate the engine rework and look
-like cc65 version drift.
+**Current state:** every target except `cx16` builds and links inside its budget. `cx16` has
+a build failure in its platform file that predates the engine rework and looks like cc65
+version drift.
 
 ## The documentation
 

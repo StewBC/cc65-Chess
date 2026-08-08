@@ -303,6 +303,53 @@ The unit tests cover the engine; this covers whether the game is a game. Read it
 that things are being drawn, not as a pixel-accurate reference — partial redraws can leave
 stale glyphs in its terminal model that a real terminal would not show.
 
+### On the real Apple II
+
+`../a2m-v2` is an Apple II emulator with a scriptable control port, which makes `apple2` the
+one 8-bit target that can be driven the same way — except that here the machine really is the
+machine, so it also catches what the terminal build cannot: character sets, video modes,
+firmware entry points.
+
+```bash
+make TARGETS=apple2 && make po      # the image step is a second make
+cd ../a2m-v2 && ./build/a2m-v2 --noini \
+    --hd s7d0=<absolute-path>/chess.po --control-port 6510
+```
+
+Run it **windowed**; `--headless` removes the human from the loop. `--model plus` gives a
+][+ instead of a //e, and anything touching video or firmware needs checking on both.
+`tools/a2m_control_client.py` gives you `mem()`, `get_frame()` (560x192 ARGB) and `key`, which
+is enough to boot the disk, walk the menus and watch an AI-vs-AI game play itself.
+
+Two things to know before trusting it. `get-memory` reads the page table directly and never
+reaches the softswitch handler, so **`$C0xx` reads are meaningless** — infer video state from
+rendered frames. And **diffing one character cell across frames is a real measurement**: it
+separates steady text from flashing text, which is how a character-set bug gets distinguished
+from an encoding bug.
+
+### On the real Plus/4
+
+VICE's `xplus4` does the same job through its **binary** monitor. The wire protocol and its
+traps are documented in `../c64m/agents/vice-oracle.md`; a minimal Python client lives in
+`scratch/vice/`.
+
+```bash
+xplus4 -TEDdsize -autostart-delay 40 -autostart cc65-Chess.plus4 \
+       -binarymonitor -binarymonitoraddress ip4://127.0.0.1:6502
+```
+
+**`-autostart-delay 40` is not decoration.** VICE's plain `-autostart` never starts the
+program on a Plus/4: it writes the keyboard buffer from its vsync hook, races the Kernal's
+read-modify-write of the pending count at `$EF`, and the count underflows — after which the
+Kernal "types" the function-key macro table and the machine hangs in a `DSAVE`. The program
+is loaded correctly the whole time; only the RUN is lost.
+
+Two habits the Apple II side does not force on you. **Closing the socket resumes emulation**,
+so anything measured across two script runs has a gap where the machine ran unobserved —
+hold one connection for a whole experiment. And **a checkpoint that never fires is not
+evidence until a control fires**: arm one on an address the machine demonstrably executes
+first.
+
 ---
 
 ## 8. The workflow
@@ -328,12 +375,21 @@ its own explanation before the speed is banked.
 
 ## 9. What none of this covers
 
-**Four of the six 8-bit targets have never been run.** `c64.chr`, `apple2`, `atmos` and
-`plus4` compile clean and link inside their budgets, and no platform file was edited, so they
-*should* be fine. That is an argument, not evidence, and it is the largest untested surface in
-the project.
+**Two targets have never been run.** `c64.chr` and `atmos` compile clean and link inside
+their budgets, and no platform file was edited, so they *should* be fine. That is an
+argument, not evidence, and it is the largest untested surface in the project.
 
-**`atari` and `cx16` do not build here** and had pre-existing failures unrelated to the engine
-work.
+`apple2` has since been booted and played here under `../a2m-v2`, `plus4` under VICE (both
+§7), and `atari` on the Windows machine under Altirra. All three build here; only `atari`
+still needs the other machine to run.
+
+**Running a target is not the same as compiling it, and the plus4 proved it.** That build
+compiled clean and linked inside its budget for the whole rework, and it was broken by a cc65
+bug: in bitmap mode `cgetc()` returns a character that was never typed, underflowing the
+Kernal's key count, after which the menus navigated themselves and the game quit. Nothing
+short of running it could have found that.
+
+**`cx16` does not build here** — a pre-existing failure in its platform file, unrelated to
+the engine work.
 
 **There is no continuous integration.** `make test` is a command someone has to remember.

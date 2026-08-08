@@ -24,6 +24,8 @@
 #define COLOR_ADDERSS           (LUMINANCE_ADDERSS + 0x0400)
 #define CHARMAP_ROM				(0xD400)
 #define CHARMAP_RAM				(BITMAP_ADDRESS + 0x2000)
+// the kernal's count of characters waiting in the keyboard buffer
+#define KEY_COUNT               (*(unsigned char*)0x00EF)
 
 /*-----------------------------------------------------------------------*/
 #define BOARD_PIECE_WIDTH           4
@@ -475,12 +477,25 @@ int plat_ReadKeys(char blocking)
 {
     char key = 0;
     int keyMask = 0;
-    
-    if(blocking || kbhit())
-        key = cgetc();
-    else
+
+    // work around a cc65 bug.  in bitmap mode - which is all this port ever
+    // runs in - cgetc() takes a branch that means to skip drawing the text
+    // cursor but skips its wait loop with it, so it calls the rom's KBDREAD
+    // with nothing in the buffer.  KBDREAD decrements the key count anyway,
+    // taking it from 0 to 255, and after that every read returns garbage and
+    // the menus drive themselves.  kbhit() is no safer: it reports true on
+    // the function key count alone, and the cgetc() that follows still
+    // decrements this one.  gate on the real count instead.
+    if(blocking)
+    {
+        while(!KEY_COUNT)
+            ;
+    }
+    else if(!KEY_COUNT)
         return 0;
-        
+
+    key = cgetc();
+
     switch(key)
     {
         case 145:        // Up
