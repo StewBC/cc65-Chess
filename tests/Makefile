@@ -39,6 +39,7 @@ HARNESS := \
 	match.c \
 	gamefuzz.c \
 	castle.c \
+	repetition.c \
 	selfplay.c
 
 chesstest: $(ENGINE) $(HARNESS) testutil.h

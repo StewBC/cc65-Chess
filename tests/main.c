@@ -24,9 +24,10 @@ static void usage(const char *argv0)
 	printf("  divide <fen> <depth>      per-move node counts for the new core\n");
 	printf("  tactics                   search finds the obvious moves\n");
 	printf("  bench                     search speed on the host\n");
-	printf("  match [sanity|terms|depth]  configuration A vs B over the opening set\n");
+	printf("  match [sanity|terms|depth|repeat]  configuration A vs B over the opening set\n");
 	printf("  fuzz [seed] [games]       random games through the game path, undo/redo checked\n");
 	printf("  castle                    castling and en passant rules\n");
+	printf("  repeat                    repetition detection and its history\n");
 	printf("  selfplay [games] [plies]  AI against itself, with timings\n");
 	printf("\noptions: -v for more detail\n");
 }
@@ -52,6 +53,8 @@ int main(int argc, char **argv)
 	{
 		printf("== cc65 Chess test suite ==\n\n");
 		failures += test_RunCastle(verbose);
+		printf("\n");
+		failures += test_RunRepetition(verbose);
 		printf("\n");
 		failures += test_RunGameFuzz(1, 150, verbose);
 		failures += test_RunGameFuzz(5000, 150, verbose);
@@ -85,6 +88,7 @@ int main(int argc, char **argv)
 		if(!strcmp(what, "time")) return test_RunMatchEqualTime(verbose);
 		if(!strcmp(what, "endgame")) return test_RunMatchEndgame(verbose);
 		if(!strcmp(what, "ladder")) return test_RunMatchLadder(verbose);
+		if(!strcmp(what, "repeat")) return test_RunMatchRepetition(verbose);
 		return test_RunMatchSanity(verbose);
 	}
 
@@ -114,6 +118,9 @@ int main(int argc, char **argv)
 
 	if(!strcmp(command, "castle"))
 		return test_RunCastle(verbose) ? 1 : 0;
+
+	if(!strcmp(command, "repeat"))
+		return test_RunRepetition(verbose) ? 1 : 0;
 
 	if(!strcmp(command, "selfplay"))
 		return test_RunSelfPlay(argc > 2 && argv[2][0] != '-' ? atoi(argv[2]) : 1,

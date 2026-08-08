@@ -925,6 +925,116 @@ transfer to a search that abandons most of its moves unexamined.**
 The profile that remains is flat — 42 / 19 / 18 / 14 with no dominant hotspot, which is what a
 reasonably optimised program looks like. There is no remaining change worth a ply.
 
+## 6.10 Repetition, and the position history
+
+For most of this engine's life the search could not tell a position from the same position two
+moves later. Nothing scored a repeat as worthless, so in any position where it could not find
+progress it would shuffle a piece back and forth indefinitely, and the fifty-move rule was the
+only thing that ever ended it.
+
+That was on the list of known absences for a long time, and it was assumed to be a small one.
+It was not: measured over 512 self-play games, **62% of all games were drawn, every one of them
+by repetition, and 57% of those were positions the engine itself scored as winning** (§5.1 of
+`doc/strength.md`). Eighteen percent of the whole match was drawn while a rook or more ahead.
+
+### The key
+
+Detection needs to recognise a position it has seen, which needs a hash. The hash is built the
+same way the evaluation is, and for the same reason — a per-node walk of the board is exactly
+what the running total exists to avoid:
+
+```c
+// eng_Make
+geHashKey ^= hashDelta(move, piece, undo->m_captured);
+// eng_Unmake
+geHashKey ^= hashDelta(move, moved, undo->m_captured);
+```
+
+`hashDelta` is deliberately the same shape as `eval_MoveDelta`, case for case: the mover, the
+promotion, the en passant victim that is not on the target square, and the rook that castling
+moves as well. It obeys the same rule that makes the evaluation safe — a pure function of the
+move and the piece bytes, reading no board state — so make and unmake cannot disagree. XOR
+being its own inverse means unmake applies the *identical* call rather than a second function
+that has to undo the first correctly.
+
+The table is 12 × 64 sixteen-bit values in `RODATA`, indexed by piece, colour and the 0..63
+tile. Sixty-four wide rather than 128: the off-board halves of the 0x88 board would otherwise
+double the table for nothing.
+
+### What deliberately is not in the running key
+
+Castling rights and the en passant file are folded in when a position is stored or compared,
+not carried incrementally. That is two extra lookups at those points and no bookkeeping at all
+in make/unmake.
+
+**Rights have to be in there somewhere, and the reason is the case this feature exists for.** A
+king that steps off e1 and comes back leaves every piece on the square it started on, and the
+position is not the same one — it can no longer castle. That is a shuffle, which is precisely
+the shape of position being judged, so a hash of piece placement alone would misfire exactly
+where it matters most. `tests/repetition.c` plays those four king moves twice, from two
+positions differing only in whether there is a castling right to lose, and requires opposite
+answers.
+
+### The history
+
+The positions themselves live in a 128-entry ring, pushed by `eng_Make` and popped by
+`eng_Unmake`. That placement is the whole design: because every move goes through those two
+functions, the ring holds the real game's history and the search line currently being explored
+in one array, with no second mechanism, nothing for a caller to remember, and no way for the
+two to disagree. Undo and redo maintain it for free. So does the UCI adapter, which replays a
+whole game move by move.
+
+Two bounds keep the scan honest. It looks back no further than the fifty-move counter, since a
+capture or a pawn move makes everything before it unreachable; and no further than the number
+of entries actually pushed, because a position loaded from a FEN can arrive claiming a
+fifty-move counter of forty with no history behind it at all. Without the second bound the scan
+would walk forty entries into whatever the previous game left in the ring. Only every second
+entry is compared — the others have the other side to move.
+
+### One repeat, or three
+
+The search treats a *single* repeat as a draw. A real game needs a threefold, and
+`board_ApplyMove` applies that rule to the board, but inside a search line the third occurrence
+tells you nothing the first did not: if a line returns to a position both sides could have
+reached earlier, neither is making progress. Waiting for the third only means searching the
+same shuffle twice more to reach the same answer.
+
+Quiescence needs none of this. It searches captures and promotions only, and both reset the
+fifty-move counter, so no position it reaches can repeat one above it.
+
+### What it cost and what it bought
+
+| | |
+|---|---|
+| RODATA | +1584 bytes (the table, plus rights and en passant) |
+| BSS | +260 bytes (the ring) |
+| CODE | +1038 bytes |
+| Speed | **−9% on a real C64** |
+| Strength | **+44 Elo** at equal nodes, **+38 Elo** at equal time, 512 games, 3.7 sigma |
+| Self-play draws | 53% → 32%; decisive games 240 → 350 of 512 |
+
+**The speed figure is the part worth stopping on.** Measured on this host — same 512-game
+match, hash maintained but detection switched off, against a build with no hash at all,
+identical node counts to the digit, best of eleven interleaved runs — the cost is 5.5%. On a
+real C64, by `tests/c64search.c` under VICE, it is 9.2%, 8.7% and 9.4% at depths 2, 3 and 4.
+The host understated the cost of the change by nearly half, because a 16-bit XOR and a table
+index are one instruction there and several on a 6502, while everything they are being compared
+against is comparatively cheaper. §6.9 records that a cost measured on perft does not transfer
+to a search; this is its sibling, and the equal-time match above is run against the target's
+number rather than the host's for exactly that reason.
+
+### The honest weakness
+
+The key is sixteen bits, so two different positions can collide, and a collision reads as a
+draw. Bounding the scan by the fifty-move counter keeps the number of comparisons per node
+small, which keeps the rate low — but low is not zero, and a false draw score costs a won
+position rather than producing an error anybody would notice. The fix if it ever proves to
+matter is a wider key, not a cleverer scan. Nothing in the measurements above suggests it
+currently does.
+
+This is also most of the groundwork for a transposition table, which is the other thing the
+absence of incremental hashing was blocking.
+
 ---
 
 # Part VII — The seams
@@ -1152,13 +1262,9 @@ coverage by making self-play games repeat their openings.
 
 **No transposition table.** Different move orders often reach the same position; a hash table
 of positions already searched avoids re-searching them. Affordable now that the attack
-database is gone, and probably the best remaining value per byte — but it needs incremental
-position hashing first.
-
-**No repetition detection.** Nothing stops the engine repeating a position it has already
-reached, and at any depth that can throw away a won game. The fifty-move rule is the only
-backstop. This needs the same incremental hashing as a transposition table, which is why the
-two are linked.
+database is gone, and probably the best remaining value per byte. It needed incremental
+position hashing first, and §6.10 has now built that — so what remains is the table itself,
+and finding the RAM for it on the Apple II, which is the tightest target by a wide margin.
 
 **The two deferred evaluation terms** (§5.4). The note in `eval.h` says what each would now
 cost.

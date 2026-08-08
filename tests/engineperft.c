@@ -120,9 +120,13 @@ char test_EngineSetFEN(const char *fen)
 	if(*p && *p != '-')
 		geEP = ENG_FROM_TILE(test_Square(p));
 
-	// the pieces went straight onto the board, so the running evaluation has
-	// to be rebuilt from them
+	// the pieces went straight onto the board, so the running evaluation and
+	// the position history have to be rebuilt from them.  The history matters
+	// as much as the score here: a FEN can carry a fifty move counter of 30
+	// with nothing behind it, and without the reset the repetition scan would
+	// read 30 plies of whatever the last test left in the ring
 	eval_Refresh();
+	eng_HashReset();
 
 	return side;
 }

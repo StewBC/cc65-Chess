@@ -11,6 +11,7 @@
  *	  - every undo reproduces the position before that move, byte for byte
  *	  - every redo reproduces the position after it
  *	  - the incremental evaluation still agrees with a full recount
+ *	  - so does the incremental position hash
  *
  *	Castling, en passant and promotion are preferred whenever available, since
  *	random play almost never reaches them on its own.  That matters most for the
@@ -133,6 +134,25 @@ static int checkEvalScore(int game, int ply, const char *tag)
 }
 
 /*-----------------------------------------------------------------------*/
+// Same argument as the evaluation, and the same failure mode: the hash is
+// carried along by eng_Make and eng_Unmake, a wrong delta breaks nothing
+// visibly, and the only symptom is repetition detection answering about a
+// position that is not on the board.  Recomputed here without touching the
+// history, so this checks the key and never hides a bug in the ring
+static int checkHashKey(int game, int ply, const char *tag)
+{
+	unsigned int full = eng_HashOfBoard();
+
+	if(geHashKey != full)
+	{
+		printf("    game %d %s ply %d: hash drifted, running %04X full %04X\n",
+		       game, tag, ply, geHashKey, full);
+		return 1;
+	}
+	return 0;
+}
+
+/*-----------------------------------------------------------------------*/
 int test_RunGameFuzz(int seed, int games, int verbose)
 {
 	int game, failures = 0, specials = 0;
@@ -194,7 +214,8 @@ int test_RunGameFuzz(int seed, int games, int verbose)
 
 			if(checkMaterial(game, ply, &prevBlack, &prevWhite) ||
 			   checkDisplayMirror(game, ply) ||
-			   checkEvalScore(game, ply, "move"))
+			   checkEvalScore(game, ply, "move") ||
+			   checkHashKey(game, ply, "move"))
 			{
 				++failures;
 				goto nextGame;
@@ -210,7 +231,8 @@ int test_RunGameFuzz(int seed, int games, int verbose)
 			--k;
 			undo_Undo();
 			if(compareBoard(sc_snapshots[k], k, "undo", game) ||
-			   checkEvalScore(game, k, "undo"))
+			   checkEvalScore(game, k, "undo") ||
+			   checkHashKey(game, k, "undo"))
 			{
 				++failures;
 				goto nextGame;
@@ -221,6 +243,7 @@ int test_RunGameFuzz(int seed, int games, int verbose)
 		{
 			undo_Redo();
 			if(checkEvalScore(game, k, "redo") ||
+			   checkHashKey(game, k, "redo") ||
 			   (k + 1 < plies && compareBoard(sc_snapshots[k+1], k, "redo", game)))
 			{
 				++failures;

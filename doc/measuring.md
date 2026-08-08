@@ -47,7 +47,8 @@ it runs:
 | Suite | What it establishes |
 |---|---|
 | `castle` | Castling and en passant rules, case by case |
-| `fuzz` ×2 | 300 random games through the *game* path, with undo and redo checked after every move, and the running evaluation checked against a full recount |
+| `fuzz` ×2 | 300 random games through the *game* path, with undo and redo checked after every move, and the running evaluation *and position hash* checked against a full recount |
+| `repeat` | Repetition detection: that it fires, that a capture cuts the history, that a loaded position does not inherit the last game's, and that a lost castling right makes an identical-looking board a different position |
 | `eperft` to depth 5 | Move generation exact against the five standard reference positions |
 | `qgen` | The capture-only generator is an exact subsequence of the full one |
 | `tactics` | The search finds the obvious moves |
@@ -96,6 +97,7 @@ the generator is wrong, and every measurement downstream of it is meaningless.
 ./chesstest match time       # the same comparison at equal TIME
 ./chesstest match ladder     # does each skill level beat the one below
 ./chesstest match endgame    # terms that only apply once the queens are off
+./chesstest match repeat     # what repetition detection is worth, and at equal time
 ```
 
 Two configurations play 512 games — 256 generated openings, each twice with the colours
@@ -123,6 +125,20 @@ in the same number of *seconds*, and on a 1 MHz machine that is not a rounding e
 | Endgame king table | +1.9σ | 1.28× slower | not worth measuring |
 
 Both were removed, and both are good terms. `match time` is the comparison that decides.
+
+**A cost measured on the host is not the cost.** The equal-time comparison needs a price for
+the change, and the host will misprice anything whose cost per node is arithmetic rather than
+work. Maintaining the position hash measures 5.5% here and **9% on a real C64** — the host was
+out by nearly half, because a 16-bit XOR and a table index are one instruction here and several
+on a 6502. Price a change with `tests/c64search.c` under VICE before charging it in a match; it
+is headless, runs under warp, and takes a minute.
+
+Getting that price means both builds doing *identical* work, which is harder than it sounds.
+Three attempts were needed before the node counts matched to the digit, and both failures were
+in the harness rather than the engine: first the new code ended games on threefold so it played
+shorter games, then the match configuration switched the feature back on per move, overriding
+the default the cost build existed to measure. **Equal node counts are the precondition for the
+timing to mean anything** — check them before reading the clock.
 
 **`match sanity` is the check on the instrument itself.** A configuration against itself must
 come out exactly level, because the harness plays every opening twice with the colours

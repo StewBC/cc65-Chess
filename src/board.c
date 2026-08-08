@@ -193,6 +193,11 @@ char board_ApplyMove(const t_engMove *move, char side)
 			outcome = OUTCOME_CHECK;
 		else if(geHalfmove >= (NUM_MOVES_TO_DRAW * 2))
 			outcome = OUTCOME_DRAW;
+		// the threefold a real game is drawn by: twice before plus now.  The
+		// search settles for one repeat, but a game should not end on the
+		// board until the rule actually says it has
+		else if(eng_IsRepetition(2))
+			outcome = OUTCOME_DRAW;
 	}
 
 	undo_AddMove(move, &undo, side, outcome);

@@ -79,6 +79,40 @@ extern char	geHalfmove;			// plies since the last capture or pawn move
 extern char	geKing[2];			// where each king is, indexed by side
 
 /*-----------------------------------------------------------------------*/
+// A running 16 bit hash of the piece placement, kept up to date by eng_Make
+// and eng_Unmake exactly the way geEvalScore is - the same pattern, checked
+// the same way by the fuzzer.  Castling rights and the en passant file are
+// not in here; they are folded in when a position is stored or compared,
+// which costs two lookups and saves keeping them incremental
+extern unsigned int geHashKey;
+
+/*-----------------------------------------------------------------------*/
+// Rebuild geHashKey from the board and start the position history again with
+// the position as it now stands.  Anything that puts pieces down without
+// going through eng_Make has to call this - a new game, a FEN, a test loading
+// a saved position - or the history will hold another game's positions and
+// repetition detection will answer about that game instead of this one
+void eng_HashReset(void);
+
+/*-----------------------------------------------------------------------*/
+// geHashKey computed from the board rather than carried along, with no other
+// effect.  eng_HashReset is built on it, and the fuzzer uses it to catch the
+// running key drifting away from the position the way it does for the running
+// evaluation - a wrong delta is silent otherwise
+unsigned int eng_HashOfBoard(void);
+
+/*-----------------------------------------------------------------------*/
+// Has the position on the board been seen "needed" times before?  1 is what
+// the search asks: inside a search line, one repeat already means neither
+// side is making progress, and treating it as a draw is what stops the engine
+// shuffling.  2 is the threefold a real game is drawn by.
+//
+// Only looks back as far as the fifty move counter allows, since a capture or
+// a pawn move makes every position before it unreachable, and only at every
+// second entry, since the others have the other side to move
+char eng_IsRepetition(char needed);
+
+/*-----------------------------------------------------------------------*/
 void eng_Clear(void);
 void eng_SetStartPosition(void);
 

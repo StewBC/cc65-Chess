@@ -23,6 +23,13 @@ directly, and this was discovered the hard way:
 that predates the engine work, and its tools live on a Windows machine. Do not delete it, do
 not knowingly break it, do not edit its platform files speculatively.
 
+**The Apple II is the tightest machine in the tree, by a wide margin.** Not the Atari, which
+has 5.6 KB spare against the Apple II's 1.2 KB in MAIN. The program starts at `$4000` because
+HGR page 1 is at `$2000-$3FFF`, and `src/apple2/chessA2.cfg` puts BSS in the stranded
+`$0800-$1FFF` below it — verified running, including a write watchpoint over the unused tail.
+Before that config existed there were 460 bytes of headroom, and repetition detection would not
+have linked. Size anything large against the Apple II first.
+
 **`apple2`, `plus4` and `atari` are no longer in that category.** All three build here.
 `apple2` and `plus4` also *run* here — `../a2m-v2` for the Apple II, VICE's `xplus4` binary
 monitor for the Plus/4 — so a change to either can be verified instead of argued (§7 of
@@ -80,6 +87,13 @@ generated move; a search with working move ordering tries about 2.28 moves per n
 a cutoff. Legality dominates the first and not the second. An optimisation justified by
 perft numbers has not been justified.
 
+**Nor does a cost measured on this host.** Maintaining the position hash costs 5.5% here and
+9% on a real C64 — out by nearly half, because a 16-bit XOR and a table index are one
+instruction here and several on a 6502. Price anything that has to hold at the board with
+`tests/c64search.c` under VICE; it is headless, runs under warp, and takes a minute. And check
+that both builds report the *same node count to the digit* before believing the clock — twice
+the harness itself made them play different games.
+
 **Do not measure from the opening position.** It is the optimistic case, not the
 conservative one — after eight moves nothing has been traded and the lines are open, so the
 middlegame is about 25% slower per node. Anything that has to hold at the board gets
@@ -120,6 +134,11 @@ seconds; there is no excuse for a short one.
 **Compare at equal time, not equal nodes.** Every richer evaluation wins at equal nodes.
 That is not the question a player is asking, and it overturned two terms that had already
 been accepted.
+
+**A feature being measured has to be switchable.** The two sides of a match live in one
+binary, so a change gets a flag under `EVAL_TUNING` — `geEvalTerms` for evaluation terms,
+`geSearchRepetition` for repetition — present in the tuning build and compiled out of the
+8-bit one, which pays neither a byte nor a test.
 
 **The search is deterministic**, so a match without a varied opening set is one game
 repeated N times. If you make it non-deterministic, that has to be switchable — every

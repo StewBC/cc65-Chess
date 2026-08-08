@@ -1002,7 +1002,7 @@ absent. It was **not** the cause of the shuffling bug above, which was depth, bu
 stops the engine repeating a position it has already reached, and at any depth that can
 still throw away a won game. It needs incremental position hashing, which is the same
 pattern as the incremental evaluation and would also be most of the groundwork for a
-transposition table. *The two deferred evaluation terms* remain unbuilt; the note in
+transposition table. *(Built in Phase 7, once Part V of `strength.md` put a number on it.)* *The two deferred evaluation terms* remain unbuilt; the note in
 `eval.h` explains what each would now cost.
 
 ## Phase 6 — Platforms working
@@ -1035,6 +1035,96 @@ transposition table. *The two deferred evaluation terms* remain unbuilt; the not
 - [ ] *(On the Windows machine, when convenient.)* Build `atari` and `cx16`. Both had
       pre-existing failures unrelated to this work. If the frozen-interface rule held, no
       engine-side changes should be needed.
+
+---
+
+## Phase 7 — Repetition detection
+
+The last item on the "still open, deliberately" list from Phase 5, and the only one that had
+a price attached: 62% of self-play games drawn, all by repetition, 57% of those in positions
+the engine itself called winning. Worth roughly a sixth of the score, which is what moved it
+ahead of everything else.
+
+- [X] Incremental position hashing in `eng_Make` / `eng_Unmake`, a position history, a draw
+      score in `negamax`, and the threefold rule at the board.
+
+**The mechanism is in §6.10 of `engine.md`.** What follows is the part that does not belong in
+a reference document.
+
+### The Apple II nearly stopped it before it started
+
+The first design was costed at about 1536 bytes for the key table, and the answer to "does that
+fit" turned out to be no — but not on the machine anyone expected. Linking all six targets with
+map files and measuring the gap between the top of BSS and each ceiling:
+
+| target | free before | free after |
+|---|---|---|
+| **apple2** | **460** | 1255 in MAIN, 2128 below HGR |
+| atmos | 5700 | 2818 |
+| atari | 8438 | 5618 |
+| c64.chr | 8542 | 8282 |
+| c64 | 13723 | 10841 |
+| plus4 | 27488 | 24606 |
+
+The Atari, the machine that prompted the question, had 8.4 KB spare. The Apple II had 460
+bytes, and the change needs 2882. It would not have linked.
+
+**The cause was layout, not appetite.** The program starts at `$4000` because HGR page 1 sits
+at `$2000-$3FFF`, which strands six kilobytes at `$0800-$1FFF` below the graphics page for the
+entire run. The Apple II was also the one target still using cc65's stock config with its
+addresses passed as link flags. A project `chessA2.cfg` moves BSS down into that dead space —
+note that stock `apple2.cfg` already defines a `LOW` area there, but sizes it `%S - $0800`,
+which with a `$4000` start runs straight through the graphics page.
+
+That was verified rather than argued, under `../a2m-v2` with its control port: boots, menus,
+board, move log, an AI-vs-AI game, and the B visualizer, with `geBoard` now at `$082D` — the
+first 200 bytes of the moved region, which is exactly where a stray ProDOS or loader buffer
+would land. A write watchpoint over the unused tail saw no writes in 150 seconds of play, which
+is the evidence that the memory is free rather than merely unassigned.
+
+Two things learned while doing it, both of which cost time:
+
+**Reading `geBoard` mid-search shows nonsense.** Twenty-three pieces, impossible positions,
+the display mirror disagreeing. It is not corruption — the search makes and unmakes moves on
+the real board, so a sample taken while it is thinking is a node from deep in the tree. Only 5
+samples in 40 caught the engine idle. Sample until the mirror agrees.
+
+**The loader leaves 31 bytes at `$1E00`** — ascending page numbers `$08..$26`. Inert, never
+rewritten, cleared by `zerobss` once BSS grows that far. Noted so that finding them in a memory
+dump does not start a hunt.
+
+### The host lied about the cost by nearly half
+
+The equal-time question needs the price of maintaining the hash. Measuring it needs both builds
+doing *identical* work, and getting there took three attempts — each time the node counts came
+back different, and each time the harness was the reason rather than the engine:
+
+1. the new harness ends games on threefold, so it played shorter games;
+2. removing that, the match configuration still switched detection on per move, overriding the
+   default the cost build was supposed to be measuring.
+
+Only on the third attempt did both builds report 111,602,938 nodes to the digit, which is the
+condition that makes the times comparable at all.
+
+The host then said 5.5%, best of eleven interleaved runs. A real C64, via `tests/c64search.c`
+under VICE, said **9.2%, 8.7% and 9.4%** at depths 2, 3 and 4 — identical node counts there
+too. A 16-bit XOR and a table index are one instruction on this host and several on a 6502,
+while everything they are measured against is comparatively cheaper.
+
+`engine.md` §6.9 already records that *a cost measured on perft does not transfer to a search*.
+This is the same mistake wearing a different hat, and it would have credited the change with
+about six rating points it had not earned. The equal-time match is charged at the C64's number.
+
+### Result
+
+**+44 Elo at equal nodes, +38 at equal time**, 512 games, 3.7 sigma. Self-play draws 53% → 32%,
+decisive games 240 → 350. Size: RODATA +1584, CODE +1038, BSS +260.
+
+**Still open.** *Opening variety* — the engine still plays the same first move every game, and
+the fix needs an entropy source that `plat.h` does not expose; parked deliberately. *The
+transposition table*, which was waiting on exactly the hashing this phase built. *The Stockfish
+ladder has not been re-run* since the fix, so every rung in `strength.md` Part IV is a pre-fix
+number.
 
 ---
 

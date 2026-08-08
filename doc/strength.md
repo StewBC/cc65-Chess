@@ -42,8 +42,11 @@ for a 1 MHz 8-bit machine holds its own against the minimum configuration of a m
 from 400 to 60,000 nodes. This is the number that says what an accelerated emulator buys you,
 and it is why level 4 is only 90 points above level 3 despite thinking four times as long.
 
-**The engine throws away roughly one game in six that it has already won.** Not a rating
-finding but a defect one, and the most valuable thing the exercise turned up. Details in §5.
+**The engine threw away roughly one game in six that it had already won.** Not a rating
+finding but a defect one, and the most valuable thing the exercise turned up. It has since
+been fixed, and the fix is worth about **+38 rating points at equal time** — details and the
+measurement in §5.1. Note that the ladder above was measured *before* that fix and has not
+been re-run against Stockfish since.
 
 ---
 
@@ -375,6 +378,40 @@ against the outcome, to see that a full point was on the table.
 absences for some time, alongside several other absences, with no way to rank them. It is now
 the only one with a number attached, and the number is roughly a sixth of the engine's score.
 
+## 5.1.1 What fixing it was worth
+
+The price above is what bought the work. Repetition detection is now in the engine —
+§6.10 of `doc/engine.md` describes the mechanism — and this is what it measured.
+
+Both sides of the match maintain the incremental hash, and only one of them scores a repeat as
+a draw, so the first line isolates the value of the *detection*. The second charges it for
+itself: the detecting side gets the node budget the hash's cost leaves it.
+
+| | Result | Score | Elo | |
+|---|---|---|---|---|
+| Equal nodes, 2000 each | 155–91–266 | 0.5625 | **+44** [+23, +65] | 4.1 sigma |
+| Equal time, 1832 v 2000 | 146–90–276 | 0.5547 | **+38** [+18, +59] | 3.7 sigma |
+
+And in self-play — the same 512 games, the engine against itself, which is where the defect was
+found:
+
+| | Draws | Decisive | How they were drawn |
+|---|---|---|---|
+| Before | 272 (53%) | 240 | 74 fifty-move, 196 ran out the ply limit |
+| After | 162 (32%) | 350 | 62 threefold, 14 fifty-move, 84 ply limit |
+
+**The equal-time column is charged at the target's cost, not this host's.** Maintaining the
+hash costs 5.5% measured here and 9% measured on a real C64, and the C64 is where the program
+runs. Taking the host figure would have credited the change with about six points it has not
+earned. This is the same lesson as §6.9 of `doc/engine.md` in a different disguise: a cost
+measured on the wrong machine is not the cost.
+
+**Three caveats, none of which the numbers above hide.** These are self-play results, and
+self-play systematically overstates a change that both sides understand — the ladder in Part IV
+has *not* been re-run against Stockfish, so the rung figures in the executive summary remain
+pre-fix numbers. The opening set is the same artificial one described in §6. And 512 games with
+a 3.7-sigma edge is a real result, not a certainty.
+
 ## 5.2 The opening is dull, and the reason is mundane
 
 From the starting position the engine plays a knight to c3. Every time. It is not a bad move;
@@ -492,6 +529,11 @@ Cross-check against the second runner, first column, 512 games each: −429, −
 | Draws | 318 (62%), **all** by threefold repetition |
 | Median game | 72 plies |
 | Longest game | 151 plies |
+
+This is the pre-fix reference, kept as it was measured — it is the evidence §5.1 is built on.
+The equivalent run with repetition detection is in §5.1.1: still exactly level, as a
+configuration against itself must be, but 162 draws instead of 272 over the harness's own
+512-game set.
 
 # Appendix C — On provenance
 

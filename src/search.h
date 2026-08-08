@@ -21,6 +21,26 @@
 #define SEARCH_MAX_PLY		12
 
 /*-----------------------------------------------------------------------*/
+// Scoring a repeated position as a draw, switchable the same way and for the
+// same reason as the evaluation terms: measuring a change means playing it
+// against its own absence, and the two sides of that match have to live in
+// one binary.  The tuning build can turn it off; the 8-bit build cannot, and
+// pays neither a byte nor a test for the switch.
+//
+// Note what this does and does not isolate.  Both sides of such a match still
+// carry the incremental hash in eng_Make and eng_Unmake, so it measures what
+// detecting repetitions is worth, not what maintaining the hash costs.  That
+// second number is a nodes/sec comparison against a build without the hash at
+// all, and the two have to be put together before the change can be judged at
+// equal time
+#ifdef EVAL_TUNING
+extern char geSearchRepetition;
+#define SEARCH_REPETITION	geSearchRepetition
+#else
+#define SEARCH_REPETITION	1
+#endif
+
+/*-----------------------------------------------------------------------*/
 typedef struct tag_searchResult
 {
 	t_engMove		m_move;			// best move found

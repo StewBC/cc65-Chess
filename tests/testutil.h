@@ -35,6 +35,7 @@ int test_RunQuiescenceGen(int verbose);
 int test_RunBudgetSurvey(int verbose);
 int test_RunGameFuzz(int seed, int games, int verbose);
 int test_RunCastle(int verbose);
+int test_RunRepetition(int verbose);
 int test_RunSelfPlay(int games, int maxPlies, int verbose);
 int test_RunSearchTactics(int verbose);
 int test_RunSearchAlwaysMoves(int verbose);
@@ -45,5 +46,6 @@ int test_RunMatchDepth(int verbose);
 int test_RunMatchEqualTime(int verbose);
 int test_RunMatchEndgame(int verbose);
 int test_RunMatchLadder(int verbose);
+int test_RunMatchRepetition(int verbose);
 
 #endif //_TESTUTIL_H_

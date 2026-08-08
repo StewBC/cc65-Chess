@@ -71,6 +71,11 @@ static char loadPosition(const t_Position *pos)
 	geHalfmove = pos->m_halfmove;
 	geKing[0] = pos->m_king[0];
 	geKing[1] = pos->m_king[1];
+
+	// a saved position dropped straight onto the board carries no history
+	// with it, and the previous game's is still in the ring
+	eng_HashReset();
+
 	return pos->m_side;
 }
 
@@ -143,11 +148,12 @@ typedef struct tag_Config
 	char			 m_terms;		// EVAL_* mask
 	char			 m_depth;
 	unsigned int	 m_nodes;
+	char			 m_repetition;	// score a repeated position as a draw
 } t_Config;
 
 /*-----------------------------------------------------------------------*/
 // +1 if "a" won, -1 if "b" won, 0 for a draw or an unfinished game
-static int si_drawFifty, si_drawStale, si_drawUnfinished;
+static int si_drawFifty, si_drawStale, si_drawUnfinished, si_drawRepeat;
 
 static int playGame(const t_Position *opening, const t_Config *a, const t_Config *b,
                     char aSide, int maxPlies, unsigned long *nodesOut)
@@ -168,8 +174,13 @@ static int playGame(const t_Position *opening, const t_Config *a, const t_Config
 			return (side == aSide) ? -1 : 1;		// side to move is mated
 		if(OUTCOME_STALEMATE == outcome) { ++si_drawStale; return 0; }
 		if(geHalfmove >= 100)            { ++si_drawFifty; return 0; }
+		// the referee's job, and until now the harness did not do it: a
+		// threefold ended these games all along, and they were being counted
+		// as having hit the ply limit
+		if(eng_IsRepetition(2))          { ++si_drawRepeat; return 0; }
 
 		geEvalTerms = cfg->m_terms;
+		geSearchRepetition = cfg->m_repetition;
 		search_Best(side, cfg->m_depth, cfg->m_nodes, &result);
 		*nodesOut += result.m_nodes;
 
@@ -195,7 +206,7 @@ static int runMatch(const t_Config *a, const t_Config *b, int maxPlies, int verb
 	clock_t started = clock();
 
 	if(sc_useEndgames) buildEndgames(); else buildOpenings();
-	si_drawFifty = si_drawStale = si_drawUnfinished = 0;
+	si_drawFifty = si_drawStale = si_drawUnfinished = si_drawRepeat = 0;
 	printf("  %s  vs  %s\n", a->m_name, b->m_name);
 
 	for(i = 0; i < NUM_OPENINGS; ++i)
@@ -223,10 +234,11 @@ static int runMatch(const t_Config *a, const t_Config *b, int maxPlies, int verb
 	       wins, losses, draws, NUM_OPENINGS * 2, nodes,
 	       (double)(clock() - started) / CLOCKS_PER_SEC);
 	if(draws)
-		printf("    draws: %d fifty-move, %d stalemate, %d hit the %d ply limit\n",
-		       si_drawFifty, si_drawStale, si_drawUnfinished, maxPlies);
+		printf("    draws: %d threefold, %d fifty-move, %d stalemate, %d hit the %d ply limit\n",
+		       si_drawRepeat, si_drawFifty, si_drawStale, si_drawUnfinished, maxPlies);
 
 	geEvalTerms = EVAL_ALL;
+	geSearchRepetition = 1;
 	return wins - losses;
 }
 
@@ -236,7 +248,7 @@ static int runMatch(const t_Config *a, const t_Config *b, int maxPlies, int verb
 // not balanced the harness is measuring something other than the change
 int test_RunMatchSanity(int verbose)
 {
-	t_Config same = { "all-terms", EVAL_ALL, 3, 2000 };
+	t_Config same = { "all-terms", EVAL_ALL, 3, 2000, 1 };
 	int edge;
 
 	printf("match sanity: a configuration against itself\n");
@@ -287,8 +299,8 @@ int test_RunMatchLadder(int verbose)
 /*-----------------------------------------------------------------------*/
 int test_RunMatchEndgame(int verbose)
 {
-	t_Config phase = { "phase-aware king", EVAL_ALL, 4, 3000 };
-	t_Config flat  = { "one king table",   EVAL_MATERIAL|EVAL_PST, 4, 3000 };
+	t_Config phase = { "phase-aware king", EVAL_ALL, 4, 3000, 1 };
+	t_Config flat  = { "one king table",   EVAL_MATERIAL|EVAL_PST, 4, 3000, 1 };
 
 	printf("match: the endgame king table, measured in actual endgames\n");
 	sc_useEndgames = 1;
@@ -300,8 +312,8 @@ int test_RunMatchEndgame(int verbose)
 /*-----------------------------------------------------------------------*/
 int test_RunMatchEqualTime(int verbose)
 {
-	t_Config rich = { "pawn struct, 1480 nodes", EVAL_ALL, 3, 1480 };
-	t_Config lean = { "material+pst, 2000 nodes", EVAL_MATERIAL|EVAL_PST, 3, 2000 };
+	t_Config rich = { "pawn struct, 1480 nodes", EVAL_ALL, 3, 1480, 1 };
+	t_Config lean = { "material+pst, 2000 nodes", EVAL_MATERIAL|EVAL_PST, 3, 2000, 1 };
 
 	printf("match: pawn structure at equal TIME rather than equal nodes\n");
 	runMatch(&rich, &lean, 240, verbose);
@@ -311,9 +323,9 @@ int test_RunMatchEqualTime(int verbose)
 /*-----------------------------------------------------------------------*/
 int test_RunMatchTerms(int verbose)
 {
-	t_Config base   = { "material only",  EVAL_MATERIAL, 3, 2000 };
-	t_Config pst    = { "+pst",           EVAL_MATERIAL|EVAL_PST, 3, 2000 };
-	t_Config all    = { "everything",  EVAL_ALL, 3, 2000 };
+	t_Config base   = { "material only",  EVAL_MATERIAL, 3, 2000, 1 };
+	t_Config pst    = { "+pst",           EVAL_MATERIAL|EVAL_PST, 3, 2000, 1 };
+	t_Config all    = { "everything",  EVAL_ALL, 3, 2000, 1 };
 
 	// each term measured against what it is being added to, one at a time
 	printf("match: which evaluation terms actually earn their bytes?\n");
@@ -328,10 +340,38 @@ int test_RunMatchTerms(int verbose)
 // search rather than with the evaluation
 int test_RunMatchDepth(int verbose)
 {
-	t_Config deep    = { "depth 4", EVAL_ALL, 4, 20000 };
-	t_Config shallow = { "depth 2", EVAL_ALL, 2, 20000 };
+	t_Config deep    = { "depth 4", EVAL_ALL, 4, 20000, 1 };
+	t_Config shallow = { "depth 2", EVAL_ALL, 2, 20000, 1 };
 
 	printf("match: does searching deeper actually win?\n");
 	runMatch(&deep, &shallow, 240, verbose);
+	return 0;
+}
+
+/*-----------------------------------------------------------------------*/
+// What repetition detection is worth, played against its own absence.
+//
+// Both sides pay for the hash - it is in eng_Make either way - so this is the
+// value of the draw score alone.  The equal-time half of the question is the
+// second match: the detecting side gets the node budget the hash's cost
+// leaves it, measured by bench against a build without the hash, so it is
+// paying for what it uses rather than being handed it
+int test_RunMatchRepetition(int verbose)
+{
+	t_Config sees   = { "sees repetitions", EVAL_ALL, 3, 2000, 1 };
+	t_Config blind  = { "repeats happily",  EVAL_ALL, 3, 2000, 0 };
+	// 2000 nodes less what the hash costs, and the cost is the one measured
+	// on a C64 rather than on this host.  The two disagree by a lot: the host
+	// says 5.5% (identical node counts, best of eleven runs), a real C64 says
+	// 9.2%, 8.7% and 9.4% at depths 2, 3 and 4 by tests/c64search.c under
+	// VICE.  The target's number is the one that decides whether a change is
+	// affordable, so 2000 / 1.092 is the budget the hash leaves
+	t_Config costed = { "sees them, 1832 nodes", EVAL_ALL, 3, 1832, 1 };
+
+	printf("match: is scoring a repetition as a draw worth anything?\n");
+	runMatch(&sees, &blind, 240, verbose);
+
+	printf("match: the same question at equal TIME rather than equal nodes\n");
+	runMatch(&costed, &blind, 240, verbose);
 	return 0;
 }
