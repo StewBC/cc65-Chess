@@ -214,8 +214,14 @@ void plat_DrawSquare(char position)
 
     if(piece)
     {
+        // Two bitmaps per piece: 0 is the hollow outline, 1 is the solid fill.
+        // Which one is wanted depends on the square as well as the piece,
+        // because rop already flips polarity on a light square - a white piece
+        // is an outline on white and a solid on black, and a black piece is the
+        // other way round.  That is blackWhite ^ isWhite; XORing with the
+        // negation instead drew every piece in its opponent's colour
         rop = blackWhite ? ROP_INV : ROP_CPY;
-        inv = blackWhite ^ !((piece & PIECE_WHITE) != 0);
+        inv = blackWhite ^ ((piece & PIECE_WHITE) != 0);
     }
     else
     {
