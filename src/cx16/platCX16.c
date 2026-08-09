@@ -131,10 +131,10 @@ void plat_setColors(char stroke, char fill, char)
 {
     __asm__("sta tmp1");
 	__asm__("ldy #%o", fill);
-	__asm__("lda (sp), y");
+	__asm__("lda (c_sp), y");
     __asm__("tax");
 	__asm__("ldy #%o", stroke);
-	__asm__("lda (sp), y");
+	__asm__("lda (c_sp), y");
     __asm__("ldy tmp1");
     __asm__("jsr GRAPH_SET_COLORS");
 }
@@ -179,7 +179,7 @@ void plat_showPiece(char color, char x, char y, const char *src)
 
 	// put the color somewhere safe
 	__asm__("ldy #%o", color);
-	__asm__("lda (sp), y");
+	__asm__("lda (c_sp), y");
 	__asm__("sta %v", xColor);
 
 	// do the 24 rows
@@ -606,7 +606,7 @@ int plat_ReadKeys(char blocking)
 			keyMask |= INPUT_UNDO;
 		break;
 		
-		// default:		// Debug - show key code
+		default:		// Debug - show key code
 		// {
 		//	char s[] = "Key:000";
 		//	s[4] = (key/100)+'0';

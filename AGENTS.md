@@ -19,9 +19,11 @@ directly, and this was discovered the hard way:
 - the attacker **count** for a tile and side — no port ever reads the attacker list
 - `gTile[0]`, `gTile[1]`, `gPiece[1]`, `gColor[0]` — the move log line
 
-**`cx16` is not built or tested here.** It has a build failure in `src/cx16/platCX16.c`
-that predates the engine work, and its tools live on a Windows machine. Do not delete it, do
-not knowingly break it, do not edit its platform files speculatively.
+**`cx16` builds here now but is still not *run* here.** The build failure that predated the
+engine work was cc65 renaming the software stack pointer: `platCX16.c` used `(sp)` in inline
+assembly where current cc65 wants `(c_sp)`. It compiles and links clean, repetition detection
+included. Running it still needs the Windows machine, so the rest of the rule stands — do not
+delete it, do not knowingly break it, do not edit its platform files speculatively.
 
 **The Apple II is the tightest machine in the tree, by a wide margin.** Not the Atari, which
 has 5.6 KB spare against the Apple II's 1.2 KB in MAIN. The program starts at `$4000` because
