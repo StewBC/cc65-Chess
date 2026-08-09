@@ -1303,23 +1303,99 @@ Two levers remain unclaimed if `optspeed` is ever wanted back: 1312 bytes on the
 `$AF00-$B41F` between the framebuffer and the stack, and a start address tested only down to
 `$1000`.
 
-### Still open, and this is the next work
+---
 
-*The Stockfish ladder is two strength changes out of date.* It was re-run once after
-repetition detection (`strength.md` §5.1.2) and not since the endgame tables, so every rung
-in Part IV and every figure in the README is a floor from an older engine.
+## Phase 9 - the ladder caught up, and the anchor disagreed
 
-*Levels 1 and 2 regressed slightly on that re-run* - about -16 and -12 Elo averaged over their
-four rungs, concentrated entirely against opponents far stronger than the engine, while levels
-3 and 4 gained +16 and +9. The hypothesis is in §5.1.2 and has not been tested. Whether it
-matters for levels whose job is to be beatable by a human is a separate question nobody has
-measured.
+Two of the three items left open at the end of Phase 8. The third, opening randomisation, is
+still parked and still blocked on the seed rather than on space.
 
-*Opening randomisation is parked, and there is now room for it.* The engine still plays the
-same first move every game. Both tight targets have headroom at `optsize` - the Apple II 2366
-bytes, the Atari 1742 - and the term needs a couple of hundred. What blocks it is the seed
-rather than the space: `plat.h` exposes no clock, so entropy has to come from human input, and
-the first move after a cold boot stays deterministic whatever is done.
+### The ladder, third generation
+
+Sixteen rungs, 512 games each, same fastchess, same Stockfish 18, same book: the conditions of
+Appendix A exactly, so the three runs are comparable. **Every rung improved.** The endgame
+tables were the only engine change since the §5.1.2 run — everything else that landed was a
+platform file, a test or a document — so the delta is theirs:
+
+| Level | mean over four rungs |
+|---|---|
+| 1 | **+94** |
+| 2 | **+77** |
+| 3 | **+65** |
+| 4 | **+52** |
+
+Monotone in how little the engine searches, which is what knowledge substituting for search
+looks like. Level 4 now beats Stockfish at one node by 82 points (248-129-135) where it used
+to draw level, and the dead heat has moved two rungs along to 100 nodes.
+
+Two things did not move. The **price of a node** - the first-column spread was 443 points
+before both strength changes and is 443 after, so 61 Elo a doubling still holds and the whole
+ladder simply lifted. And the **second runner** agrees: c-chess-cli, built for this, reads
+-357, -254, -35, +77 against fastchess's -361, -250, -31, +82.
+
+### Self-play was wrong again, in the other direction
+
+§5.1.2's lesson was that self-play overstated repetition detection about threefold. Here it
+understated the endgame tables: +44 claimed at equal nodes, +52 to +94 delivered. **The bias
+has no fixed sign, so it cannot be corrected with a factor** - which is the useful form of the
+lesson, and worth more than either number.
+
+### The anchor says none of it happened
+
+The rated anchor was re-run and, at the only rung measured on both sides of the change, it
+disagrees with the ladder flatly: +39, -3, +7, -37 against the ladder's +78, +65, +80, +61.
+Some of that is the rung being useless - levels 3 and 4 score 88% against Stockfish's 1320
+floor, past the top of the informative band, and the *old* run's own two replicates differed
+by 38 points there. The rest may be real: a change that is pure endgame knowledge is worth
+more against an opponent that does not search endgames than against one that does, and
+node-limited Stockfish at 1 to 300 nodes does not search at all.
+
+So the claim in the document is now the narrow one - worth a great deal against opponents that
+do not search endgames, not yet shown to be worth much against opponents that do - and the way
+to settle it is a rated rung near 50% measured on *both* sides of the next change. That has to
+be set up before the change, not after.
+
+Re-running the anchor properly turned up two harness defects, both of which had been quietly
+inside published ratings:
+
+- **A clock-ignoring engine was losing games on time.** fastchess needs some limit declared and
+  was handed 30 ms; a level 4 move is ~15 ms here, so host load alone forfeited four games. The
+  limit is 5000 ms now, and the node-limited ladder reproduces to the digit across the change.
+- **The anchor's answer depends on which rung you read it at**, by 144 points at level 4. A
+  200-point step in `UCI_Elo` buys 56 points of played strength up there: Stockfish's limiter
+  has run out of ways to be weak that a 4-second clock does not already impose. Each level is
+  now played against the two rungs nearest its own strength, and level 4 against Stockfish
+  rated 1700 came out 122-121-13, which is as well-placed an anchor point as this project is
+  going to get.
+
+The headline ratings move to ~1200 / ~1350 / ~1650 / ~1700, and the ±150 that used to be an
+assertion is now a measurement.
+
+### The levels 1 and 2 hypothesis, tested rather than argued
+
+§5.1.2 guessed that repetition detection cost the shallow levels by making the engine decline
+draws its evaluation wrongly thought it was better than. `make uci-tuning` now builds the UCI
+adapter with the tuning switches exposed as UCI options, so the ladder can be re-run with one
+term off against an outside opponent - and with everything on it reproduces the shipped
+binary's games to the digit, which is what makes the difference attributable to the switch.
+
+Detection off minus on: level 1 **+15** mean, level 2 **+1**. The mechanism is visible - every
+rung's draw count rises with detection off, losses fall to match - and it is worth about a
+sixth of what the endgame tables gave the same level. At level 2 the extra draws come out of
+the *wins* instead, so the net is zero: level 2 searches deep enough that some of those
+repetitions were winnable.
+
+Not a case for removing anything. It retires an open question, which is what it was for.
+
+### Still open
+
+*Opening randomisation.* Unchanged from Phase 8: the engine plays the same first move every
+game, there is room for the term at `optsize`, and `plat.h` exposes no clock, so entropy has to
+come from human input and the first move after a cold boot stays deterministic whatever is
+done. This one needs a decision before it needs code.
+
+*A rated rung near 50%, measured before the next evaluation term lands.* Without it the next
+change gets the same three-instruments-three-answers treatment as this one.
 
 ---
 
@@ -1336,6 +1412,13 @@ Kept here so they do not get relitigated.
   better than free speed on the targets that could take it.
 - Budgets are node counts, never wall-clock, because the platforms share no timer and
   determinism across ports is worth more than adaptive timing.
+- **A rated-anchor rung is only read where the engine scores near 50%.** Levels 3 and 4 score
+  88% against Stockfish's 1320 floor, and a rung like that cannot register a 60-point change -
+  which is how Phase 9's largest gain came to be invisible to it. Each level gets the two rungs
+  nearest its own strength, and the anchor runs below the host's core count because it is the
+  one measurement with a clock in it.
+- **No published figure comes from the tuning build.** `uci-tuning` exists for A/B work and
+  must be shown to reproduce `uci`'s games to the digit before its differences mean anything.
 - `plat.h` and 0-63 tile numbering are frozen so that the untestable ports stay safe.
 - The opening book and the transposition table are deferred, not rejected. Revisit after
   Phase 4.

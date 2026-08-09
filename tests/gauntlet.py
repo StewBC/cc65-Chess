@@ -125,9 +125,13 @@ FC_GAMES = re.compile(r"Games:\s*(\d+),\s*Wins:\s*(\d+),\s*Losses:\s*(\d+),\s*Dr
 FC_ELO = re.compile(r"\bElo:\s*([-+]?[\d.]+)\s*\+/-\s*([\d.]+)")
 FC_PTNML = re.compile(r"Ptnml\(0-2\):\s*\[([^\]]+)\]")
 
-# the engine takes milliseconds a move natively; this is only here because
-# fastchess insists on a limit existing
-NOMINAL_MOVETIME = 30
+# The engine ignores every clock and stops at a node count, so this exists only
+# because fastchess insists on a limit existing.  It is deliberately far larger
+# than any move actually takes: at 30ms a level 4 move (~15ms here) was close
+# enough to the line that host load alone could forfeit a game, and a
+# clock-ignoring engine losing on time is measuring the machine, not the chess.
+# Raising it cannot change a single move that gets played
+NOMINAL_MOVETIME = 5000
 
 
 def elo(score):
@@ -277,6 +281,13 @@ def main():
     # thing runs from anywhere.  the absolute path also tells both runners
     # which directory to start the engine in
     ap.add_argument("--uci", default=str(TESTS / "uci"))
+    # for A/B work against an outside opponent: --uci ./uci-tuning together
+    # with --uci-option Repetition=false plays one side of the ladder with a
+    # term switched off.  The shipped uci has no switches, so this only does
+    # anything for the tuning build
+    ap.add_argument("--uci-option", action="append", default=[],
+                    metavar="NAME=VALUE",
+                    help="UCI option for our engine; repeatable")
     ap.add_argument("--book", default=str(TESTS / "book.epd"))
     ap.add_argument("--games", type=int, default=256)
     ap.add_argument("--concurrency", type=int, default=os.cpu_count() or 4)
@@ -316,6 +327,7 @@ def main():
 
     runner = Runner(cli)
     sf_common = ["option.Threads=1", "option.Hash=16"]
+    us_common = [f"option.{o}" for o in args.uci_option]
     levels = ints(args.levels)
     nodes = ints(args.nodes)
 
@@ -324,6 +336,10 @@ def main():
     print(f"runner: {os.path.basename(cli)} - {tool_version(cli)}"
           f"{'  (pentanomial intervals)' if runner.fastchess else ''}")
     print(f"opponent: {tool_version(sf, True)}")
+    if us_common:
+        # a non-default configuration is not the shipped engine, and a table
+        # that does not say so is a table nobody can place
+        print(f"engine: {args.uci} with {' '.join(args.uci_option)}")
 
     if nodes:
         print(f"{args.games} games a pairing, {args.book}, "
@@ -342,7 +358,7 @@ def main():
 
                 report(level, f"SF nodes={n}", *run_match(
                     runner,
-                    args.uci, [f"name=cc65-L{level}", f"option.Skill={level}"],
+                    args.uci, [f"name=cc65-L{level}", f"option.Skill={level}"] + us_common,
                     sf, [f"name=SF-n{n}", f"nodes={n}"] + sf_common,
                     args.games, args.book, args.concurrency, pgn))
             print()
@@ -360,7 +376,7 @@ def main():
             for rating in ints(args.anchor_ratings):
                 report(level, f"SF Elo {rating}", *run_match(
                     runner,
-                    args.uci, [f"name=cc65-L{level}", f"option.Skill={level}"],
+                    args.uci, [f"name=cc65-L{level}", f"option.Skill={level}"] + us_common,
                     sf, [f"name=SF-{rating}", f"tc={args.anchor_tc}",
                               "option.UCI_LimitStrength=true",
                               f"option.UCI_Elo={rating}"] + sf_common,

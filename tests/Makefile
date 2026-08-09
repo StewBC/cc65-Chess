@@ -57,6 +57,13 @@ UCIFLAGS := -I$(SRCDIR) -funsigned-char -O2 -Wall -Wno-char-subscripts
 uci: $(ENGINE) uci.c testutil.c engineperft.c platStub.c testutil.h
 	$(CC) $(UCIFLAGS) -o $@ $(ENGINE) uci.c testutil.c engineperft.c platStub.c
 
+# The same adapter WITH the tuning switches, for A/B matches against an outside
+# opponent - the ladder can then be re-run with one term off.  It is not the
+# binary any published figure is measured with: tuning costs nodes, so the two
+# builds must be shown to play the same games before an A/B means anything
+uci-tuning: $(ENGINE) uci.c testutil.c engineperft.c platStub.c testutil.h
+	$(CC) $(CFLAGS) -o $@ $(ENGINE) uci.c testutil.c engineperft.c platStub.c
+
 genbook: $(ENGINE) genbook.c testutil.c platStub.c testutil.h
 	$(CC) $(UCIFLAGS) -o $@ $(ENGINE) genbook.c testutil.c platStub.c
 
@@ -75,7 +82,7 @@ gauntlet: uci genbook
 
 # note book.epd is not removed here: make clean must not delete a tracked file
 clean:
-	rm -f chesstest uci genbook
-	rm -rf chesstest.dSYM uci.dSYM genbook.dSYM
+	rm -f chesstest uci uci-tuning genbook
+	rm -rf chesstest.dSYM uci.dSYM uci-tuning.dSYM genbook.dSYM
 
 .PHONY: test clean gauntlet book

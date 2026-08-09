@@ -269,6 +269,12 @@ static void cmdSetOption(char *args)
 		s_optDepth = atol(value);
 	else if(0 == strcmp(name, "Nodes"))
 		s_optNodes = atol(value);
+#ifdef EVAL_TUNING
+	// only the tuning build has anything to switch; a runner is free to send
+	// "true"/"false" or 1/0
+	else if(0 == strcmp(name, "Repetition"))
+		geSearchRepetition = (char)(0 == strcmp(value, "true") || atoi(value));
+#endif
 }
 
 /*-----------------------------------------------------------------------*/
@@ -283,6 +289,9 @@ static void cmdUci(void)
 	       SEARCH_NUM_SKILLS, SEARCH_NUM_SKILLS);
 	printf("option name Depth type spin default 0 min 0 max %d\n", SEARCH_MAX_PLY);
 	printf("option name Nodes type spin default 0 min 0 max %ld\n", UCI_MAX_NODES);
+#ifdef EVAL_TUNING
+	printf("option name Repetition type check default true\n");
+#endif
 	say("uciok");
 }
 
@@ -291,8 +300,10 @@ int main(void)
 {
 	static char line[UCI_LINE_MAX];
 
-	// no geEvalTerms here: this build is the shipping one, where EVAL_HAS is a
-	// constant 1 and every term is always in
+	// nothing is switched here.  The shipping build has no switches at all -
+	// EVAL_HAS is a constant 1 and every term is always in - and the tuning
+	// build starts with everything on, so an unconfigured match plays the same
+	// chess either way
 	setvbuf(stdout, NULL, _IOLBF, 0);
 	eng_SetStartPosition();
 

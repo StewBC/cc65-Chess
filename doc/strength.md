@@ -12,7 +12,7 @@ caveats is just a boast.
 ## Executive summary
 
 The engine was played against Stockfish 18 — one of the strongest chess programs in
-existence — across roughly **20,000 games**. Each of the four skill levels from the game's
+existence — across roughly **40,000 games**. Each of the four skill levels from the game's
 own menu was measured, and the results were cross-checked with two independent match
 runners.
 
@@ -20,36 +20,39 @@ runners.
 
 | Menu level | Node budget | Time on a stock C64 | Approximate rating |
 |---|---|---|---|
-| 1 — Very Easy | 400 | 8 seconds a move | **~1170** |
+| 1 — Very Easy | 400 | 8 seconds a move | **~1200** |
 | 2 — Easy | 1,200 | 29 seconds | **~1350** |
-| 3 — Harder | 15,000 | ~3.5 minutes | **~1610** |
+| 3 — Harder | 15,000 | ~3.5 minutes | **~1650** |
 | 4 — Very Hard | 60,000 | ~15 minutes | **~1700** |
 
 Each figure carries an honest uncertainty of about **±150 points** — not because the games
-were few, but for reasons explained in §6 that no number of games would fix.
+were few, but for reasons explained in §4.3 and §6 that no number of games would fix.
 
-**Four findings worth pulling out of the tables:**
+**Five findings worth pulling out of the tables:**
 
-**The levels are real.** Each rung beats the one below it by 125 to 180 points, with no
+**The levels are real.** Each rung beats the one below it by 111 to 219 points, with no
 overlap in the confidence intervals. The difficulty menu is not decorative.
 
-**At its strongest setting the engine draws level with Stockfish's floor.** Stockfish
-restricted to a single search node scored 179–159–174 against level 4 over 512 games — a
-difference of +14 points, statistically indistinguishable from equality. A program written
-for a 1 MHz 8-bit machine holds its own against the minimum configuration of a modern engine.
+**At its strongest setting the engine beats Stockfish's floor and draws level two rungs up.**
+Level 4 scored 248–129–135 against Stockfish restricted to a single search node over 512
+games, a difference of +82. Equality has moved two rungs along, to Stockfish at 100 nodes: −9,
+interval −35 to +17. A program written for a 1 MHz 8-bit machine is past the minimum
+configuration of a modern engine.
 
 **Thinking twice as long is worth about 60 rating points.** Measured across the full range
-from 400 to 60,000 nodes. This is the number that says what an accelerated emulator buys you,
-and it is why level 4 is only 90 points above level 3 despite thinking four times as long.
+from 400 to 60,000 nodes, and unchanged across two strength changes that lifted the whole
+ladder without altering its shape. This is the number that says what an accelerated emulator
+buys you, and it is why level 4 is only 113 points above level 3 despite thinking four times
+as long.
 
 **The engine threw away roughly one game in six that it had already won.** Not a rating
 finding but a defect one, and the most valuable thing the exercise turned up. It has since
 been fixed — details and the measurement in §5.1.
 
-**The ladder above is out of date and the figures in it are not current.** It predates both
-repetition detection and the endgame tables. It was re-run once after the first of those
-(§5.1.2) and not since, so the four ratings should be read as a floor from an older engine
-rather than as today's numbers.
+**Three instruments measured the last change and gave three answers.** Self-play said +44, the
+ladder says +52 to +94, and the rated anchor says approximately nothing. §5.1.3 works through
+which to believe and why the honest claim is narrower than any single number. This is the most
+useful thing in the document for anyone measuring their own engine.
 
 ---
 
@@ -254,28 +257,34 @@ colours swapped. Figures are rating differences relative to the Stockfish settin
 
 | Menu level | vs SF @ 1 node | @ 30 | @ 100 | @ 300 |
 |---|---|---|---|---|
-| 1 — Very Easy | −429 | −417 | −556 | −689 |
-| 2 — Easy | −292 | −298 | −465 | −575 |
-| 3 — Harder | −111 | −108 | −195 | −348 |
-| 4 — Very Hard | **+14** | −6 | −53 | −256 |
+| 1 — Very Easy | −361 | −363 | −459 | −597 |
+| 2 — Easy | −250 | −265 | −375 | −479 |
+| 3 — Harder | −31 | −29 | −128 | −254 |
+| 4 — Very Hard | **+82** | +65 | −9 | −194 |
 
-Confidence intervals run from ±25 points at the top of the table to ±45 at the bottom. The
+Confidence intervals run from ±26 points at the top of the table to ±80 at the bottom. The
 first two columns are identical within noise, for the reason given in §3.1.
 
 **The ladder is clean.** Reading down the first column, the four levels are separated by
-137, 181 and 125 points, in order, with no overlap between adjacent intervals. The four-item
+111, 219 and 113 points, in order, with no overlap between adjacent intervals. The four-item
 difficulty menu delivers four genuinely different opponents — which was an assumption before
-this exercise and is now a measurement.
+this exercise and is now a measurement. The uneven spacing is not a defect: the node budgets
+step by 3x, 12.5x and 4x, and §4.2 shows those gaps are exactly what that buys.
 
-**The headline row is level 4 against Stockfish at one node: 179–159–174 over 512 games,
-+14 points, interval −12 to +39.** That is a dead heat. An engine that fits in 31 KB and runs
-on a 1 MHz processor plays level with the weakest configuration a modern engine can be
-persuaded into.
+**The headline row is level 4 against Stockfish at one node: 248–129–135 over 512 games,
++82 points, interval +56 to +109.** An engine that fits in 31 KB and runs on a 1 MHz processor
+beats the weakest configuration a modern engine can be persuaded into, and the row below it —
++65 against 30 nodes — says the same thing. The dead heat has moved a column right: against
+Stockfish at 100 nodes level 4 scores −9, interval −35 to +17, which is equality.
 
 The honest framing of that result: Stockfish at one node is not playing chess in any
 meaningful sense — it is making a well-informed snap judgement using a world-class evaluation
-function. It is a low bar for Stockfish. It is still a real opponent, and matching it is a
+function. It is a low bar for Stockfish. It is still a real opponent, and clearing it is a
 real result.
+
+**These numbers are current as of the endgame piece-square tables.** The ladder has been run
+three times over the life of the project, and §5.1.3 sets the three generations side by side —
+that comparison, not this table, is where the strength changes are visible.
 
 ## 4.2 What a doubling of thinking time buys
 
@@ -285,6 +294,12 @@ ladder can be re-read as a curve of strength against effort.
 From 400 nodes to 60,000 nodes is a factor of 150, or 7.2 doublings, across a total gain of
 443 rating points. That is **about 61 points per doubling of thinking time.**
 
+That figure has survived two strength changes without moving. The first-column spread was 443
+points before repetition detection and the endgame tables and is 443 after — the whole ladder
+lifted, and the shape of it did not. The three individual steps are the same story: 3x, 12.5x
+and 4x in budget predict 97, 222 and 122 points at 61 a doubling, and the ladder measures
+111, 219 and 113. Whatever these changes did, they did not change the price of a node.
+
 This is a useful number to carry around:
 
 - Emulator acceleration is a free multiplier on thinking time. A 10x-accelerated machine is
@@ -293,7 +308,7 @@ This is a useful number to carry around:
   real, but not transformative. The two changes that doubled the search speed on real
   hardware are worth slightly under half of one step on the difficulty menu.
 - Diminishing returns are visible in the table: the step from level 3 to level 4 quadruples
-  the budget for only 125 points.
+  the budget for only 113 points.
 - And it sets the price of a rating point. Another 100 points from thinking alone would need
   roughly triple the node budget — about 45 minutes a move on a stock C64, and around 187,000
   nodes. That number does not fit: budgets are held in a 16-bit counter, which stops at
@@ -303,37 +318,72 @@ This is a useful number to carry around:
 
 ## 4.3 The anchor, and why it is the soft part
 
-Against Stockfish's rating-limited mode at its 1320 floor, at a two-second time control:
+The ladder measures differences. Turning those into ratings needs an opponent whose rating is
+claimed rather than inferred, and Stockfish's `UCI_LimitStrength` mode is the only one
+available. It comes with a clock — its calibration assumes one — so this is the single
+measurement in this document that is not reproducible.
 
-| Menu level | Run A (256 games) | Run B (128 games) | Implied rating |
-|---|---|---|---|
-| 1 | −126 | −180 | ~1140–1195 |
-| 2 | +27 | +27 | ~1347 |
-| 3 | +264 | +314 | ~1584–1634 |
-| 4 | +364 | +402 | ~1684–1722 |
+Each level is played against the two rated rungs nearest its own strength, 256 games each, at
+`tc=4+0.04`. Reading a rating off a rung the engine scores 88% against tells you very little,
+which is a mistake this section used to make.
 
-**The two runs disagree by 40 to 50 points**, which is larger than either one's statistical
-interval. That is not sloppiness — it is the honest scale of the uncertainty, and it comes
-from three sources that more games would not reduce:
+| Menu level | Rung | W–L–D | Score | Diff | Implied rating |
+|---|---|---|---|---|---|
+| 1 | SF Elo 1320 | 79–160–17 | 0.342 | −114 | 1206 |
+| 1 | SF Elo 1500 | 49–203–4 | 0.199 | −242 | 1258 |
+| 2 | SF Elo 1320 | 135–117–4 | 0.535 | +24 | **1344** |
+| 2 | SF Elo 1500 | 82–168–6 | 0.332 | −121 | 1379 |
+| 3 | SF Elo 1500 | 152–100–4 | 0.602 | +72 | 1572 |
+| 3 | SF Elo 1700 | 104–142–10 | 0.426 | −52 | **1648** |
+| 4 | SF Elo 1700 | 122–121–13 | 0.502 | **+1** | **1701** |
+| 4 | SF Elo 1900 | 102–142–12 | 0.422 | −55 | 1845 |
 
-1. Stockfish at a time control is not deterministic, so the opponent itself varies.
-2. Its rating calibration assumes a normal game length, not two seconds.
-3. Rating differences are not transitive. Measuring A against B and B against C does not
-   reliably give A against C, especially when the styles differ.
+**Level 4 against Stockfish rated 1700 is 122–121–13.** As anchor points go that one could
+hardly be better placed: a score of 0.502 needs no extrapolation at all.
 
-There is a fourth, visible in the data: the ladder and the anchor disagree about the *spread*
-of the four levels. The ladder puts level 1 and level 4 exactly 443 points apart. The anchor
-puts them 490 apart on one run and 582 on the other. Both cannot be right, and the
-disagreement is around 20%.
+### The anchor's answer depends on which rung you read it at
 
-**This is why the executive summary says ±150.** The statistical error is ±30. The
-methodological error is five times larger, and stating only the first would be dishonest.
+Every level reads *higher* the stronger the rung it is measured against, and the effect is
+large:
+
+| Level | Rung step | Nominal gap | Measured gap | Ratio |
+|---|---|---|---|---|
+| 1 | 1320 → 1500 | 180 | 128 | 1.4 |
+| 2 | 1320 → 1500 | 180 | 145 | 1.2 |
+| 3 | 1500 → 1700 | 200 | 124 | 1.6 |
+| 4 | 1700 → 1900 | 200 | **56** | **3.6** |
+
+A 200-point step in `UCI_Elo` is not worth 200 points of played strength, and by the top of
+the range it is worth barely a quarter of that. Stockfish's rating limiter has run out of ways
+to be weak that the clock does not already impose, so the two rungs play nearly the same chess
+while claiming a 200-point difference. Level 4 is therefore "1701" or "1845" depending purely
+on which one you ask, and the honest reading is the rung nearest a 50% score.
+
+**This is what ±150 means, and it is now measured rather than asserted.** The statistical
+interval on any single rung above is about ±40. The disagreement between two rungs measuring
+the same thing is 144.
+
+### Two other things that would have quietly corrupted this
+
+**Games lost on time.** The engine ignores every clock and stops at a node count, so it cannot
+legitimately lose on time — but the harness has to hand fastchess *some* limit, and the 30 ms
+it used to pass was close enough to a level 4 move (~15 ms here) that host load alone forfeited
+games. The first anchor run flagged four. The limit is now 5000 ms, which cannot change a move
+that gets played, and the node-limited ladder reproduces to the digit across the change —
+level 4 against Stockfish at one node was 248–129–135 before and after.
+
+**Concurrency.** A time-controlled match run with as many games in parallel as the host has
+cores is partly a measurement of the host. These rungs run at concurrency 4 on 8 cores; the
+node-limited ladder does not care and runs at 8.
+
+Neither of these touches the ladder in §4.1. Both touch the anchor, which is one more reason
+it is the soft part.
 
 ## 4.4 The correct form of the claim
 
-> *Level 4 scores 50% against Stockfish restricted to a single search node, and roughly 89%
-> against Stockfish's rating-limited mode set to 1320. That places it near 1700 on
-> Stockfish's own scale, give or take 150.*
+> *Level 4 scores 62% against Stockfish restricted to a single search node, 50% against it at
+> 100 nodes, and 50% against Stockfish's rating-limited mode set to 1700. That places it near
+> 1700 on Stockfish's own scale, give or take 150.*
 
 Note what that sentence does **not** say. It does not say the engine is a 1700-rated player.
 Engine rating lists, Lichess ratings and FIDE ratings are three different pools with three
@@ -450,6 +500,147 @@ across sixteen rungs is what carries it. Whether it matters for the *purpose* of
 is a separate question, since a human beginner is far closer to Stockfish at one node than at
 three hundred, and no one has measured that.
 
+**This hypothesis has since been tested directly — §5.1.4.** It half survives: the mechanism is
+visible at level 1 and worth about +15 Elo, and at level 2 it is worth nothing.
+
+## 5.1.3 The endgame tables, measured the same way
+
+The endgame piece-square tables — §6.11 of `doc/engine.md` — were accepted on a self-play
+result of **+44 Elo at equal nodes and +30 at equal time**, the first evaluation term in the
+project to survive the equal-time test. They are the only change to the engine since the run
+in §5.1.2; everything else that landed in between was a platform file, a test, or a document.
+So the ladder can price them against an outside opponent exactly as it priced repetition
+detection.
+
+| Level | vs SF 1 node | vs SF 30 | vs SF 100 | vs SF 300 | mean |
+|---|---|---|---|---|---|
+| 1 | +61 | +75 | +127 | +112 | **+94** |
+| 2 | +53 | +59 | +90 | +107 | **+77** |
+| 3 | +60 | +59 | +50 | +89 | **+65** |
+| 4 | +52 | +55 | +39 | +62 | **+52** |
+
+**Sixteen rungs out of sixteen improved.** That is the part worth stating first, because no
+individual cell is significant on its own — the intervals are ±26 to ±80 — and a unanimous
+sign pattern across sixteen rungs is not something a null effect produces.
+
+**Self-play understated this one against the ladder, having overstated the last one.** §5.1.2
+found self-play inflating repetition detection about threefold. Against the ladder it did the
+opposite here: it claimed +44 at equal nodes and the ladder measures +52 to +94, between one
+and two times as much again. The useful conclusion is not that self-play is pessimistic — it is
+that **the bias has no fixed sign, so it cannot be corrected with a factor.** Two changes, two
+directions. A self-play number is a reason to go and measure against somebody else, and nothing
+more than that. The rated anchor, asked the same question below, gives a third answer again.
+
+There is a mechanism for the direction in this case, and it is the same one that made these
+tables worth having. Self-play puts endgame knowledge on both sides of the board, where much
+of what it buys is spent against an opponent who knows the same thing and the game is drawn
+anyway. The ladder puts it against an opponent that has *better* endgame knowledge already,
+so what the tables buy is the engine failing to lose won and drawn endings — which shows up
+as points.
+
+**The gain is monotone in how little the engine searches:** +94, +77, +65, +52 down the
+levels. Knowledge substitutes for search, and it substitutes hardest where there is least
+search to substitute for. Level 1 sees 400 nodes and gained nearly twice what level 4 gained
+at 60,000. This is the first change in the project where the shallow levels were the biggest
+winners, and it is the reason the concern in §5.1.2 is now closed — see below.
+
+**What this table does not charge for.** Every rung is a fixed node budget on both sides, so
+the tables' 9% cost per node on a real C64 is not paid anywhere in it. That is not a cheat, it
+is what a skill level *is* here: level 4 means 60,000 nodes, and 60,000 nodes now play about
+50 points better and take about 9% longer on the board. The equal-time question was asked and
+answered in self-play (§5.1.1, +30), which is the number to quote if the 9% has to be charged
+somewhere.
+
+### The anchor does not see it, and that is the interesting part
+
+The ladder is not the only instrument pointed at this change. The rated anchor of §4.3 was run
+before the endgame tables and after, and where the two overlap — Stockfish's 1320 rung, the
+only configuration measured on both sides of the change — it says something else:
+
+| Level | Ladder, mean of four rungs | Anchor at SF 1320 |
+|---|---|---|
+| 1 | +78 | +39 |
+| 2 | +65 | −3 |
+| 3 | +80 | +7 |
+| 4 | +61 | −37 |
+
+Both anchor columns average their runs; the level 3 and 4 figures come from the first re-run,
+before the movetime fix, since the clean run played those levels at rungs the old engine was
+never measured against. The four forfeited games were all at level 2.
+
+Two explanations, and they are not exclusive.
+
+**The 1320 rung cannot resolve it.** Levels 3 and 4 score 0.86 and 0.88 there, past the top of
+the informative band §1.2 describes. At that score a couple of games move the Elo figure tens
+of points, which is visible in the old run's own replicates: level 4 measured +364 and +402 on
+two runs of the same unchanged engine, a spread of 38. The level 3 and level 4 rows above are
+differences between numbers that were never that precise. Levels 1 and 2 sit in the middle of
+the band and are the ones worth reading, and they disagree too.
+
+**The gain may be partly specific to the opponent that showed it.** This is §4.3's third
+source of error — non-transitivity — arriving with evidence. Stockfish at 1 to 300 nodes is
+not searching; whatever it plays in an endgame is a raw evaluation of the position in front of
+it. Stockfish with four seconds on a clock plays endgames properly. A change that is *entirely
+endgame knowledge* is worth more against the first opponent than against the second, and the
+ladder is built from the first.
+
+**Neither instrument is being ignored here.** Self-play said +44, the ladder says +52 to +94,
+the anchor says approximately nothing, and all three were measured carefully. The claim the
+evidence supports is the narrow one: **the endgame tables are worth a great deal against
+opponents that do not search endgames, and are not yet shown to be worth much against
+opponents that do.** They also raised endgame conversion from 87% to 90% and openings from 69%
+to 78% in self-play (§5.1.1), which is a defect measurement rather than a rating one and is not
+in dispute.
+
+The way to settle it is a rated-anchor rung near 50% measured on both sides of the change,
+which cannot be done retroactively — the pre-change engine's anchor was only ever run at 1320.
+It is the sort of thing worth setting up before the next evaluation term, not after.
+
+## 5.1.4 The levels 1 and 2 hypothesis, tested
+
+§5.1.2 recorded levels 1 and 2 coming out −16 and −12 after repetition detection, offered a
+mechanism, and admitted it was a hypothesis with no test behind it: *a repetition is often the
+worse side's best result, and scoring it as a draw makes the engine decline one whenever its
+evaluation claims better than zero.*
+
+Two things have since made it testable. The first is arithmetic — those levels have gained
++94 and +77 from the endgame tables, so against the original ladder they now stand **+78 and
++65**, the two largest improvements of the four, which closes it as a *problem*. The second is
+that the mechanism itself can now be switched: `make uci-tuning` builds the UCI adapter with
+`-DEVAL_TUNING`, and `--uci-option Repetition=false` turns the detection off for one side of a
+ladder run. With everything on it reproduces the shipped binary's games to the digit on all six
+rungs, which is what makes the difference attributable.
+
+512 games a rung, repetition detection off minus on, so a positive number means the engine did
+*better* without it:
+
+| Level | vs SF 1 node | vs SF 100 | vs SF 300 | mean |
+|---|---|---|---|---|
+| 1 | +37 | +3 | +6 | **+15** |
+| 2 | −1 | −6 | +9 | **+1** |
+
+**The hypothesis survives in direction at level 1 and dies at level 2.** Every rung's draw
+count rises with detection off — level 1 goes 76 → 97, 46 → 51, 14 → 21 — which is the
+mechanism doing exactly what §5.1.2 said it would: without detection the engine shuffles into
+repetitions, and against an opponent it cannot beat, a repetition is a point saved. The losses
+fall to match: 417 → 395 at the first rung.
+
+**But at level 2 the same extra draws come out of the wins.** Draws 110 → 129 while wins go
+43 → 33 and losses only 359 → 350. Level 2 searches three times as deep and some of those
+repetitions were positions it could have won, so declining them is correct there and the net
+is zero.
+
+**And the one large cell is not significant.** +37 at level 1 against Stockfish at a single
+node carries an interval of roughly ±52 on the difference of two independent matches. Three
+rungs averaging +15 with a consistent sign is suggestive; it is not a finding, and it is a
+sixth of what the endgame tables gave the same level.
+
+**Nothing here is a case for removing repetition detection.** It exists because the engine was
+throwing away one game in six that it had already won (§5.1), which is a defect worth more than
+15 Elo at one skill level, and the tuning switch is a measuring instrument rather than a
+proposal. What the test does retire is the open question: the shallow levels do not pay a
+meaningful price for it, and §5.1.2's concern can stop being carried forward.
+
 ## 5.2 The opening is dull, and the reason is mundane
 
 From the starting position the engine plays a knight to c3. Every time. It is not a bad move;
@@ -466,14 +657,22 @@ a human opponent, deterministic for the harness.
 
 ## 5.3 The other thing that did not happen
 
-No illegal move was played, and no game was lost on time, across roughly 20,000 games.
+No illegal move was played across roughly 40,000 games.
 
 That is worth stating because it was not guaranteed. The move generator had been verified
 by node-counting to a fixed depth from a handful of standard positions — a strong test, but a
 *shallow* one, exploring a few million positions near the start of a game. A real game is 70
 to 150 moves deep and wanders into endgames, promotion races and fortress positions that a
-depth-5 count never reaches. Twenty thousand games is a very different kind of test, and the
+depth-5 count never reaches. Forty thousand games is a very different kind of test, and the
 generator passed it without a single complaint from either referee.
+
+**Four games were lost on time, and none of them were the engine's doing.** They are in the
+first anchor run, and the cause is in §4.3: the harness passed fastchess a 30 ms move limit
+that an engine ignoring the clock had no reason to respect, and host load did the rest. The
+limit is now 5000 ms. This sentence used to claim no game was ever lost on time, which was
+true when written and stopped being true without anyone noticing — the flag that caught it is
+printed by `gauntlet.py` on every affected rung, which is the only reason it is here rather
+than silently inside a rating.
 
 ---
 
@@ -490,7 +689,16 @@ across position types.
 **Ratings are pool-dependent.** Every figure here lives on Stockfish's scale. It is not FIDE,
 not Lichess, and not any published engine rating list.
 
-**The anchor rung is not reproducible** and its two runs disagree by 40–50 points (§4.3).
+**The anchor rung is not reproducible**, and worse than that, its answer depends on which
+rated rung it is read at — by 144 points at level 4 (§4.3). Stockfish's `UCI_Elo` scale is
+compressed at this time control, so the engine looks stronger the stronger the opponent it is
+measured against.
+
+**A gain measured against node-limited Stockfish may not be a gain against anything else.**
+Stockfish at 1 to 300 nodes does not search, so a change that is pure endgame knowledge is
+worth more against it than against an opponent that plays endgames properly — and §5.1.3 shows
+exactly that disagreement between the ladder and the rated anchor. Non-transitivity is the
+third caveat in §4.3, and it is not hypothetical here.
 
 **Fixed-node Stockfish is not a rated configuration.** The ladder is internally consistent
 and externally uncalibrated; it borrows its calibration entirely from the anchor.
@@ -520,7 +728,10 @@ build from source in about a minute), and Stockfish, which is a package on every
    a few seconds. This is the step that catches a broken harness before it produces a
    convincing wrong answer.
 4. Run the ladder: four skill levels against four opponent settings, 512 games each.
-5. Run the anchor separately, and treat it with the suspicion §4.3 earns it.
+5. Run the anchor separately, and treat it with the suspicion §4.3 earns it. Give each level
+   the two rated rungs nearest its own strength rather than one rung for all four — a rung the
+   engine scores 88% against carries almost no information — and run it at a concurrency below
+   the core count, because it is the one measurement with a clock in it.
 
 The whole ladder is roughly 8,000 games and takes a few minutes. **There is no reason ever to
 run a short match.**
@@ -534,27 +745,46 @@ will stay current; naming them here would only date this document.
 
 512 games a rung. Rating difference relative to the Stockfish setting, 95% interval, and the
 opening-pair breakdown (both games lost, split, both drawn, split the other way, both won).
+fastchess alpha 1.8.2, Stockfish 18, `tests/book.epd`, both sides node limited.
 
-| Level | Opponent | W–L–D | Score | Diff | 95% interval |
-|---|---|---|---|---|---|
-| 1 | SF 1 node | 13–445–54 | 0.078 | −429 | [−474, −383] |
-| 1 | SF 30 nodes | 14–441–57 | 0.083 | −417 | [−463, −372] |
-| 1 | SF 100 nodes | 9–481–22 | 0.039 | −556 | [−623, −490] |
-| 1 | SF 300 nodes | 4–497–11 | 0.019 | −689 | [−792, −587] |
-| 2 | SF 1 node | 30–381–101 | 0.157 | −292 | [−324, −259] |
-| 2 | SF 30 nodes | 30–386–96 | 0.152 | −298 | [−331, −265] |
-| 2 | SF 100 nodes | 20–466–26 | 0.064 | −465 | [−522, −408] |
-| 2 | SF 300 nodes | 10–486–16 | 0.035 | −575 | [−649, −502] |
-| 3 | SF 1 node | 99–257–156 | 0.346 | −111 | [−136, −86] |
-| 3 | SF 30 nodes | 107–261–144 | 0.350 | −108 | [−134, −81] |
-| 3 | SF 100 nodes | 79–340–93 | 0.245 | −195 | [−226, −165] |
-| 3 | SF 300 nodes | 39–429–44 | 0.119 | −348 | [−389, −306] |
-| 4 | SF 1 node | 179–159–174 | 0.520 | **+14** | [−12, +39] |
-| 4 | SF 30 nodes | 165–174–173 | 0.491 | −6 | [−31, +19] |
-| 4 | SF 100 nodes | 159–237–116 | 0.424 | −53 | [−79, −27] |
-| 4 | SF 300 nodes | 70–391–51 | 0.187 | −256 | [−292, −220] |
+| Level | Opponent | W–L–D | Score | Diff | 95% interval | Pairs (0–2) |
+|---|---|---|---|---|---|---|
+| 1 | SF 1 node | 19–417–76 | 0.111 | −361 | [−400, −322] | 169,66,16,4,1 |
+| 1 | SF 30 nodes | 18–417–77 | 0.110 | −363 | [−402, −323] | 169,68,14,3,2 |
+| 1 | SF 100 nodes | 11–455–46 | 0.066 | −459 | [−507, −411] | 201,42,13,0,0 |
+| 1 | SF 300 nodes | 9–489–14 | 0.031 | −597 | [−678, −515] | 234,12,10,0,0 |
+| 2 | SF 1 node | 43–359–110 | 0.191 | −250 | [−280, −221] | 121,82,47,4,2 |
+| 2 | SF 30 nodes | 39–368–105 | 0.179 | −265 | [−296, −234] | 129,80,40,5,2 |
+| 2 | SF 100 nodes | 22–428–62 | 0.104 | −375 | [−415, −335] | 180,47,28,1,0 |
+| 2 | SF 300 nodes | 18–469–25 | 0.060 | −479 | [−536, −422] | 215,21,20,0,0 |
+| 3 | SF 1 node | 173–219–120 | 0.455 | −31 | [−59, −4] | 50,54,78,40,34 |
+| 3 | SF 30 nodes | 171–213–128 | 0.459 | −29 | [−55, −2] | 49,47,88,41,31 |
+| 3 | SF 100 nodes | 115–295–102 | 0.324 | −128 | [−156, −99] | 87,57,74,25,13 |
+| 3 | SF 300 nodes | 57–376–79 | 0.188 | −254 | [−288, −220] | 141,54,46,13,2 |
+| 4 | SF 1 node | 248–129–135 | 0.616 | **+82** | [+56, +109] | 17,36,74,69,60 |
+| 4 | SF 30 nodes | 238–143–131 | 0.593 | +65 | [+38, +92] | 21,41,72,66,56 |
+| 4 | SF 100 nodes | 199–212–101 | 0.487 | −9 | [−35, +17] | 37,48,99,35,37 |
+| 4 | SF 300 nodes | 83–343–86 | 0.246 | −194 | [−225, −164] | 109,69,59,11,8 |
 
-Cross-check against the second runner, first column, 512 games each: −429, −290, −105, +10.
+Cross-check against the second runner, first column, 512 games each: −357, −254, −35, +77.
+c-chess-cli computes a binomial interval where fastchess pairs the colours, so the two do not
+have to agree to the point — four points at the widest is two implementations telling the same
+story.
+
+## A.1 The two earlier runs, kept for comparison
+
+The same sixteen rungs before the two strength changes. First column, then the mean of the
+four columns at each level. §5.1.3 is what these are for.
+
+| Level | Original | After repetition detection | Current |
+|---|---|---|---|
+| 1 | −429 | −422 | **−361** |
+| 2 | −292 | −303 | **−250** |
+| 3 | −111 | −91 | **−31** |
+| 4 | +14 | +30 | **+82** |
+
+The middle column is reconstructed from the deltas recorded in §5.1.2, which is how that run
+was written down; the outer two are measured tables.
 
 # Appendix B — Self-play reference
 

@@ -167,10 +167,18 @@ seconds; there is no excuse for a short one.
 That is not the question a player is asking, and it overturned two terms that had already
 been accepted.
 
+**A self-play number is a reason to go and measure, not a result.** It overstated repetition
+detection about threefold and understated the endgame tables by half — same instrument, both
+directions — so there is no correction factor, only an outside opponent. `doc/strength.md`
+§5.1.2 and §5.1.3.
+
 **A feature being measured has to be switchable.** The two sides of a match live in one
 binary, so a change gets a flag under `EVAL_TUNING` — `geEvalTerms` for evaluation terms,
 `geSearchRepetition` for repetition — present in the tuning build and compiled out of the
-8-bit one, which pays neither a byte nor a test.
+8-bit one, which pays neither a byte nor a test. `make uci-tuning` puts those switches on the
+UCI adapter so a term can be A/B'd against Stockfish rather than against the engine itself;
+nothing published is measured with that binary, and it has to reproduce `uci`'s games to the
+digit before its differences mean anything.
 
 **The search is deterministic**, so a match without a varied opening set is one game
 repeated N times. If you make it non-deterministic, that has to be switchable — every

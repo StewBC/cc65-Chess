@@ -203,6 +203,28 @@ Two things about it are deliberate:
 Node budgets are clamped to 65535, because that is what a 16-bit counter holds on the target.
 Asking for more would measure a configuration no C64 can reach.
 
+### Switching a term off against an outside opponent
+
+`make uci-tuning` builds the same adapter *with* `-DEVAL_TUNING`, which exposes the tuning
+switches as UCI options. This is how a term gets priced against Stockfish rather than against
+the engine's own opinion of itself, which §5.1.2 and §5.1.3 of `doc/strength.md` show is a
+different number in an unpredictable direction.
+
+```bash
+./gauntlet.py --uci ./uci-tuning --games 512 --levels 1,2 --nodes 1,100,300
+./gauntlet.py --uci ./uci-tuning --uci-option Repetition=false \
+              --games 512 --levels 1,2 --nodes 1,100,300
+```
+
+`--uci-option` is repeatable and goes to our engine only. Any run that uses it prints the
+configuration in its header, because a table that does not say which engine produced it is a
+table nobody can place.
+
+Two rules come with it. **Nothing published is measured with this binary** — tuning makes
+every node dearer, so `uci` stays the one the ladder runs. And **before believing an A/B,
+show that `uci-tuning` with everything on plays `uci`'s games**: same result, same node
+counts. If it does not, the switch is not the only thing that changed.
+
 ### The opening book
 
 The search is deterministic: from one position it plays one game, so a match without varied

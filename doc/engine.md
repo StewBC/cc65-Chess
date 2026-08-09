@@ -546,6 +546,11 @@ And on the number the work was actually for — the share of clear material adva
 become wins — 69% to **78%** from openings, 87% to **90%** from endgame positions. Games that
 ran out the 240-ply limit halved.
 
+Those are self-play figures. Against Stockfish the same change measured **+52 to +94** across
+sixteen ladder rungs, and against Stockfish's *rated* mode it did not measure at all —
+`doc/strength.md` §5.1.3 is about why three careful instruments gave three answers, and why the
+honest claim is narrower than any of them.
+
 **The king alone was nearly worthless, and that is the lesson.** It measured +15 Elo and moved
 conversion not at all. The engine could not finish won endings because marching a pawn from
 home to the seventh earned it 45 centipawns — nine a move — while the promotion that justifies
@@ -1053,6 +1058,7 @@ fifty-move counter, so no position it reaches can repeat one above it.
 | CODE | +1038 bytes |
 | Speed | **−9% on a real C64** |
 | Strength | **+44 Elo** at equal nodes, **+38 Elo** at equal time, 512 games, 3.7 sigma |
+| ...against Stockfish | **+9 to +16** at levels 3 and 4; the self-play figure was threefold optimistic (`strength.md` §5.1.2) |
 | Self-play draws | 53% → 32%; decisive games 240 → 350 of 512 |
 
 **The speed figure is the part worth stopping on.** Measured on this host — same 512-game

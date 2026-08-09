@@ -10,6 +10,7 @@
 # native test binaries and their debug info
 /tests/chesstest
 /tests/uci
+/tests/uci-tuning
 /tests/genbook
 *.dSYM/
 

@@ -20,27 +20,29 @@ including the parts that went wrong.
 
 ## How strong is it?
 
-Measured over roughly 20,000 games against Stockfish, using two independent match runners:
+Measured over roughly 40,000 games against Stockfish, using two independent match runners:
 
 | Menu level | Search budget | Time per move on a stock C64 | Approximate rating |
 |---|---|---|---|
-| 1 — Very Easy | 400 nodes | 8 seconds | ~1170 |
+| 1 — Very Easy | 400 nodes | 8 seconds | ~1200 |
 | 2 — Easy | 1,200 nodes | 29 seconds | ~1350 |
-| 3 — Harder | 15,000 nodes | ~3.5 minutes | ~1610 |
+| 3 — Harder | 15,000 nodes | ~3.5 minutes | ~1650 |
 | 4 — Very Hard | 60,000 nodes | ~15 minutes | ~1700 |
 
 Ratings are on Stockfish's own scale, ±150 — and that uncertainty is honest rather than
-statistical. At its strongest setting the engine draws level with Stockfish restricted to a
-single search node. `doc/strength.md` explains what the numbers mean, what they do not mean,
-and how to reproduce them.
+statistical. At its strongest setting the engine beats Stockfish restricted to a single search
+node, and draws level with it at a hundred nodes and with its rating-limited mode set to 1700.
+`doc/strength.md` explains what the numbers mean, what they do not mean, and how to reproduce
+them.
 
 Emulator speed-up is a free multiplier: strength is measured in positions searched, not
 seconds, so an accelerated machine plays the same game sooner. Roughly 60 rating points per
 doubling of thinking time.
 
-Those four figures predate two strength changes — repetition detection and the endgame tables
-— so read them as a floor rather than as current. `doc/strength.md` §5.1.2 has the one re-run
-that has been done since.
+The table is current as of the endgame piece-square tables. Against node-limited Stockfish
+every rung of the ladder improved after that change; against Stockfish's *rated* mode it is
+not visible, and `doc/strength.md` §5.1.3 is about why two careful measurements of the same
+change disagree — which is more interesting than either number.
 
 ## Playing it
 
