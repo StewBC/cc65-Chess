@@ -152,6 +152,49 @@ typedef struct tag_Config
 } t_Config;
 
 /*-----------------------------------------------------------------------*/
+// Material balance in hundredths of a pawn, white positive.  Walking 64
+// squares per ply would be absurd inside the search and is nothing in a
+// harness, and it has to be counted rather than read from geEvalScore: the
+// evaluation is the thing under test, so it cannot also be the instrument
+static int materialBalance(void)
+{
+	int score = 0;
+	char sq;
+
+	for(sq = 0; sq < 0x78; ++sq)
+	{
+		char piece = geBoard[sq];
+
+		if(ENG_OFFBOARD(sq) || NONE == (piece & PIECE_DATA))
+			continue;
+		if(piece & PIECE_WHITE)
+			score += gcPieceValue[piece & PIECE_DATA];
+		else
+			score -= gcPieceValue[piece & PIECE_DATA];
+	}
+	return score;
+}
+
+/*-----------------------------------------------------------------------*/
+// Conversion: of the games where a side was ever a clear piece up, how many
+// did that side actually win?
+//
+// This is the number that says whether the engine can finish, and W-L-D does
+// not contain it - a change can leave the score untouched and still turn won
+// endings into draws, which is exactly the failure that started this.  The
+// threshold is material because material is objective; an evaluation that
+// rates its own position +2.55 when it is +9.8 cannot be asked to referee.
+//
+// The advantage has to *last* to count.  A piece hanging for one ply before it
+// is recaptured is a peak of +3 and means nothing; counting those put 880
+// winning sides in 512 games, which is not what anyone means by winning.  Ten
+// plies is five moves of actually being a piece up
+#define CONVERT_MARGIN		300
+#define CONVERT_PLIES		10
+
+static int si_hadWin, si_converted, si_stillUp, si_gaveBack, si_threwIt;
+
+/*-----------------------------------------------------------------------*/
 // +1 if "a" won, -1 if "b" won, 0 for a draw or an unfinished game
 static int si_drawFifty, si_drawStale, si_drawUnfinished, si_drawRepeat;
 
@@ -159,7 +202,7 @@ static int playGame(const t_Position *opening, const t_Config *a, const t_Config
                     char aSide, int maxPlies, unsigned long *nodesOut)
 {
 	char side = loadPosition(opening);
-	int ply;
+	int ply, upWhite = 0, upBlack = 0, verdict;
 
 	undo_Init();
 	board_SyncDisplay();
@@ -170,14 +213,21 @@ static int playGame(const t_Position *opening, const t_Config *a, const t_Config
 		t_searchResult result;
 		char outcome = search_Outcome(side);
 
+		{
+			int material = materialBalance();
+
+			if(material >= CONVERT_MARGIN) ++upWhite;
+			else if(-material >= CONVERT_MARGIN) ++upBlack;
+		}
+
 		if(OUTCOME_CHECKMATE == outcome)
-			return (side == aSide) ? -1 : 1;		// side to move is mated
-		if(OUTCOME_STALEMATE == outcome) { ++si_drawStale; return 0; }
-		if(geHalfmove >= 100)            { ++si_drawFifty; return 0; }
+			goto decided;
+		if(OUTCOME_STALEMATE == outcome) { ++si_drawStale; goto drawn; }
+		if(geHalfmove >= 100)            { ++si_drawFifty; goto drawn; }
 		// the referee's job, and until now the harness did not do it: a
 		// threefold ended these games all along, and they were being counted
 		// as having hit the ply limit
-		if(eng_IsRepetition(2))          { ++si_drawRepeat; return 0; }
+		if(eng_IsRepetition(2))          { ++si_drawRepeat; goto drawn; }
 
 		geEvalTerms = cfg->m_terms;
 		geSearchRepetition = cfg->m_repetition;
@@ -187,7 +237,7 @@ static int playGame(const t_Position *opening, const t_Config *a, const t_Config
 		if(!result.m_haveMove)
 		{
 			++si_drawStale;
-			return 0;
+			goto drawn;
 		}
 
 		board_ApplyMove(&result.m_move, side);
@@ -195,7 +245,40 @@ static int playGame(const t_Position *opening, const t_Config *a, const t_Config
 	}
 
 	++si_drawUnfinished;
+drawn:
+	// A side that was a clear piece up for long enough and did not win it.
+	// Two very different failures hide in that one number, so split them: is
+	// it still a piece up at the end and simply cannot finish, or did it hand
+	// the material back?  The first wants endgame technique, the second wants
+	// something else entirely, and building the wrong one is easy
+	{
+		int final = materialBalance();
+
+		if(upWhite >= CONVERT_PLIES)
+		{
+			++si_hadWin;
+			if(final >= CONVERT_MARGIN) ++si_stillUp; else ++si_gaveBack;
+		}
+		if(upBlack >= CONVERT_PLIES)
+		{
+			++si_hadWin;
+			if(-final >= CONVERT_MARGIN) ++si_stillUp; else ++si_gaveBack;
+		}
+	}
 	return 0;
+
+decided:
+	// the side to move is mated, so the other side won
+	verdict = (side == aSide) ? -1 : 1;
+	{
+		int winnerUp = (side == SIDE_WHITE) ? upBlack : upWhite;
+		int loserUp  = (side == SIDE_WHITE) ? upWhite : upBlack;
+
+		if(winnerUp >= CONVERT_PLIES) { ++si_hadWin; ++si_converted; }
+		// a piece up for ten plies and mated anyway: the third failure
+		if(loserUp >= CONVERT_PLIES)  { ++si_hadWin; ++si_threwIt; }
+	}
+	return verdict;
 }
 
 /*-----------------------------------------------------------------------*/
@@ -207,6 +290,7 @@ static int runMatch(const t_Config *a, const t_Config *b, int maxPlies, int verb
 
 	if(sc_useEndgames) buildEndgames(); else buildOpenings();
 	si_drawFifty = si_drawStale = si_drawUnfinished = si_drawRepeat = 0;
+	si_hadWin = si_converted = si_stillUp = si_gaveBack = si_threwIt = 0;
 	printf("  %s  vs  %s\n", a->m_name, b->m_name);
 
 	for(i = 0; i < NUM_OPENINGS; ++i)
@@ -236,6 +320,14 @@ static int runMatch(const t_Config *a, const t_Config *b, int maxPlies, int verb
 	if(draws)
 		printf("    draws: %d threefold, %d fifty-move, %d stalemate, %d hit the %d ply limit\n",
 		       si_drawRepeat, si_drawFifty, si_drawStale, si_drawUnfinished, maxPlies);
+	if(si_hadWin)
+		printf("    conversion: %d of %d sides a clear piece up for %d+ plies won it (%d%%)\n",
+		       si_converted, si_hadWin, CONVERT_PLIES,
+		       (100 * si_converted) / si_hadWin);
+	if(si_hadWin - si_converted)
+		printf("      of the %d that did not: %d drew still a piece up, "
+		       "%d drew after giving it back, %d lost\n",
+		       si_hadWin - si_converted, si_stillUp, si_gaveBack, si_threwIt);
 
 	geEvalTerms = EVAL_ALL;
 	geSearchRepetition = 1;
@@ -299,10 +391,19 @@ int test_RunMatchLadder(int verbose)
 /*-----------------------------------------------------------------------*/
 int test_RunMatchEndgame(int verbose)
 {
-	t_Config phase = { "phase-aware king", EVAL_ALL, 4, 3000, 1 };
-	t_Config flat  = { "one king table",   EVAL_MATERIAL|EVAL_PST, 4, 3000, 1 };
+	// Both sides are the shipped configuration on purpose, for now.  The two
+	// terms this comparison was written for were removed, and EVAL_ALL has
+	// been identical to EVAL_MATERIAL|EVAL_PST ever since - it was a
+	// configuration playing itself and reporting a perfect 234-234-44, which
+	// looks like a result and is not one.
+	//
+	// Until a term exists to put on one side of it, this earns its keep as the
+	// conversion baseline from thinned-out positions: level score, and the
+	// share of clear material advantages that actually become wins
+	t_Config phase = { "shipped", EVAL_ALL, 4, 3000, 1 };
+	t_Config flat  = { "shipped", EVAL_ALL, 4, 3000, 1 };
 
-	printf("match: the endgame king table, measured in actual endgames\n");
+	printf("match: conversion from endgame positions\n");
 	sc_useEndgames = 1;
 	runMatch(&phase, &flat, 240, verbose);
 	sc_useEndgames = 0;
