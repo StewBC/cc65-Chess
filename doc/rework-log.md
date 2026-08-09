@@ -1047,7 +1047,10 @@ transposition table. *(Built in Phase 7, once Part V of `strength.md` put a numb
       - the **terminal build**, through AI-vs-AI, the attack overlay, and a human move
         followed by an undo.
 
-      **Still unrun: c64, c64.chr, atmos, atari, cx16.** And no target has been through the
+      - **atari**, under AltirraSDL's bridge, which is what turned up the framebuffer
+        collision in Phase 7 - boot through MyPicoDOS, menus, and an AI-vs-AI game.
+
+      **Still unrun: c64, c64.chr, atmos, cx16.** And no target has been through the
       *whole* checklist — castling, en passant, promotion, undo/redo and all three toggles
       in one sitting. c64, c64.chr and plus4 are drivable headless through VICE's binary
       monitor and apple2 through a2m-v2, so only atmos, atari and cx16 genuinely need
@@ -1169,6 +1172,46 @@ about six rating points it had not earned. The equal-time match is charged at th
 
 **+44 Elo at equal nodes, +38 at equal time**, 512 games, 3.7 sigma. Self-play draws 53% → 32%,
 decisive games 240 → 350. Size: RODATA +1584, CODE +1038, BSS +260.
+
+### The Atari, which this phase broke
+
+Repetition detection needs 2882 bytes, and the Atari had 1751 spare. That was the wrong
+number to be looking at.
+
+`hiresAtari.s` sets `scrn = $9100` and draws a 7680-byte GR.8 framebuffer there, up to
+$AEFF. It is an assembler constant. **The linker was never told**, so `ld65` places BSS
+wherever MAIN has room, reports a build well inside its budget, and the top of the screen
+displays whatever BSS happens to hold. Measured at optsize:
+
+| | static end | against the screen at $9100 |
+|---|---|---|
+| before repetition detection | $8A29 | clear by 1751 |
+| after | $952D | **1069 bytes inside it** |
+
+At optspeed it was already 553 bytes inside before any of this work — which is the real
+explanation for a note that had been in the README for years, that the Atari "needs optsize
+for the extra kilobyte". It never needed the kilobyte. It needed to end below $9100, and
+optsize happened to.
+
+So the sequence is: a latent bug from 2020, a workaround that recorded the wrong cause, and
+then a change that pushed the safe configuration over the same edge. Booting the current
+build under AltirraSDL's bridge shows it immediately - a band of noise across the top of the
+title screen, which is BSS being drawn as pixels.
+
+**The fix is the Apple II's fix again**: find the memory nobody is using. MEMLO is $0700
+under MyPicoDOS, and the program starts at $2000. Loading at $0800 crashes - the loader is
+still down there while it works - but **$1000 boots, plays, and leaves 2771 bytes clear at
+optsize and 723 at optspeed**, so both settings are safe now. Verified through the bridge:
+MyPicoDOS boot, menus, an AI-vs-AI game with a clean board.
+
+The cfg also caps MAIN at $9100, which is the part that matters beyond this bug. An overrun
+is now a link error rather than a corrupted display.
+
+**The general lesson, and it is not a small one.** Every "all targets link inside their
+budgets" in this document is a statement about `ld65`, and `ld65` only knows what the config
+tells it. Two of the seven targets keep their framebuffer at an address that lives in
+assembly. A clean link proved nothing about either, and on the Atari it was actively
+misleading for years.
 
 **Still open.** *Opening variety* — the engine still plays the same first move every game, and
 the fix needs an entropy source that `plat.h` does not expose; parked deliberately. *The

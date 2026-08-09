@@ -25,8 +25,14 @@ assembly where current cc65 wants `(c_sp)`. It compiles and links clean, repetit
 included. Running it still needs the Windows machine, so the rest of the rule stands — do not
 delete it, do not knowingly break it, do not edit its platform files speculatively.
 
-**The Apple II is the tightest machine in the tree, by a wide margin.** Not the Atari, which
-has 5.6 KB spare against the Apple II's 1.2 KB in MAIN. The program starts at `$4000` because
+**Two targets have video memory the linker cannot see, and both now have a config that
+says so.** The Apple II's HGR page 1 at `$2000` and the Atari's GR.8 framebuffer at a
+hard-coded `$9100` in `hiresAtari.s`. A clean `ld65` run proves nothing about either: the
+Atari linked "inside its budget" for months while drawing BSS onto the top of the screen.
+Both cfgs now cap the program below the framebuffer, so an overrun is a link error.
+
+**The Apple II is the tightest machine in the tree**, at 1.2 KB spare in MAIN against the
+Atari's 2.7 KB at optsize. The program starts at `$4000` because
 HGR page 1 is at `$2000-$3FFF`, and `src/apple2/chessA2.cfg` puts BSS in the stranded
 `$0800-$1FFF` below it — verified running, including a write watchpoint over the unused tail.
 Before that config existed there were 460 bytes of headroom, and repetition detection would not

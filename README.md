@@ -63,8 +63,12 @@ friendly piece defending it. Attackers in cyan, defenders in red.
 make OPTIONS=optspeed TARGETS=c64
 ```
 
-Build for speed on almost every target — it is also *smaller* on most of them. The Atari is
-the exception and needs `OPTIONS=optsize` for the extra kilobyte.
+Build for speed on almost every target. The Atari was long believed to *need* `optsize`; it
+did, but not for the reason recorded here — its framebuffer sits at a hard-coded `$9100` that
+the linker was never told about, and `optspeed` ended up 553 bytes inside it while `optsize`
+ended below it. `src/atari/chessAtari.cfg` now reserves the screen and loads lower, so both
+settings are safe; `optsize` is still the better default there, with 2771 bytes of margin
+against 723.
 
 `make` with no `TARGETS` builds the c64. The full list is `apple2 atari atmos c64 c64.chr
 plus4 cx16`. Most platforms have a second step to produce a disk, tape or program image —
