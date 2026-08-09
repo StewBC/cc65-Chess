@@ -140,6 +140,22 @@ shorter games, then the match configuration switched the feature back on per mov
 the default the cost build existed to measure. **Equal node counts are the precondition for the
 timing to mean anything** — check them before reading the clock.
 
+**W-L-D does not contain every failure, and conversion is the one it hides.** An engine can
+score dead level and still turn won endings into draws — that is how the biggest defect this
+project has found went unnoticed through a whole tuning phase. Every match therefore also
+reports **conversion**: of the sides that were a clear piece up for ten plies or more, how many
+actually won, split into drew-still-a-piece-up, drew-after-giving-it-back, and lost. The three
+want different fixes and lumping them together sends you building the wrong one.
+
+The yardstick is *material*, not the engine's own score, because the evaluation is usually the
+thing under test — an engine that rates its position +2.55 when it is +9.8 cannot referee its
+own conversion. And the advantage has to last ten plies: a piece hanging for one ply before
+recapture is a peak of +3 and means nothing, and counting those put 880 winning sides in 512
+games.
+
+Current baselines, shipped configuration against itself: **78%** from openings, **90%** from
+endgame positions.
+
 **`match sanity` is the check on the instrument itself.** A configuration against itself must
 come out exactly level, because the harness plays every opening twice with the colours
 swapped, so every result has its mirror. If that is not balanced, the harness is measuring

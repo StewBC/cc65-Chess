@@ -44,9 +44,12 @@ and it is why level 4 is only 90 points above level 3 despite thinking four time
 
 **The engine threw away roughly one game in six that it had already won.** Not a rating
 finding but a defect one, and the most valuable thing the exercise turned up. It has since
-been fixed, and the fix is worth about **+38 rating points at equal time** — details and the
-measurement in §5.1. Note that the ladder above was measured *before* that fix and has not
-been re-run against Stockfish since.
+been fixed — details and the measurement in §5.1.
+
+**The ladder above is out of date and the figures in it are not current.** It predates both
+repetition detection and the endgame tables. It was re-run once after the first of those
+(§5.1.2) and not since, so the four ratings should be read as a floor from an older engine
+rather than as today's numbers.
 
 ---
 
@@ -407,10 +410,45 @@ earned. This is the same lesson as §6.9 of `doc/engine.md` in a different disgu
 measured on the wrong machine is not the cost.
 
 **Three caveats, none of which the numbers above hide.** These are self-play results, and
-self-play systematically overstates a change that both sides understand — the ladder in Part IV
-has *not* been re-run against Stockfish, so the rung figures in the executive summary remain
-pre-fix numbers. The opening set is the same artificial one described in §6. And 512 games with
-a 3.7-sigma edge is a real result, not a certainty.
+self-play systematically overstates a change that both sides understand. The opening set is the
+same artificial one described in §6. And 512 games with a 3.7-sigma edge is a real result, not
+a certainty.
+
+The first of those caveats can be checked rather than asserted, and §5.1.2 does.
+
+## 5.1.2 The same change, measured against somebody else
+
+The ladder was re-run after repetition detection landed: same 512 games a rung, same Stockfish
+18, same book, both sides node limited — the conditions of Appendix A exactly. The differences
+against the recorded table:
+
+| Level | vs SF 1 node | vs SF 30 | vs SF 100 | vs SF 300 | mean |
+|---|---|---|---|---|---|
+| 1 | +7 | −21 | −30 | −20 | **−16** |
+| 2 | −11 | −26 | 0 | −11 | **−12** |
+| 3 | +20 | +20 | +17 | +5 | **+16** |
+| 4 | +16 | +16 | +5 | 0 | **+9** |
+
+**Self-play overstated the gain about threefold.** It said +38 at equal time; against an
+opponent that does not share the defect it is +9 to +16 at the levels where it helps. That is
+the caveat above turned into a number, and it is a large one. Any future self-play result in
+this document should be read with it in mind.
+
+**Levels 1 and 2 came out slightly worse, and the pattern says where.** Every one of the eight
+deep-level rungs is at or above zero; seven of the eight shallow ones are at or below it. The
+damage is concentrated against opponents far stronger than the engine, and against the weakest
+opponent level 1 actually improved.
+
+The mechanism is a hypothesis, not a finding: a repetition is often the *worse* side's best
+result, and scoring it as a draw makes the engine decline one whenever its evaluation claims
+better than zero. At 400 to 1200 nodes that evaluation is frequently wrong, so it walks out of
+a draw it should have taken. Level 2 against Stockfish at 30 nodes bears the shape of it —
+draws 96 → 65, losses 386 → 411, wins 30 → 36, draws converted into losses about four to one.
+
+Per-rung intervals are ±25 to ±50, so no single cell above is significant; the sign pattern
+across sixteen rungs is what carries it. Whether it matters for the *purpose* of those levels
+is a separate question, since a human beginner is far closer to Stockfish at one node than at
+three hundred, and no one has measured that.
 
 ## 5.2 The opening is dull, and the reason is mundane
 

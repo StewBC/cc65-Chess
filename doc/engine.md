@@ -1310,8 +1310,18 @@ database is gone, and probably the best remaining value per byte. It needed incr
 position hashing first, and §6.10 has now built that — so what remains is the table itself,
 and finding the RAM for it on the Apple II, which is the tightest target by a wide margin.
 
-**The two deferred evaluation terms** (§5.4). The note in `eval.h` says what each would now
-cost.
+**Pawn structure** — doubled, isolated and passed pawns (§5.4). The one deferred term still
+out. Its sibling came back as the endgame tables (§5.4a); this one needs a per-file pawn count
+carried alongside the score, since it is a property of the whole pawn configuration rather than
+of a piece on a square.
+
+**No opening variety.** From the starting position the engine plays the same first move every
+game, because the evaluation rates several openings exactly equal and ties break on generator
+order. The fix is to choose randomly among moves within a few hundredths of a pawn of the best,
+and it has to be switchable, since every measurement here depends on the search being
+deterministic. What blocks it is not the choosing but the seed: `plat.h` exposes no clock, so
+the entropy has to come from human input — menu choices, cursor keys, the squares of moves
+played — which leaves the very first move after a cold boot deterministic.
 
 **No pin set** (§6.9) — dropped on measurement, and the reasoning is recorded so it does not
 get re-proposed.

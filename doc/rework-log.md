@@ -1287,6 +1287,40 @@ structure and the endgame king table both died there in Phase 4, and the king ta
 there again on its own here. What changed is not the measurement standard but the pairing -
 the two tables together are worth three times what the better one was worth alone.
 
+### It cost the Atari its optspeed build
+
+1079 bytes was affordable at `optsize` and is not at `optspeed`: the Atari now overflows its
+memory area by **562 bytes** and refuses to link, and the Apple II links with **twelve** to
+spare. `optsize` remains comfortable - 1742 and 2366 bytes respectively - and is what
+`Makefile.options` defaults to.
+
+This is the Phase 7 cap earning its keep rather than a new problem. Before that config existed
+the same overflow was silent, and the Atari drew its own BSS across the top of the screen while
+`ld65` reported a clean build. A link error is the correct outcome; it is only visible now
+because something finally told the linker where the screen was.
+
+Two levers remain unclaimed if `optspeed` is ever wanted back: 1312 bytes on the Atari at
+`$AF00-$B41F` between the framebuffer and the stack, and a start address tested only down to
+`$1000`.
+
+### Still open, and this is the next work
+
+*The Stockfish ladder is two strength changes out of date.* It was re-run once after
+repetition detection (`strength.md` §5.1.2) and not since the endgame tables, so every rung
+in Part IV and every figure in the README is a floor from an older engine.
+
+*Levels 1 and 2 regressed slightly on that re-run* - about -16 and -12 Elo averaged over their
+four rungs, concentrated entirely against opponents far stronger than the engine, while levels
+3 and 4 gained +16 and +9. The hypothesis is in §5.1.2 and has not been tested. Whether it
+matters for levels whose job is to be beatable by a human is a separate question nobody has
+measured.
+
+*Opening randomisation is parked, and there is now room for it.* The engine still plays the
+same first move every game. Both tight targets have headroom at `optsize` - the Apple II 2366
+bytes, the Atari 1742 - and the term needs a couple of hundred. What blocks it is the seed
+rather than the space: `plat.h` exposes no clock, so entropy has to come from human input, and
+the first move after a cold boot stays deterministic whatever is done.
+
 ---
 
 ## Decisions on record
@@ -1295,6 +1329,11 @@ Kept here so they do not get relitigated.
 
 - The reference machine for all timing is real 1 MHz hardware at 1x. Emulator acceleration
   is a free multiplier and is not designed for.
+- **Every target is built at the same optimisation setting, and it is `optsize`.** A port
+  built differently is a port that behaves differently, so the setting is uniform rather
+  than per-target. Since Phase 8 it is also the only one that fits: `optspeed` overflows
+  the Atari by 562 bytes and leaves the Apple II twelve. Not revisited without a reason
+  better than free speed on the targets that could take it.
 - Budgets are node counts, never wall-clock, because the platforms share no timer and
   determinism across ports is worth more than adaptive timing.
 - `plat.h` and 0-63 tile numbering are frozen so that the untestable ports stay safe.

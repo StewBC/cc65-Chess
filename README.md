@@ -38,6 +38,10 @@ Emulator speed-up is a free multiplier: strength is measured in positions search
 seconds, so an accelerated machine plays the same game sooner. Roughly 60 rating points per
 doubling of thinking time.
 
+Those four figures predate two strength changes — repetition detection and the endgame tables
+— so read them as a floor rather than as current. `doc/strength.md` §5.1.2 has the one re-run
+that has been done since.
+
 ## Playing it
 
 Built images for every platform are in the releases tab. There is a video of the game
@@ -60,23 +64,27 @@ friendly piece defending it. Attackers in cyan, defenders in red.
 ## Building
 
 ```bash
-make OPTIONS=optspeed TARGETS=c64
+make                    # every target
+make TARGETS=c64        # or just one
 ```
 
-Build for speed on almost every target. The Atari was long believed to *need* `optsize`; it
-did, but not for the reason recorded here — its framebuffer sits at a hard-coded `$9100` that
-the linker was never told about, and `optspeed` ended up 553 bytes inside it while `optsize`
-ended below it. `src/atari/chessAtari.cfg` now reserves the screen and loads lower, so both
-settings are safe; `optsize` is still the better default there, with 2771 bytes of margin
-against 723.
+The full target list is `apple2 atari atmos c64 c64.chr plus4 cx16`, and a bare `make` builds
+all of them. Every one is built at the same optimisation setting, `optsize`, which is the
+default — the Atari does not fit at `optspeed`, and a port built differently is a port that
+behaves differently.
 
-`make` with no `TARGETS` builds the c64. The full list is `apple2 atari atmos c64 c64.chr
-plus4 cx16`. Most platforms have a second step to produce a disk, tape or program image —
-`dsk`, `atr`, `tap`, `prg`, `cprg`, `cxprg` — and the two can be combined:
+Most platforms have a second step to produce a disk, tape or program image — `d64`, `dsk`,
+`po`, `atr`, `tap`, `prg`, `cprg`, `cxprg`. The binaries have to exist first, so build them in
+the same invocation:
 
 ```bash
-make OPTIONS=optspeed all dsk atr tap prg cprg cxprg
+make all d64 dsk po atr tap prg cprg cxprg
 ```
+
+`po` needs `cadius` and `atr` needs `dir2atr`; the rest need nothing extra.
+
+`cx16` needs a reasonably current cc65: it uses `c_sp` in inline assembly, which older
+versions called `sp`.
 
 **The terminal build**, which is what development happens against:
 
@@ -85,11 +93,6 @@ cc -Isrc -lcurses -funsigned-char src/globals.c src/engine.c src/eval.c src/sear
    src/board.c src/undo.c src/cpu.c src/human.c src/frontend.c src/main.c \
    src/term/platTerm.c -o /tmp/chessterm
 ```
-
-**Current state:** all seven targets build and link inside their budgets. `cx16` was the
-last holdout — a build failure in its platform file that predated the engine rework and was
-indeed cc65 version drift: newer cc65 renamed the software stack pointer, so the inline
-assembly wanted `(c_sp)` where it said `(sp)`.
 
 ## The documentation
 

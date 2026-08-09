@@ -31,18 +31,35 @@ hard-coded `$9100` in `hiresAtari.s`. A clean `ld65` run proves nothing about ei
 Atari linked "inside its budget" for months while drawing BSS onto the top of the screen.
 Both cfgs now cap the program below the framebuffer, so an overrun is a link error.
 
-**The Apple II is the tightest machine in the tree**, at 1.2 KB spare in MAIN against the
-Atari's 2.7 KB at optsize. The program starts at `$4000` because
-HGR page 1 is at `$2000-$3FFF`, and `src/apple2/chessA2.cfg` puts BSS in the stranded
-`$0800-$1FFF` below it — verified running, including a write watchpoint over the unused tail.
-Before that config existed there were 460 bytes of headroom, and repetition detection would not
-have linked. Size anything large against the Apple II first.
+**Every target is built at the same optimisation setting, and that setting is `optsize`.**
+Uniformity is the point - a port that is built differently is a port that behaves
+differently - so `optspeed` is not an option for one target while another cannot take it.
+Since the endgame tables it is also the only setting that fits:
 
-**`apple2`, `plus4` and `atari` are no longer in that category.** All three build here.
+| | optsize | optspeed |
+|---|---|---|
+| atari | 1742 free below the framebuffer | **does not link — 562 bytes over** |
+| apple2 | 2366 free in MAIN, 2124 in BSS | links with **12 bytes** spare |
+
+`Makefile.options` defaults to `optsize` and that is why. Raising it would mean raising it
+everywhere, which the Atari cannot take - so treat `optsize` as fixed, and check anything
+added to the shipped build against the two numbers above.
+
+There is RAM left to claim if it comes to that: 1312 bytes on the Atari at `$AF00-$B41F`
+between the screen and the stack, and a start address that has only been tested down to
+`$1000` (`$0800` crashes on load — MyPicoDOS is still there while it works).
+
+Both tight targets got there the same way. The Apple II starts at `$4000` because HGR page 1
+is at `$2000-$3FFF`, and `src/apple2/chessA2.cfg` puts BSS in the stranded `$0800-$1FFF`
+below it — verified running, with a write watchpoint over the unused tail. Before that config
+existed it had 460 bytes and repetition detection would not have linked.
+
+**`apple2`, `plus4` and `atari` all build here, and two of the three run here.**
 `apple2` and `plus4` also *run* here — `../a2m-v2` for the Apple II, VICE's `xplus4` binary
 monitor for the Plus/4 — so a change to either can be verified instead of argued (§7 of
-`doc/measuring.md`). `atari` builds to a `.atr` with `dir2atr`, but running it is still
-Altirra on the Windows machine.
+`doc/measuring.md`). `atari` runs here too now, under AltirraSDL's JSON bridge — see
+`scratch/altirra-bridge-usage.md`, which is how the framebuffer collision was found and the
+fix confirmed.
 
 **Compiling a target says nothing about whether it runs.** The plus4 build linked inside its
 budget throughout the rework and was broken end to end — by a **cc65 bug**, not ours: in
@@ -58,6 +75,13 @@ than inventing a binding. The four-item skill menu is the only difficulty contro
 
 **The attacker/defender visualizer is a feature, not an accident.** The `B` / `A` / `D`
 displays are the thing worth preserving most. They may be reimplemented, never degraded.
+
+**`B` shows four numbers a square, and all four are deliberate**: attackers bottom left,
+defenders bottom right, piece value top left, colour top right. The C64 separates them by
+colour and says so in a comment; the Apple II has no colour to spare and crams the top pair
+into three hex characters, which reads like a debug leftover and is not one. It is the display
+the 2014 video explains. Before deleting anything in a port that looks like debris, read the
+same function in `platC64.c` - the ports are ports.
 
 **All targets must build and play.** Intermediate states may break individual targets; the
 tree as committed may not.
