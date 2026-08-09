@@ -587,12 +587,32 @@ target, not assumed free.**
 
 ## Phase 5 — 8-bit fit and speed
 
-- [ ] Measure binary size and RAM for every buildable target and compare against the
+- [X] Measure binary size and RAM for every buildable target and compare against the
       pre-rework baseline. The C64 baseline before this work was 27130 bytes at
-      `optspeed`, 25883 at `optsize`. **Partly done: the c64 is measured segment by segment
-      throughout Phase 5 (summary at the end). The other four targets have only been
-      confirmed to link, not measured.** They all fit, so this is bookkeeping rather than a
-      risk — `ld65 --mapfile` per target is the whole job.
+      `optspeed`, 25883 at `optsize`.
+
+      **Done, and there are now seven targets rather than five** — `atari` and `cx16` both
+      build here too (Phase 6). Segment totals from `ld65 --mapfile`, after repetition
+      detection:
+
+      | Target | CODE | RODATA | DATA | BSS | Total `optsize` | Total `optspeed` |
+      |---|---|---|---|---|---|---|
+      | atari   | 21577 | 3335 | 287 | 4068 | **29267** | 31550 |
+      | c64.chr | 22118 | 2783 | 291 | 5030 | **30222** | 32030 |
+      | apple2  | 21630 | 4464 | 492 | 4016 | **30602** | 32788 |
+      | cx16    | 22432 | 3820 | 341 | 4067 | **30660** | 32803 |
+      | atmos   | 24080 | 2514 | 290 | 4085 | **30969** | 32944 |
+      | plus4   | 23105 | 3695 | 324 | 4070 | **31194** | 33624 |
+      | c64     | 23474 | 3819 | 341 | 4071 | **31705** | 34123 |
+
+      (CODE and the totals are the `optsize` figures; RODATA, DATA and BSS do not move
+      between the two settings.)
+
+      Against the baseline, the c64 is **31705 against 25883 at `optsize`** — 5822 bytes
+      more program for a search that actually searches, an incremental evaluation, and
+      repetition detection. All seven link inside their budgets. The Apple II is the
+      tightest by a wide margin at 1255 bytes spare in MAIN, and only because Phase 7 gave
+      it a config that reclaims the RAM stranded below HGR page 1.
 
 - [X] **Make the evaluation incremental.** `geEvalScore` is a running white-positive total
       kept up to date by `eng_Make` and `eng_Unmake`; `eval_Position` is now a read.
@@ -704,7 +724,8 @@ target, not assumed free.**
 - [X] **Profile where search time actually goes on a real 6502.** Done, and it overturned
       the premise the remaining optimisation work was resting on. See below.
 
-- [ ] ~~Per-node pin set.~~ **Dropped on measurement, not on difficulty.** See below.
+- [X] ~~Per-node pin set.~~ **Dropped on measurement, not on difficulty.** Closed as a
+      decision rather than left open as work. See below.
 
 - [X] Bring each target inside its budget. **Nothing to do — all five buildable targets
       link clean and fit.** The lever noted here was wrong anyway: the undo stack is
@@ -1011,14 +1032,35 @@ transposition table. *(Built in Phase 7, once Part V of `strength.md` put a numb
       and the terminal build. A full game each, exercising castling, en passant, promotion,
       undo/redo and all three visualizer toggles.
 
-      **Status: builds yes, play-tests no.** All five cc65 targets compile clean and link
-      inside their budgets, and the terminal build has been driven through AI-vs-AI, the
-      attack overlay, and a human move followed by an undo. But **c64.chr, apple2, atmos and
-      plus4 have never actually been run** — not once, by anyone, since the rework began.
-      The frozen-interface rule means they *should* be fine, and no platform file has been
-      edited; that is an argument, not evidence. This is the largest remaining risk.
+      **Status: all seven build; two have now been run; the full checklist is still not
+      done.** Every target compiles clean and links inside its budget — `atari` and `cx16`
+      included, which this item did not expect (see the last item in this phase).
 
-- [ ] Update `readme.txt`. **Confirmed stale, more so than the plan assumed.** Section VI
+      Run, rather than argued about:
+
+      - **apple2**, under `../a2m-v2` with its control port. Boots, menus, hires board, move
+        log, an AI-vs-AI game played through, and the `B` visualizer drawing attack counts.
+        Done while verifying the relocated BSS in Phase 7.
+      - **plus4**, under VICE's binary monitor — which is how the `cgetc` bug in the Kernal
+        key count was found and worked around, a bug that made the menus drive themselves.
+        That one is the standing argument against trusting a clean link.
+      - the **terminal build**, through AI-vs-AI, the attack overlay, and a human move
+        followed by an undo.
+
+      **Still unrun: c64, c64.chr, atmos, atari, cx16.** And no target has been through the
+      *whole* checklist — castling, en passant, promotion, undo/redo and all three toggles
+      in one sitting. c64, c64.chr and plus4 are drivable headless through VICE's binary
+      monitor and apple2 through a2m-v2, so only atmos, atari and cx16 genuinely need
+      another machine. This remains the largest gap between what is known and what is
+      assumed.
+
+- [X] Update `readme.txt`. **Done, by replacement rather than by editing.** `README.md` is
+      now the front page and describes the engine that exists — alpha-beta, quiescence,
+      node budgets — while the 2014 text is kept verbatim as `doc/readme-2014.txt`, where
+      being out of date is the point: it documents the program that was replaced. The
+      original note is left below because it is the inventory of what was wrong.
+
+      **Confirmed stale, more so than the plan assumed.** Section VI
       documents the old algorithm in detail — `gWidth`, `gMaxLevel`, `gDeepThoughts`, the
       stack-ranking of per-piece scores — none of which exists any more; it needs replacing
       with a description of alpha-beta, quiescence, and node budgets. Section II also
@@ -1032,9 +1074,17 @@ transposition table. *(Built in Phase 7, once Part V of `strength.md` put a numb
       final size, speed and strength numbers against the baselines from Phase 0, Phase 1
       and Phase 5.
 
-- [ ] *(On the Windows machine, when convenient.)* Build `atari` and `cx16`. Both had
+- [X] *(On the Windows machine, when convenient.)* Build `atari` and `cx16`. Both had
       pre-existing failures unrelated to this work. If the frozen-interface rule held, no
       engine-side changes should be needed.
+
+      **Neither needed the Windows machine in the end, and the frozen-interface rule did
+      hold — no engine-side change was required for either.** `atari` builds here and
+      produces a bootable `.atr` via `dir2atr`. `cx16`'s failure was cc65 version drift, as
+      suspected: newer cc65 renamed the software stack pointer, so the inline assembly in
+      `platCX16.c` wanted `(c_sp)` where it said `(sp)`. Three lines. Both now build on the
+      Mac with repetition detection in them; *running* them still needs Altirra and
+      x16emu.
 
 ---
 

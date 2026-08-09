@@ -82,9 +82,10 @@ cc -Isrc -lcurses -funsigned-char src/globals.c src/engine.c src/eval.c src/sear
    src/term/platTerm.c -o /tmp/chessterm
 ```
 
-**Current state:** every target except `cx16` builds and links inside its budget. `cx16` has
-a build failure in its platform file that predates the engine rework and looks like cc65
-version drift.
+**Current state:** all seven targets build and link inside their budgets. `cx16` was the
+last holdout — a build failure in its platform file that predated the engine rework and was
+indeed cc65 version drift: newer cc65 renamed the software stack pointer, so the inline
+assembly wanted `(c_sp)` where it said `(sp)`.
 
 ## The documentation
 

@@ -1252,8 +1252,10 @@ Doubling the speed is worth having and does not make the engine visibly deeper.
 Against the engine it replaced, at that engine's strongest setting: **6 wins, 0 losses**,
 mating on ply 31 as White and ply 52 as Black.
 
-Size on the C64 at `optspeed`: 31129 bytes total (CODE 24739, RODATA 2235, DATA 344,
-BSS 3811). All five buildable targets link and fit.
+Size on the C64 at `optspeed`: 34123 bytes total (CODE 25892, RODATA 3819, DATA 341,
+BSS 4071); 31705 at `optsize`. Repetition detection accounts for 2882 of that — see §6.10.
+**All seven targets link and fit**, the Apple II most narrowly at 1255 bytes spare; the
+full table is in the Phase 5 notes of `doc/rework-log.md`.
 
 # Appendix B — What is deliberately absent
 
