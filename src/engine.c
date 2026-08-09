@@ -837,6 +837,8 @@ void eng_Make(const t_engMove *move, t_engUndo *undo)
 	// keep the running evaluation with the pieces.  eng_Unmake subtracts this
 	// exact call, so the two cannot drift apart
 	geEvalScore += eval_MoveDelta(move, piece, undo->m_captured);
+	gePhase += eval_PhaseDelta(move, piece, undo->m_captured);
+	geEvalEnd += eval_EndDelta(move, piece, undo->m_captured);
 	geHashKey ^= hashDelta(move, piece, undo->m_captured);
 
 	// and record where we now are.  This runs for search moves as well as
@@ -891,6 +893,8 @@ void eng_Unmake(const t_engMove *move, const t_engUndo *undo)
 	}
 
 	geEvalScore -= eval_MoveDelta(move, moved, undo->m_captured);
+	gePhase -= eval_PhaseDelta(move, moved, undo->m_captured);
+	geEvalEnd -= eval_EndDelta(move, moved, undo->m_captured);
 	geHashKey ^= hashDelta(move, moved, undo->m_captured);
 
 	--sc_hashTop;

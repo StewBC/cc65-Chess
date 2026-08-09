@@ -41,7 +41,8 @@ extern const int gcPieceValue[PAWN+1];
 // neither the byte nor the test
 #define EVAL_MATERIAL		SET_BIT(0)
 #define EVAL_PST			SET_BIT(1)
-#define EVAL_ALL			(EVAL_MATERIAL|EVAL_PST)
+#define EVAL_ENDGAME		SET_BIT(4)
+#define EVAL_ALL			(EVAL_MATERIAL|EVAL_PST|EVAL_ENDGAME)
 
 // Two terms were built, measured and taken out again; see the Phase 4 notes.
 //
@@ -59,13 +60,21 @@ extern const int gcPieceValue[PAWN+1];
 // char count rather than an int sum made no difference at all - the cost is
 // doing anything at all per piece, 32 times, at every node.
 //
-// Both are good terms.  Both were blocked on the same thing: the evaluation was
-// recomputed from scratch at every node, so anything added to it was paid for
-// 20000 times a move.  Phase 5 made it incremental, which is what unblocks
-// them - a term that can be folded into eval_MoveDelta is now paid once per
-// move made rather than once per node, so their measured gains should stand at
-// equal *time* and not just at equal nodes.  Reinstate them one at a time, each
-// behind a 512-game match, exactly as before.
+// Both were blocked on the same thing: the evaluation was recomputed from
+// scratch at every node, so anything added to it was paid for 20000 times a
+// move.  Phase 5 made it incremental, which is what unblocked them.
+//
+// EVAL_ENDGAME is the one that came back, and the interesting part is what it
+// took.  Reinstating the king table alone measured +15 Elo at 1.55 sigma and
+// did not improve conversion at all - the number it was built to move.  The
+// reason was the pawns: the middlegame table pays 50 for a pawn on the seventh
+// and 5 for one at home, so marching a pawn the length of the board earns 45,
+// against the 800 that promoting is worth from beyond the horizon.  The king
+// had somewhere to go and the pawns had no reason to move.
+//
+// With a steep endgame pawn table alongside it: +44 Elo at equal nodes, +30 at
+// equal time charged the C64's 9%, and conversion from 69% to 78%.  The two
+// terms are worth far more together than the king was alone.
 
 #ifdef EVAL_TUNING
 extern char geEvalTerms;
@@ -78,6 +87,21 @@ extern char geEvalTerms;
 // The running score, always from white's point of view.  Nothing outside
 // eval.c and the two make/unmake functions should write it
 extern int geEvalScore;
+
+/*-----------------------------------------------------------------------*/
+// Non-pawn material left on the board, both sides, carried by make/unmake the
+// same way the score is.  It decides how far into the endgame the position is,
+// which is what the king table switches on
+extern int gePhase;
+int eval_PhaseDelta(const t_engMove *move, char piece, char captured);
+
+/*-----------------------------------------------------------------------*/
+// How much more the position is worth once the endgame tables apply.  Carried
+// by make/unmake like the score, and blended in by eval_Position according to
+// the phase.  Holding the difference rather than a second full score is what
+// keeps this to one extra delta per move and nothing per node
+extern int geEvalEnd;
+int eval_EndDelta(const t_engMove *move, char piece, char captured);
 
 /*-----------------------------------------------------------------------*/
 // Position score from "side"'s point of view; positive is good for side.  Now

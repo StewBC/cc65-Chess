@@ -511,6 +511,48 @@ configuration — it would need a per-file pawn count carried alongside the scor
 redo, over 300 games weighted toward castling, en passant and promotion — the three moves
 whose delta is not simply "a piece left one square and arrived on another".
 
+## 5.4a The endgame tables, and what a second running total costs
+
+A pawn is worth more the closer it is to promoting, and a king belongs in the
+middle of the board once the queens are off. Both are standard, and both were out of reach
+while the evaluation was one set of tables: the right square for a pawn depends on the phase,
+and deciding the phase per piece per node is exactly the cost that killed §5.4's two terms.
+
+**The trick is to carry the difference rather than a second score.** `geEvalScore` stays the
+middlegame total it always was — nothing that reads it changes — and a second running total,
+`geEvalEnd`, holds only what the endgame tables would *add*. Both are maintained by
+make/unmake by the same rule as §5.3, so both are paid once per move made. `eval_Position`
+blends them by how much non-pawn material is left, in four steps, using shifts rather than a
+multiply, and leaves immediately in the middlegame:
+
+```c
+score = geEvalScore;
+if(gePhase < PHASE_ENDGAME)
+    score += weighted(geEvalEnd);   // 1/4, 1/2, 3/4, all
+```
+
+`geEvalEnd` is zero for every piece but pawns and kings, since no other table changes with the
+phase. Three running totals now ride along with the board — score, hash, phase — and the
+fuzzer checks all of them against a full recount after every move, undo and redo.
+
+**What it was worth**, 512 games a set, and the order matters:
+
+| | equal nodes | equal time (C64's 9%) |
+|---|---|---|
+| endgame king table alone | +15 Elo, 1.55σ | not measured — it did not earn it |
+| king **and** pawn tables | **+44 Elo, 4.41σ** | **+30 Elo, 3.02σ** |
+
+And on the number the work was actually for — the share of clear material advantages that
+become wins — 69% to **78%** from openings, 87% to **90%** from endgame positions. Games that
+ran out the 240-ply limit halved.
+
+**The king alone was nearly worthless, and that is the lesson.** It measured +15 Elo and moved
+conversion not at all. The engine could not finish won endings because marching a pawn from
+home to the seventh earned it 45 centipawns — nine a move — while the promotion that justifies
+the march is worth 800 and sits past the horizon. Giving the king somewhere to go without
+giving the pawns a reason to move fixed nothing. The two terms are worth three times together
+what one was worth alone.
+
 ## 5.4 Two good terms that were removed
 
 The comment block in `eval.h` records two evaluation terms that were built, measured, and

@@ -111,6 +111,42 @@ static const signed char sc_pstKing[64] =
 	 20, 30, 10,  0,  0, 10, 30, 20
 };
 
+// Endgame pawns: the reason a won ending gets drawn.  The middlegame table
+// pays 50 for a pawn on the seventh and 5 for one at home, so marching a pawn
+// the length of the board earns 45 - nine a move - while the promotion that
+// justifies it is worth 800 and sits well past the horizon.  The engine had no
+// gradient to climb, so pushing and shuffling scored the same and it shuffled.
+//
+// Rank is nearly all of it here; the file barely matters once the pieces are
+// off.  127 is not a round number, it is what a signed char holds
+static const signed char sc_pstPawnEnd[64] =
+{
+	  0,  0,  0,  0,  0,  0,  0,  0,
+	127,127,127,127,127,127,127,127,
+	 85, 85, 85, 85, 85, 85, 85, 85,
+	 50, 50, 50, 50, 50, 50, 50, 50,
+	 28, 28, 28, 28, 28, 28, 28, 28,
+	 14, 14, 14, 14, 14, 14, 14, 14,
+	  5,  5,  5,  5,  5,  5,  5,  5,
+	  0,  0,  0,  0,  0,  0,  0,  0
+};
+
+// Endgame king: the opposite advice.  Once the queens are off, a king behind
+// its pawns on the back rank is a spectator - it has to walk to the middle and
+// help.  The engine drew 62 games from the opening set still a clear piece up,
+// and a king that will not come out is most of why
+static const signed char sc_pstKingEnd[64] =
+{
+	-50,-40,-30,-20,-20,-30,-40,-50,
+	-30,-20,-10,  0,  0,-10,-20,-30,
+	-30,-10, 20, 30, 30, 20,-10,-30,
+	-30,-10, 30, 40, 40, 30,-10,-30,
+	-30,-10, 30, 40, 40, 30,-10,-30,
+	-30,-10, 20, 30, 30, 20,-10,-30,
+	-30,-30,  0,  0,  0,  0,-30,-30,
+	-50,-30,-30,-30,-30,-30,-30,-50
+};
+
 // Indexed by the piece values in types.h: NONE, ROOK, KNIGHT, BISHOP, QUEEN,
 // KING, PAWN
 static const signed char *sc_pst[PAWN+1] =
@@ -129,6 +165,88 @@ char geEvalTerms = EVAL_ALL;
 #endif
 
 int geEvalScore;
+int geEvalEnd;
+int gePhase;
+
+/*-----------------------------------------------------------------------*/
+// Non-pawn material on the board, both sides, in hundredths of a pawn.  6400
+// at the start, 0 with bare kings.  Carried by make/unmake like the score,
+// because working it out per node was what killed this term the first time -
+// the cost was never the table, it was touching 32 pieces to decide which
+// table to use
+#define PHASE_ENDGAME		3200
+int eval_PhaseDelta(const t_engMove *move, char piece, char captured)
+{
+	char promote = move->m_flags & ENG_MF_PROMO;
+	int delta = 0;
+
+	if(NONE != (captured & PIECE_DATA) && PAWN != (captured & PIECE_DATA))
+		delta -= gcPieceValue[captured & PIECE_DATA];
+
+	// a promoted pawn arrives as non-pawn material
+	if(promote)
+		delta += gcPieceValue[promote];
+
+	(void)piece;
+	return delta;
+}
+
+/*-----------------------------------------------------------------------*/
+// What this piece on this square is worth in an ending *over and above* what
+// the middlegame tables already counted.  Zero for everything except pawns and
+// kings, which are the only two whose right square depends on the phase
+static int endBonus(char piece, char sq)
+{
+	char kind = piece & PIECE_DATA;
+	char tile = ENG_TO_TILE(sq);
+	int value;
+
+	if(PAWN == kind)
+	{
+		tile = (piece & PIECE_WHITE) ? tile : (tile ^ 56);
+		value = sc_pstPawnEnd[tile] - sc_pstPawn[tile];
+	}
+	else if(KING == kind)
+	{
+		tile = (piece & PIECE_WHITE) ? tile : (tile ^ 56);
+		value = sc_pstKingEnd[tile] - sc_pstKing[tile];
+	}
+	else
+		return 0;
+
+	return (piece & PIECE_WHITE) ? value : -value;
+}
+
+/*-----------------------------------------------------------------------*/
+// The second running total, carried by make/unmake exactly like the first.
+//
+// Interpolating between two sets of tables normally means keeping a whole
+// second score and blending them.  Keeping the *difference* instead is the
+// same thing for less: geEvalScore stays the middlegame total it always was,
+// nothing that reads it changes, and this holds only what the endgame would
+// add.  It is zero for every piece but pawns and kings, so most moves cost
+// nothing to track
+int eval_EndDelta(const t_engMove *move, char piece, char captured)
+{
+	char to = move->m_to, flags = move->m_flags;
+	char promote = flags & ENG_MF_PROMO;
+	char white = piece & PIECE_WHITE;
+	int delta;
+
+	delta = endBonus(promote ? (promote | white) : piece, to) -
+	        endBonus(piece, move->m_from);
+
+	if(NONE != (captured & PIECE_DATA))
+	{
+		char victim = (flags & ENG_MF_ENPASSANT) ? (white ? to + 16 : to - 16) : to;
+
+		delta -= endBonus(captured, victim);
+	}
+
+	// castling moves a rook, which has no endgame bonus - but say so rather
+	// than leave the reader wondering whether it was forgotten
+	return delta;
+}
 
 /*-----------------------------------------------------------------------*/
 // What one piece standing on one square is worth, always signed white-positive
@@ -182,6 +300,27 @@ void eval_Refresh(void)
 	}
 
 	geEvalScore = score;
+
+	// and the endgame difference, the same way
+	geEvalEnd = 0;
+	for(sq = 0; sq < 0x78; ++sq)
+	{
+		if(ENG_OFFBOARD(sq))
+			continue;
+		geEvalEnd += endBonus(geBoard[sq], sq);
+	}
+
+	// the phase has to be rebuilt from the board for the same reason the score
+	// does - pieces got here without going through eng_Make
+	gePhase = 0;
+	for(sq = 0; sq < 0x78; ++sq)
+	{
+		char kind = geBoard[sq] & PIECE_DATA;
+
+		if(ENG_OFFBOARD(sq) || NONE == kind || PAWN == kind)
+			continue;
+		gePhase += gcPieceValue[kind];
+	}
 }
 
 /*-----------------------------------------------------------------------*/
@@ -228,5 +367,24 @@ int eval_Position(char side)
 {
 	// the running total is white-positive; hand it back the way round the
 	// caller asked for
-	return (side == SIDE_WHITE) ? geEvalScore : -geEvalScore;
+	int score = geEvalScore;
+
+	// Blend in the endgame tables by how much material is left: nothing in the
+	// middlegame, all of it with bare kings, in four steps.  Four steps rather
+	// than a true interpolation because the weight then costs shifts instead of
+	// a multiply, and the middlegame leaves immediately without touching it
+	if(EVAL_HAS(EVAL_ENDGAME) && gePhase < PHASE_ENDGAME)
+	{
+		int adj = geEvalEnd;
+
+		switch((char)((PHASE_ENDGAME - gePhase) >> 10))
+		{
+			case 0:  score += adj >> 2;               break;
+			case 1:  score += adj >> 1;               break;
+			case 2:  score += (adj >> 1) + (adj >> 2); break;
+			default: score += adj;                    break;
+		}
+	}
+
+	return (side == SIDE_WHITE) ? score : -score;
 }

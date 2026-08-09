@@ -400,13 +400,29 @@ int test_RunMatchEndgame(int verbose)
 	// Until a term exists to put on one side of it, this earns its keep as the
 	// conversion baseline from thinned-out positions: level score, and the
 	// share of clear material advantages that actually become wins
-	t_Config phase = { "shipped", EVAL_ALL, 4, 3000, 1 };
-	t_Config flat  = { "shipped", EVAL_ALL, 4, 3000, 1 };
+	// 3000 nodes less what the tables cost.  Measured on a real C64 by
+	// tests/c64search.c: +9.6%, +8.5% and +8.9% at depths 2, 3 and 4, with
+	// identical node counts, because that benchmark runs from the opening
+	// where the blend never fires.  That is the honest figure to charge - it
+	// is the overhead paid everywhere, including where the term does nothing
+	t_Config on     = { "endgame tables",       EVAL_ALL, 4, 3000, 1 };
+	t_Config off    = { "one set of tables",    EVAL_MATERIAL|EVAL_PST, 4, 3000, 1 };
+	t_Config costed = { "tables, 2751 nodes",   EVAL_ALL, 4, 2751, 1 };
 
-	printf("match: conversion from endgame positions\n");
+	printf("match: the endgame tables, measured in actual endgames\n");
 	sc_useEndgames = 1;
-	runMatch(&phase, &flat, 240, verbose);
+	runMatch(&on, &off, 240, verbose);
+	printf("match: the same at equal TIME, charged the C64's 9%%\n");
+	runMatch(&costed, &off, 240, verbose);
 	sc_useEndgames = 0;
+
+	{
+		t_Config openOn  = { "endgame tables, 1835 nodes", EVAL_ALL, 3, 1835, 1 };
+		t_Config openOff = { "one set of tables",  EVAL_MATERIAL|EVAL_PST, 3, 2000, 1 };
+
+		printf("match: and from openings, also at equal time\n");
+		runMatch(&openOn, &openOff, 240, verbose);
+	}
 	return 0;
 }
 

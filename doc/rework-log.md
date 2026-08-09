@@ -1221,6 +1221,74 @@ number.
 
 ---
 
+## Phase 8 — Finishing won games
+
+Started from a complaint that turned out to be wrong and a measurement that turned out to be
+right. The complaint was an Apple II game on HARD where the engine "refused to end" a won
+rook ending; the position was in fact a stalemate trap the engine correctly dodged, and the
+pieces were being drawn in their opponent's colours, which is why it read as a blunder.
+
+The measurement underneath it stood up. Eighty level-3 self-play games audited against
+Stockfish: **12 of 80 drawn with one side at +3 or better**, games running 100 to 344 plies.
+And against the pre-repetition build the same audit gave 43 of 80, so repetition detection
+had already quartered it - the disease was real and already much improved.
+
+### The instrument came first, and it had been lying
+
+`match endgame` compared `EVAL_ALL` against `EVAL_MATERIAL|EVAL_PST`. Those have been the
+same mask since Phase 4 removed the two deferred terms, so it was a configuration playing
+itself, returning a perfect 234-234-44 that looked like a result.
+
+W-L-D cannot see this failure anyway: an engine can score dead level and still turn won
+endings into draws. So the harness now measures **conversion** - of the sides that were a
+clear piece up for ten plies or more, how many won - and splits the failures three ways,
+because they want different fixes: drew still a piece up, drew after giving the material
+back, or lost. Material is the yardstick, not the engine's own score, because the evaluation
+is the thing under test.
+
+Baseline: **69%** from openings, **87%** from endgame positions.
+
+### The king table alone was nearly worthless
+
+Reinstating the deferred endgame king table measured +15 Elo at 1.55 sigma - and moved
+conversion **not at all**, 69% before and 69% after. The term it was built to fix did not
+respond to it.
+
+The reason is the pawn table. It pays 50 for a pawn on the seventh and 5 for one at home, so
+marching a pawn the length of the board earns **45 centipawns, nine a move**, while the
+promotion that justifies the march is worth 800 and sits past a depth-4 horizon. In a won
+ending the engine had no gradient to climb, so pushing and shuffling scored the same. Giving
+the king somewhere to go while the pawns had no reason to move fixed nothing.
+
+### Two tables, one extra total
+
+The fix needed a steep endgame pawn table, and the king-only shortcut could not extend to it:
+two kings can be corrected at eval time out of `geKing`, but sixteen pawns cannot - that is
+O(pawns) per node, which is the cost that killed these terms the first time.
+
+So carry the **difference**. `geEvalScore` stays the middlegame total it always was, and a
+second running total holds only what the endgame tables would add - zero for everything but
+pawns and kings. One extra delta per move made, four shift-weighted steps at eval time, and
+an immediate exit in the middlegame.
+
+| | equal nodes | equal time, charged the C64's 9% |
+|---|---|---|
+| king table alone | +15 Elo, 1.55σ | not measured, it had not earned it |
+| king and pawn tables | **+44 Elo, 4.41σ** | **+30 Elo, 3.02σ** |
+
+Conversion 69% → **78%** from openings and 87% → **90%** from endgames; games running out the
+240-ply limit halved. 1079 bytes, and 9% slower per move on a real C64 - measured with
+identical node counts, because `c64search.c` runs from the opening where the blend never
+fires, which makes it the honest figure: it is the overhead paid everywhere, including where
+the term does nothing.
+
+**This is the first evaluation term in the project to survive the equal-time test.** Pawn
+structure and the endgame king table both died there in Phase 4, and the king table died
+there again on its own here. What changed is not the measurement standard but the pairing -
+the two tables together are worth three times what the better one was worth alone.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.
