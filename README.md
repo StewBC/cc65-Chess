@@ -24,10 +24,10 @@ Measured over roughly 40,000 games against Stockfish, using two independent matc
 
 | Menu level | Search budget | Time per move on a stock C64 | Approximate rating |
 |---|---|---|---|
-| 1 — Very Easy | 400 nodes | 9 seconds | ~1240 |
-| 2 — Easy | 1,200 nodes | 33 seconds | ~1430 |
-| 3 — Harder | 15,000 nodes | ~4 minutes | ~1700 |
-| 4 — Very Hard | 60,000 nodes | ~17 minutes | ~1950 |
+| 1 — Very Easy | 400 nodes | 13 seconds | ~1240 |
+| 2 — Easy | 1,200 nodes | 46 seconds | ~1430 |
+| 3 — Harder | 15,000 nodes | ~11 minutes | ~1700 |
+| 4 — Very Hard | 60,000 nodes | ~45 minutes | ~1950 |
 
 Ratings are on Stockfish's own scale, ±150 — and that uncertainty is honest rather than
 statistical. At its strongest setting the engine scores 71% against Stockfish restricted to a
@@ -42,7 +42,8 @@ The table is current as of check evasions in quiescence — the fix for a defect
 found rather than a test: the two weak levels could not see a mate in one, because quiescence
 stood pat and looked only at captures even when the king was in check. Level 1 solved 27 of 60
 mates in one before and 55 after. `doc/strength.md` §5.1.5 has it, along with the reason 40,000
-measured games never noticed.
+measured games never noticed — and the on-target measurement showing what it costs, which is
+why the times above are longer than they used to be.
 
 ## Playing it
 

@@ -293,12 +293,50 @@ cl65 -t c64 -Oris -I../src -o c64search.prg \
 ./vice-run.sh c64search.prg /tmp/out.png 400000000
 ```
 
+### Under c64m, which is the easier rig
+
+`../c64m` has a control port very like `../a2m-v2`'s, and for these benchmarks it is less
+work than VICE. Four things had to be learned the hard way and are worth writing down:
+
+- **`load-prg` injects but does not start.** The program sits at the BASIC prompt until
+  something types `RUN`.
+- **`paste-text` cannot carry a RETURN**, because the protocol is line based — it types a
+  literal `n`. `paste-text-data <count>` is length-prefixed and can.
+- **`set-turbo 3` (warp) disables painting.** Use `set-turbo 2`, or there may be no screen
+  left to read.
+- **Read the result from screen RAM** at `$0400` with `get-memory`, and wait for the
+  program's own "done." rather than a fixed sleep — the two halves of an A/B take different
+  amounts of wall time, which is the entire point of running it.
+
+Emulated time is what these programs measure, through the jiffy clock, so turbo does not
+distort a result any more than VICE's `-warp` does.
+
+### Pricing a change on the target, without EVAL_TUNING
+
+The tuning build cannot be used to price a node: `-DEVAL_TUNING` makes every node dearer, and
+the cost of a node is exactly what is being measured. Build the *shipping* configuration twice
+instead, with the term's macro overridden on the command line:
+
+```bash
+cl65 -t c64 -Oris -I../src -o c64evasion-on.prg \
+     ../src/engine.c ../src/eval.c ../src/search.c c64evasion.c
+cl65 -t c64 -Oris -I../src -DSEARCH_CHECK_EVASION=0 -o c64evasion-off.prg \
+     ../src/engine.c ../src/eval.c ../src/search.c c64evasion.c
+```
+
+**And make both halves walk identical positions.** `c64evasion.c` replays a fixed game rather
+than letting each build choose its own moves, because two builds that pick their own moves
+diverge at the first disagreement and then measure different work. That mistake was made on the
+host first and put the cost of check evasions at 30%; identical work put it at 12.2% on the
+host and 22.7% on the target.
+
 | Program | Measures |
 |---|---|
 | `c64perft.c` | Raw move generation |
 | `c64search.c` | Search cost at three fixed budgets |
 | `c64level1.c` | Per-move time through a real game at the easiest setting |
 | `c64skill.c` | Per-move time and depth reached, per skill level, over 20 plies |
+| `c64evasion.c` | Cost of a node with and without check evasions, over a fixed game |
 
 **The profile in `doc/rework-log.md` was taken with a program that is not in the tree** — it
 needed a modified engine as well as a driver, so it was done on a scratch fork and not kept.

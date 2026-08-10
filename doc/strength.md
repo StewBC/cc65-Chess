@@ -20,10 +20,16 @@ runners.
 
 | Menu level | Node budget | Time on a stock C64 | Approximate rating |
 |---|---|---|---|
-| 1 — Very Easy | 400 | 9 seconds a move | **~1240** |
-| 2 — Easy | 1,200 | 33 seconds | **~1430** |
-| 3 — Harder | 15,000 | ~4 minutes | **~1700** |
-| 4 — Very Hard | 60,000 | ~17 minutes | **~1950** |
+| 1 — Very Easy | 400 | 13 seconds a move | **~1240** |
+| 2 — Easy | 1,200 | 46 seconds | **~1430** |
+| 3 — Harder | 15,000 | ~11 minutes | **~1700** |
+| 4 — Very Hard | 60,000 | ~45 minutes | **~1950** |
+
+The first two times are measured on an emulated C64 over real games; the last two are computed
+from the same node rate and are upper bounds, because levels 3 and 4 often finish an iteration
+before the budget runs out. **These are much longer than earlier versions of this table said**,
+and the reason is §5.1.5: three accepted changes have made a node about 60% dearer between
+them. Levels 3 and 4 are emulator settings and always were.
 
 Each figure carries an honest uncertainty of about **±150 points** — not because the games
 were few, but for reasons explained in §4.3 and §6 that no number of games would fix.
@@ -54,8 +60,9 @@ through which to believe and why the honest claim is narrower than any single nu
 
 **The largest defect in the project was found by a person, not by 40,000 measured games.**
 Level 1 hung mate in one more than half the time, because quiescence stood pat and looked only
-at captures even when the king was in check. §5.1.5 has the fix and what it was worth — between
-+28 and +102 Elo a level at equal time, which is the largest single gain recorded here.
+at captures even when the king was in check. §5.1.5 has the fix: +82, +49 and +31 Elo at levels
+2, 3 and 4 at equal time, and at level 1 a wash on rating that nevertheless doubles the mates it
+can find. A defect fix is not always a rating gain, and it is worth having anyway.
 
 ---
 
@@ -705,23 +712,33 @@ the code.
 | 3 | +51 | +35 | +61 | +39 | **+47** |
 | 4 | +74 | +71 | +28 | +79 | **+63** |
 
-**And at equal time, which is the number that counts.** A node costs 12.2% more with evasions
-on, measured over identical work rather than inferred from two matches — an important
-distinction, because the first estimate came from comparing two matches that had played
-different games and was wrong by more than double. That figure is a *host* figure and the
-target is not the host: §5.1.1 found the position hash costing 5.5% here and 9% on a real C64,
-so the honest thing is to charge more than measured. Charged **20%** — the fixed engine given
-proportionally fewer nodes, its opponent unchanged:
+**And at equal time, which is the number that counts.** The per-node cost was measured twice.
+On this host, over identical work, it is 12.2%. **On a real C64 it is 22.7%** — measured with
+`tests/c64evasion.c` under `c64m`, which replays a *fixed* game so both builds walk identical
+positions: 27.6 nodes/sec without evasions, 22.5 with. The host understated the target by
+1.86x, almost exactly the 1.64x §5.1.1 found for the position hash, which is the third time
+that lesson has been paid for.
 
-| Level | budget, on vs off | Elo at equal time |
-|---|---|---|
-| 1 | 333 v 400 | **+28** |
-| 2 | 1,000 v 1,200 | **+102** |
-| 3 | 12,500 v 15,000 | **+51** |
-| 4 | 50,000 v 60,000 | **+32** |
+Charged at the measured 22.7% — the fixed engine given proportionally fewer nodes, its opponent
+unchanged:
 
-It wins at every level with the cost overcharged. And the defect itself survives the cut:
-54 of 60 mates at −20%, and **50 of 60 even at −30%**, against 27 before.
+| Level | budget, on vs off | vs SF 1 node | vs SF 100 |
+|---|---|---|---|
+| 1 | 326 v 400 | +15 | −20 |
+| 2 | 978 v 1,200 | — | **+82** |
+| 3 | 12,225 v 15,000 | — | **+49** |
+| 4 | 48,900 v 60,000 | — | **+31** |
+
+**Levels 2, 3 and 4 gain clearly. Level 1 is a wash** — +15 at one rung and −20 at the other,
+both inside their own intervals. That is the honest result and it is worth stating plainly:
+at the weakest setting, the depth given up to pay for evasions is worth about what the evasions
+buy, *as measured in Elo against Stockfish*.
+
+**Which is not the same as the change being worthless there.** What level 1 gets is the ability
+to finish a game: 54 of 60 mates in one at the reduced budget against 27 before. A rating
+difference against Stockfish at a hundred nodes does not measure "can it deliver mate when it
+has one", and for the level a beginner actually plays, that is the property that matters. This
+was a defect fix, and the rating table is not the instrument that judges it.
 
 **Two things about how this was missed for the whole life of the project.** The tactics test
 searched every position with 60,000 nodes — the level 4 budget — so no test had ever asked the
@@ -729,10 +746,13 @@ weak levels the question at the budget they play with. And self-play cannot see 
 both sides share the blindness, so the games look balanced, exactly as §5.1's repetition
 defect did. `tests/search.c` now checks mate in one at each level's *own* budget.
 
-**The unmeasured part, stated rather than buried:** the 12.2% is a host figure. VICE is not
-installed on the machine this was measured on, so `tests/c64search.c` was not run and the real
-per-node cost on a C64 is unknown. The 20% charge above is an estimate scaled from the one
-previous case where both numbers exist. Anyone with a C64 or VICE to hand should replace it.
+**What the on-target measurement also revealed:** the engine is a good deal slower on bare
+metal than this document has been claiming. Level 1 now takes **13.2 seconds a move** measured
+over a real game (`tests/c64level1.c` under `c64m`), against the 8.2 seconds recorded when the
+skill budgets were set. That is the accumulated cost of the position hash, the endgame tables
+and now check evasions — each individually affordable, and about 60% together. The time column
+in the executive summary is updated; levels 3 and 4 have not been re-measured directly, because
+a single level 4 move is now around three quarters of an hour on a stock C64.
 
 ## 5.2 The opening was dull, and the reason was mundane
 

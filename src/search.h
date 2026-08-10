@@ -45,10 +45,15 @@ extern char geSearchRepetition;
 // its absence.  Without it quiescence stands pat and looks only at captures
 // even when the side to move is in check, which makes checkmate invisible to a
 // depth 1 search - and level 1's 400 nodes rarely reach depth 2.
+// The -D form exists for on-target A/B measurement: the tuning build cannot be
+// used for that, because EVAL_TUNING makes every node dearer and the thing being
+// priced is what a node costs.  Building the shipping configuration twice, once
+// with -DSEARCH_CHECK_EVASION=0, is the only way to get the two numbers from the
+// same compiler on the same machine
 #ifdef EVAL_TUNING
 extern char geSearchCheckEvasion;
 #define SEARCH_CHECK_EVASION	geSearchCheckEvasion
-#else
+#elif !defined(SEARCH_CHECK_EVASION)
 #define SEARCH_CHECK_EVASION	1
 #endif
 

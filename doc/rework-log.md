@@ -1534,29 +1534,42 @@ returns a mate score when nothing is legal. Mates in one: 27 → **55** at level
 level 2.
 
 At equal nodes the ladder moved more than any previous change: +44, +82, +47, +63 down the four
-levels. But equal nodes is the test this document distrusts, so it was charged properly. A node
-costs **12.2% more**, measured over identical work - and that number is worth dwelling on,
-because the first estimate came from comparing two matches that had played *different games* and
-said 30%. Inferring a per-node cost from two different workloads is not a measurement.
+levels. But equal nodes is the test this document distrusts, so it was charged properly - and
+getting the price took three goes, each wrong in an instructive way.
 
-Charged at 20% rather than 12.2%, because §5.1.1 found the position hash costing 5.5% on this
-host and 9% on a real C64 and the target is not the host:
+**First estimate, 30%:** inferred from two match runs that had played *different games*. That is
+not a measurement of anything, and it was out by a factor of two and a half.
+
+**Second, 12.2%:** the same work with the flag on and off, on the host. A real measurement, of
+the wrong machine.
+
+**Third, 22.7%:** on an emulated C64 with `tests/c64evasion.c`, which replays a *fixed* game so
+both builds walk identical positions - 27.6 nodes/sec without evasions and 22.5 with. The host
+understated the target by 1.86x, against the 1.64x §5.1.1 found for the position hash. That is
+now three times this project has been told that a cost measured on a desktop is not the cost.
+
+Charged at the measured 22.7%:
 
 | Level | budget, on vs off | Elo at equal time |
 |---|---|---|
-| 1 | 333 v 400 | **+28** |
-| 2 | 1,000 v 1,200 | **+102** |
-| 3 | 12,500 v 15,000 | **+51** |
-| 4 | 50,000 v 60,000 | **+32** |
+| 1 | 326 v 400 | **+15 / -20** (two rungs; a wash) |
+| 2 | 978 v 1,200 | **+82** |
+| 3 | 12,225 v 15,000 | **+49** |
+| 4 | 48,900 v 60,000 | **+31** |
 
-And the defect stays fixed under the cut: 54 of 60 at -20%, 50 of 60 at -30%, against 27 before.
+**Level 1 comes out level, and that is the interesting cell.** Charged its true cost, the depth
+it gives up is worth about what the evasions buy. What it gets that the table cannot see is the
+ability to finish: 54 of 60 mates in one at the reduced budget against 27 before. A defect fix
+is not obliged to be a rating gain.
 
 132 bytes. The Atari crossed its `DLIST` page boundary for the second time in a day and pays 256
 for it, leaving 1228 free with 128 bytes of padding.
 
-**What is not measured, and should be:** the 12.2% is a host figure. VICE is not installed on
-this machine, so `tests/c64search.c` never ran and the real per-node cost on a C64 is unknown.
-The 20% charge is an estimate scaled from the one previous case where both numbers exist.
+**And the engine is slower on bare metal than this log has been claiming.** Level 1 now takes
+13.2 seconds a move measured over a real game against the 8.2 recorded when the budgets were
+set - the accumulated cost of the position hash, the endgame tables and check evasions, about
+60% between them. Levels 3 and 4 were never bare-metal settings and are now firmly emulator
+territory: level 4 is around three quarters of an hour a move on a stock C64.
 
 ### The ladder and the anchor, both moved
 

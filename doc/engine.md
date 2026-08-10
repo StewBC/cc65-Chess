@@ -1136,16 +1136,22 @@ out must degrade to a worse move, never to a wrong claim about the position.
 **The in-check exits return `eval_Position` rather than `alpha`.** Out of ply or out of arena
 while in check, there is no stand-pat score to fall back on and `alpha` may still be −infinity.
 
-**`eng_InCheck` runs at every quiescence node**, and that is where the cost is: 12.2% more per
-node, measured over identical work. `doc/strength.md` §5.1.5 has what that bought — between +28
-and +102 Elo a level at *equal time*, with the cost deliberately overcharged at 20%.
+**`eng_InCheck` runs at every quiescence node**, and that is where the cost is. Measured over
+identical work it is 12.2% more per node on a modern host and **22.7% on a real C64** — the
+host understating the target by 1.86x, which is the third time that particular lesson has been
+paid for in this project.
 
 | | |
 |---|---|
 | CODE | +132 bytes |
-| Speed | **−12.2% per node** on this host; not yet measured on a C64 |
+| Speed | **−22.7% per node on a C64** (−12.2% on this host) |
 | Mate in one, level 1 | 27/60 → **55/60** |
-| Strength | +28 to +102 Elo a level at equal time |
+| Strength at equal time | +82, +49, +31 at levels 2, 3, 4; a wash at level 1 |
+
+The level 1 row is the honest one. Charged its real 22.7%, the depth it gives up is worth about
+what the evasions buy, *measured in Elo*. What it gets instead is the ability to finish a game —
+54 of 60 mates in one at the reduced budget against 27 before — and no rating table measures
+that. It was a defect fix, not a strength term.
 
 **The lesson is about the test, not the code.** The tactics suite searched every position with
 60,000 nodes — the level 4 budget — so for the whole life of the project no test had ever asked
