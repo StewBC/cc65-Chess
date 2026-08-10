@@ -32,6 +32,8 @@
 #include "engine.h"
 #include "search.h"
 #include "board.h"
+#include "undo.h"
+#include "cpu.h"
 #include "testutil.h"
 
 static int si_failures;
@@ -173,6 +175,59 @@ static void randomisationStops(void)
 }
 
 /*-----------------------------------------------------------------------*/
+// The opening table in cpu.c is hand written, and a wrong square in it would
+// put an illegal move on the board on move one.  cpu_BookMove looks its roll up
+// in the generator's output rather than trusting the table, so a typo makes the
+// engine quietly search instead - safe, but it silently removes an opening
+// nobody would notice was missing.  So check the table itself: every entry has
+// to be a legal first move, and the four of them have to be four *different*
+// moves.
+//
+// The table is static to cpu.c, so this drives the roll the way the game does -
+// enough seeds to be sure every entry comes up - and checks what comes back
+static void everyBookMoveIsLegal(void)
+{
+	t_engMove moves[64];
+	char count, i, s;
+	int seen[64], distinct = 0, illegal = 0;
+
+	memset(seen, 0, sizeof(seen));
+
+	board_Init();
+	count = eng_GenMoves(SIDE_WHITE, moves, 64);
+
+	for(s = 1; s; ++s)			// every nonzero seed, then wraps to 0 and stops
+	{
+		t_searchResult r;
+		char legal = 0;
+
+		board_Init();
+		undo_Init();
+		search_SetSeed(s);
+
+		// cpu_Play is the game's entry point and the only caller of the table
+		cpu_Play(SIDE_WHITE);
+
+		// the move it made is the one on the board now; find it by diffing
+		for(i = 0; i < count; ++i)
+			if(NONE == (geBoard[moves[i].m_from] & PIECE_DATA) &&
+			   NONE != (geBoard[moves[i].m_to] & PIECE_DATA))
+			{
+				legal = 1;
+				if(!seen[i]) { seen[i] = 1; ++distinct; }
+				break;
+			}
+
+		if(!legal)
+			++illegal;
+		(void)r;
+	}
+
+	check("every opening the table plays is legal", illegal, 0);
+	check("the table plays four different first moves", distinct, 4);
+}
+
+/*-----------------------------------------------------------------------*/
 int test_RunOpening(int verbose)
 {
 	si_failures = 0;
@@ -181,6 +236,7 @@ int test_RunOpening(int verbose)
 	seedsVaryTheOpening();
 	randomisedMovesScoreEqual();
 	randomisationStops();
+	everyBookMoveIsLegal();
 
 	// leave the engine as the rest of the suite expects to find it
 	search_SetSeed(0);

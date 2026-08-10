@@ -650,12 +650,17 @@ The cause was not mysterious. The evaluation frequently rates several opening mo
 equal, and ties fell to whichever move the generator produced first — a property of the loop
 order, not of chess.
 
-**This has been fixed, and it cost the measurements nothing.** §6.11 of `doc/engine.md` has
-the mechanism; what matters here is why it does not appear anywhere in this document's
-numbers. The randomiser perturbs move *ordering* at the root, and ordering cannot change what
-alpha-beta returns except among moves that already score exactly equal — so the move it plays
-is always one the search ranked equal-best. There was nothing to measure, because there is
-nothing to lose.
+**This has been fixed twice over, and it cost the measurements nothing.** §6.11 of
+`doc/engine.md` has the first mechanism: the randomiser perturbs move *ordering* at the root,
+and ordering cannot change what alpha-beta returns except among moves that already score
+exactly equal, so the move it plays is always one the search ranked equal-best.
+
+That turned out to reach exactly two moves — `b1c3` and `g1f3` — because those are the only
+two the evaluation rates equal-best, on every level and every seed. So the first move now comes
+from a four-entry table instead (§6.10a): e4, d4, Nf3, c4. **That is not a concession to get
+variety, it is an improvement.** Given its own 256-position opening set each and 512 games at
+level 4 against Stockfish at 100 nodes, all four table moves outscore the move the engine
+picked for itself, which finishes last of the five at −29 Elo.
 
 The determinism this document depends on is preserved by a stronger mechanism than a flag:
 the randomiser does nothing until it is seeded, and it is seeded by `main.c`, which is not in

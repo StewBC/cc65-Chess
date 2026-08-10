@@ -47,15 +47,19 @@ Since the endgame tables it is also the only setting that fits:
 
 | | optsize | optspeed |
 |---|---|---|
-| atari | 1740 free below the framebuffer | **does not link — 562 bytes over** |
-| apple2 | 2178 free in MAIN, 2122 in BSS | links with **12 bytes** spare |
+| atari | 1484 free below the framebuffer | **does not link — 562 bytes over** |
+| apple2 | 1876 free in MAIN, 2122 in BSS | links with **12 bytes** spare |
 
 **The Atari's headroom does not shrink smoothly, and the number above hides a cliff.** `DLIST`
 is page-aligned inside `MAIN`, so code growth is absorbed by the padding in front of it until
-the padding runs out and the display list jumps a page — 256 bytes of the 1740, gone at once.
-Opening randomisation added 188 bytes of code and cost the *free space* two, because 186 of it
-disappeared into that padding. **50 bytes of padding are left.** Check `DATA`'s end against
-`DLIST`'s start in an `ld65 -m` map before assuming a small addition is cheap.
+the padding runs out and the display list jumps a page — 256 bytes, gone at once. That has now
+happened once: the opening table crossed it, which is why the Atari lost 256 bytes for 302
+bytes of code while the Apple II lost exactly 302.
+
+**There are 4 bytes of that padding left.** The next thing added to `CODE`, `RODATA` or `DATA`
+— anything at all — takes the Atari to about 1228. Check `DATA`'s end against `DLIST`'s start
+in an `ld65 -m` map rather than reading the free-space number on its own; the two tell
+different stories and only one of them predicts the next change.
 
 `Makefile.options` defaults to `optsize` and that is why. Raising it would mean raising it
 everywhere, which the Atari cannot take - so treat `optsize` as fixed, and check anything

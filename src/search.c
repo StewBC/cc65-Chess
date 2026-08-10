@@ -104,6 +104,22 @@ void search_SetSeed(char seed)
 }
 
 /*-----------------------------------------------------------------------*/
+// The same generator, for the game layer's opening table.  Sharing it rather
+// than starting a second one keeps the whole program's randomness downstream
+// of the single seed plat_GetSeed handed over, so "unseeded plays the old
+// game" stays true of everything and not just of the search
+char search_Random(void)
+{
+	return randNext();
+}
+
+/*-----------------------------------------------------------------------*/
+char search_Seeded(void)
+{
+	return sc_rand != 0;
+}
+
+/*-----------------------------------------------------------------------*/
 // How many moves will still fit in the arena, clamped to what a char can hold
 static char arenaRoom(void)
 {

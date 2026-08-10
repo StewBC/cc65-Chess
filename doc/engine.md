@@ -1083,6 +1083,64 @@ currently does.
 This is also most of the groundwork for a transposition table, which is the other thing the
 absence of incremental hashing was blocking.
 
+## 6.10a The first move comes from a table, not from the search
+
+The engine does not search its opening move. When it has White and nothing has been played,
+`cpu.c` rolls a die over four moves and plays one:
+
+```
+e2e4    d2d4    g1f3    c2c4
+```
+
+**This is here because the search is wrong, not because it is slow.** §6.11 explains how the
+randomiser varies the opening among moves the search rates *exactly equal*, and that turned out
+to be a set of size two: `b1c3` and `g1f3`, both knight moves, on every skill level and every
+seed. Scoring all twenty first moves at level 1 says why:
+
+```
+b1c3   50      g1f3   50        <- the only two that tie
+d2d4   40      e2e4   40        <- ten centipawns behind
+d2d3   20      e2e3   20
+```
+
+A 400-node search rates e4 and d4 below a knight move. That is the engine's opinion, and on
+this one question it is simply worse informed than four centuries of chess. Widening the
+randomiser to reach e4 would mean *conceding* ten centipawns to the evaluation; a table
+concedes nothing, because it is not asking.
+
+**Measured, because the claim deserved it.** Each first move was given its own 256-position
+opening set — the same generator and seeds as `book.epd`, differing only in the forced first
+move — and played 512 games at level 4 against Stockfish at 100 nodes:
+
+| First move | Elo | 95% interval |
+|---|---|---|
+| e2e4 | **+1** | [−26, +27] |
+| g1f3 | −7 | [−33, +20] |
+| d2d4 | −12 | [−39, +14] |
+| c2c4 | −19 | [−46, +8] |
+| **b1c3** — what the engine picked for itself | **−29** | [−55, −2] |
+
+**All four table moves beat the move the engine chose.** No single pair is significant on its
+own — the intervals overlap heavily — but the ordering matches opening theory exactly, and the
+engine's own preference finishes last of five. The table is worth roughly 20 Elo, and the
+honest version of that is "no evidence of harm, and the direction favours the table."
+
+Three details:
+
+**It fires in exactly one position.** White, and `undo_CanUndo()` false, which is true only
+while no move has been played. Black's first move is a *reply*, and a fixed reply is not sound
+against an arbitrary opening — that would need a real book keyed on what White played.
+
+**The roll is looked up in the generator's output** rather than trusted. A wrong square in a
+hand-written table would otherwise put an illegal move on the board; instead the entry matches
+nothing and the engine searches as usual. That is not hypothetical — the first draft encoded
+the pawns from the wrong end of the board, since tile 0 is a8, and three of the four entries
+were black's pawns. `tests/opening.c` caught it by checking that the table plays four
+*different* legal moves.
+
+**It costs no search at all**, which on a stock C64 is about eight seconds saved at level 1 and
+fifteen minutes at level 4 — on a move that was never in doubt.
+
 ## 6.11 The opening randomiser, and why it is nearly free
 
 From the starting position the engine played a knight to c3. Every game, on every machine,
@@ -1129,6 +1187,11 @@ staying below that keeps iterative deepening's stability, and stops the addition
 promise is the same whichever colour it has. Past that the engine is the deterministic one it
 always was, which is what keeps the randomiser out of the endgames the piece-square tables of
 §5.4a were built for.
+
+**And it is not what varies the opening when the engine has White** — §6.10a's table does that,
+and reaches moves this cannot. What this still earns its bytes for is the other case: the
+engine playing Black against a human who opens 1.e4 every time. The table never fires there,
+and without this the reply would be identical every game.
 
 ### Where a 1 MHz machine finds entropy
 

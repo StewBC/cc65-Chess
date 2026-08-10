@@ -1426,6 +1426,57 @@ recording: `DLIST` is page-aligned inside `MAIN`, so 186 of those 188 bytes vani
 padding in front of it and the free space fell by two. **50 bytes of padding are left**, and
 the byte that exhausts them costs 256 in one step.
 
+### The randomiser reached two moves, so the first move became a table
+
+Running it on real hardware is what exposed the limit. On the Apple II every game opened with a
+knight - a *different* knight, which is the randomiser working, but still a knight. Counting on
+the host put a number on it: **two distinct first moves, across all 255 seeds, at every skill
+level.** Scoring all twenty says why - `b1c3` and `g1f3` tie at 50, `e2e4` and `d2d4` are ten
+centipawns behind - and a randomiser confined to exact ties can never reach the third one.
+
+The reflex was to widen it to "within N centipawns", and that reflex was wrong twice over:
+
+- **It would have cost strength for no reason.** A ten centipawn concession to reach e4 treats
+  the engine's evaluation as the authority on opening moves, and at 400 nodes it is not. A
+  table concedes nothing because it is not asking the search anything.
+- **It is not even a constant to change.** `negamax` is fail-hard, so at the root an equal move
+  and a *worse* move both return exactly `alpha`; near-ties are invisible without re-searching
+  with a lowered window, which costs nodes.
+
+So the first move comes from four hand-picked moves in `cpu.c` - e4, d4, Nf3, c4 - rolled with
+the LFSR that was already there. It sits in the game layer rather than the search on purpose:
+`cpu_Play` is called by no harness, so the whole measurement apparatus is untouched by
+construction rather than by a flag.
+
+**And it measures as an improvement, not a cost.** Each first move got its own 256-position
+opening set - same generator and seeds as `book.epd`, differing only in the forced first move -
+and 512 games at level 4 against Stockfish at 100 nodes:
+
+| | e2e4 | g1f3 | d2d4 | c2c4 | **b1c3** |
+|---|---|---|---|---|---|
+| Elo | +1 | −7 | −12 | −19 | **−29** |
+
+All four beat the move the engine chose for itself. The intervals are ±27 to ±30 and overlap
+heavily, so no pair is significant alone, but the ordering is opening theory's and the engine's
+own preference finishes last. Worth about 20 Elo, and free at the board: no search on move one
+is fifteen minutes saved at level 4 on a stock C64.
+
+One thing not done, and it is the honest limit of the above: the sets are four plies deep with
+three random plies after the forced move, so this measures positions *derived from* e4 rather
+than the e4 line itself. A sharper test would force more of the opening.
+
+### A wrong-way-round table, caught by the test written for it
+
+The first draft of the table encoded the pawns from the wrong end of the board - tile 0 is a8,
+so tile 12 is e7 and not e2 - which put *black's* pawns in three of the four entries. Because
+the roll is looked up in the generator's output rather than trusted, the effect was not an
+illegal move but a silent fallback to searching, and the engine went on playing its two knights
+exactly as before. `tests/opening.c` had been written to check the table plays four *different*
+legal moves, and it failed with "got 2, wanted 4" on the first run.
+
+That is the whole argument for the lookup and for the test: the failure mode of a hand-written
+table is not a crash, it is a feature that quietly does not exist.
+
 ### Two things caught in passing
 
 **A green suite can be a stale binary.** `tests/Makefile` did not list the engine headers as
@@ -1442,8 +1493,14 @@ these things are always found, by failing to link after the other seven were don
 *A rated rung near 50%, measured before the next evaluation term lands.* Without it the next
 change gets the same three-instruments-three-answers treatment as the endgame tables did.
 
-*The Apple II and Atari have not been run since this landed.* Both can be, and neither has -
-see the note at the top of this section about checking rather than assuming.
+*A reply book for Black.* The table only fires when the engine opens. Against a human who
+plays 1.e4 every time the engine's reply is whatever the root randomiser makes of it, which is
+thin for the same reason the first move was. A real reply book needs keying on White's move,
+which is a different size of project.
+
+*The Atari has 4 bytes of `DLIST` alignment padding left.* The next byte added to `CODE`,
+`RODATA` or `DATA` costs 256 of its 1484. Not a problem, but it is the kind of thing that looks
+like one in a link error six months from now.
 
 ---
 

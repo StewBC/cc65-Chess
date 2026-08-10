@@ -107,6 +107,12 @@ void search_Best(char side, char maxDepth, unsigned int nodeBudget, t_searchResu
 // and it is the same state the test harnesses are in by never calling this
 void search_SetSeed(char seed);
 
+// The next byte from that generator, and whether a game has seeded it at all.
+// cpu.c uses both for the opening table: unseeded means no table and no
+// randomisation, which is the state every harness in tests/ runs in
+char search_Random(void);
+char search_Seeded(void);
+
 /*-----------------------------------------------------------------------*/
 // Is the side to move mated, stalemated or fine?  Returns OUTCOME_CHECKMATE,
 // OUTCOME_STALEMATE or OUTCOME_OK.  With a real search this is just "are
