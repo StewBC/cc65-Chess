@@ -24,25 +24,25 @@ Measured over roughly 40,000 games against Stockfish, using two independent matc
 
 | Menu level | Search budget | Time per move on a stock C64 | Approximate rating |
 |---|---|---|---|
-| 1 — Very Easy | 400 nodes | 8 seconds | ~1200 |
-| 2 — Easy | 1,200 nodes | 29 seconds | ~1350 |
-| 3 — Harder | 15,000 nodes | ~3.5 minutes | ~1650 |
-| 4 — Very Hard | 60,000 nodes | ~15 minutes | ~1700 |
+| 1 — Very Easy | 400 nodes | 9 seconds | ~1240 |
+| 2 — Easy | 1,200 nodes | 33 seconds | ~1430 |
+| 3 — Harder | 15,000 nodes | ~4 minutes | ~1700 |
+| 4 — Very Hard | 60,000 nodes | ~17 minutes | ~1950 |
 
 Ratings are on Stockfish's own scale, ±150 — and that uncertainty is honest rather than
-statistical. At its strongest setting the engine beats Stockfish restricted to a single search
-node, and draws level with it at a hundred nodes and with its rating-limited mode set to 1700.
-`doc/strength.md` explains what the numbers mean, what they do not mean, and how to reproduce
-them.
+statistical. At its strongest setting the engine scores 71% against Stockfish restricted to a
+single search node and draws level with it at a hundred. `doc/strength.md` explains what the
+numbers mean, what they do not mean, and how to reproduce them.
 
 Emulator speed-up is a free multiplier: strength is measured in positions searched, not
 seconds, so an accelerated machine plays the same game sooner. Roughly 60 rating points per
 doubling of thinking time.
 
-The table is current as of the endgame piece-square tables. Against node-limited Stockfish
-every rung of the ladder improved after that change; against Stockfish's *rated* mode it is
-not visible, and `doc/strength.md` §5.1.3 is about why two careful measurements of the same
-change disagree — which is more interesting than either number.
+The table is current as of check evasions in quiescence — the fix for a defect a *player*
+found rather than a test: the two weak levels could not see a mate in one, because quiescence
+stood pat and looked only at captures even when the king was in check. Level 1 solved 27 of 60
+mates in one before and 55 after. `doc/strength.md` §5.1.5 has it, along with the reason 40,000
+measured games never noticed.
 
 ## Playing it
 
@@ -126,9 +126,10 @@ any chess GUI. [doc/measuring.md](doc/measuring.md) covers all of it.
 ## Porting
 
 Everything platform-specific is behind `plat.h`, and the board is presented to it as squares
-0–63 regardless of what the engine does internally. When the terminal port was written it
-took about an hour. The engine rewrite touched no platform file at all, including the ones
-that cannot be built here.
+0–63 regardless of what the engine does internally. When the terminal port was written it took
+about an hour. The engine rewrite touched no platform file at all; the only addition to that
+interface since is `plat_GetSeed()`, three lines a port that read a free-running counter for
+the opening randomiser.
 
 If you port it somewhere new, please say so — that is the best part of putting this online.
 

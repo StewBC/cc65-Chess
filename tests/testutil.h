@@ -40,6 +40,7 @@ int test_RunOpening(int verbose);
 int test_RunSelfPlay(int games, int maxPlies, int verbose);
 int test_RunSearchTactics(int verbose);
 int test_RunSearchAlwaysMoves(int verbose);
+int test_RunSearchMateInOne(int verbose);
 int test_RunSearchBench(int verbose);
 int test_RunMatchSanity(int verbose);
 int test_RunMatchTerms(int verbose);

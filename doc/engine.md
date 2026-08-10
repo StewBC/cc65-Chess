@@ -1083,6 +1083,76 @@ currently does.
 This is also most of the groundwork for a transposition table, which is the other thing the
 absence of incremental hashing was blocking.
 
+## 6.10b Check evasions in quiescence, or: how the engine hung mate in one
+
+Quiescence as §6.5 describes it does two things that are both illegal when the side to move is
+in check, and the combination cost the two weak levels the ability to see a checkmate.
+
+**Standing pat is illegal in check.** The stand-pat score says *I could decline to move and
+still be at least this well off*. In check there is no declining.
+
+**Captures are not the only moves worth looking at.** A king stepping out of check is a quiet
+move, so a search that generates only captures can decide a position is quiet while the side to
+move is being mated.
+
+Put together with `negamax`'s
+
+```c
+if(0 == depth)
+    return quiesce(side, alpha, beta, ply);
+```
+
+— which returns before generating anything, so "no legal move and in check" is never tested —
+a mating move looked exactly like an ordinary quiet move. **Mate in one was invisible to a
+depth 1 search.** Level 1 has 400 nodes and depth 2 wants about 1159 in a middlegame (§6.8), so
+level 1 rarely reaches the depth that would have seen it. Level 1 found 27 of 60 mates in one;
+level 2, 54.
+
+The fix is to make quiescence know it is in check:
+
+```c
+inCheck = eng_InCheck(side);
+
+if(!inCheck)
+{
+    stand = eval_Position(side);        // no stand-pat when in check
+    if(stand >= beta) return beta;
+    if(stand > alpha) alpha = stand;
+}
+...
+count = inCheck ? eng_GenMoves(side, moves, arenaRoom())     // evasions
+                : eng_GenCaptures(side, moves, arenaRoom());
+...
+if(inCheck && !legal && !sc_abort)
+    return -EVAL_MATE_IN(ply);          // this is the whole point
+```
+
+Three details that are not decoration:
+
+**`!sc_abort` on the mate return.** Without it, a search that ran out of budget part way through
+the evasion list reports "no legal move" — which would be read as checkmate. A budget running
+out must degrade to a worse move, never to a wrong claim about the position.
+
+**The in-check exits return `eval_Position` rather than `alpha`.** Out of ply or out of arena
+while in check, there is no stand-pat score to fall back on and `alpha` may still be −infinity.
+
+**`eng_InCheck` runs at every quiescence node**, and that is where the cost is: 12.2% more per
+node, measured over identical work. `doc/strength.md` §5.1.5 has what that bought — between +28
+and +102 Elo a level at *equal time*, with the cost deliberately overcharged at 20%.
+
+| | |
+|---|---|
+| CODE | +132 bytes |
+| Speed | **−12.2% per node** on this host; not yet measured on a C64 |
+| Mate in one, level 1 | 27/60 → **55/60** |
+| Strength | +28 to +102 Elo a level at equal time |
+
+**The lesson is about the test, not the code.** The tactics suite searched every position with
+60,000 nodes — the level 4 budget — so for the whole life of the project no test had ever asked
+the weak levels whether they could see a mate. Self-play could not find it either, because both
+sides shared the blindness. It was found by a person playing the game on an Apple II. There is
+now a `matein1` test that runs at each level's own budget.
+
 ## 6.10a The first move comes from a table, not from the search
 
 The engine does not search its opening move. When it has White and nothing has been played,

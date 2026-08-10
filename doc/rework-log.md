@@ -1488,6 +1488,99 @@ is that `sed -i.bak` and `mv` restore the *original mtime*, which walks straight
 **The eighth port.** `src/c64.chr` is a separate platform file and the build found it the way
 these things are always found, by failing to link after the other seven were done.
 
+---
+
+## Phase 10 - a player found what 40,000 games did not
+
+The game was being played on an Apple II and the report was one sentence: *it blunders
+checkmate, it doesn't see mate in one on easy or very easy.*
+
+It was true, it was the largest defect in the project, and it had been there the whole time.
+Sixty mate-in-one positions from random games, each verified by playing the move and confirming
+the opponent is in check with no legal reply: **level 1 solved 27 of them.** Level 2, 54.
+Levels 3 and 4, all sixty.
+
+The first instinct was that the opening randomiser had done it, and the first job was to
+disprove that: the same probe against the commit before this session's work gives 27 and 54 to
+the digit. Pre-existing.
+
+### The cause, and why nothing caught it
+
+`negamax` at depth 0 returns straight into quiescence, before generating anything, so "no legal
+move and in check" is never tested. And quiescence stands pat on a static evaluation and looks
+only at captures - both illegal when the side to move is in check, because there is no declining
+to move and the move that escapes may be quiet. **So a mating move looked like a quiet move, and
+mate in one was invisible to a depth 1 search.** Level 1's 400 nodes rarely reach depth 2, which
+puts the failure exactly where it was reported. Sorting level 1 by the deepest iteration it
+finished settles it:
+
+```
+completed depth 1:   4 solved, 32 missed
+completed depth 2:  23 solved,  0 missed
+```
+
+Two reasons it survived every instrument in `tests/`:
+
+- **The tactics test searched every position with 60,000 nodes** - the level 4 budget. No test
+  had ever asked the weak levels a question at the budget they play with.
+- **Self-play cannot see it.** Both sides share the blindness, the games come out balanced, and
+  the harness reports "ok, balanced" - exactly as it did for the repetition defect in Phase 5.
+  That is twice the same shape of miss.
+
+### What the fix was worth
+
+Quiescence now generates evasions rather than captures when in check, does not stand pat, and
+returns a mate score when nothing is legal. Mates in one: 27 → **55** at level 1, 54 → **58** at
+level 2.
+
+At equal nodes the ladder moved more than any previous change: +44, +82, +47, +63 down the four
+levels. But equal nodes is the test this document distrusts, so it was charged properly. A node
+costs **12.2% more**, measured over identical work - and that number is worth dwelling on,
+because the first estimate came from comparing two matches that had played *different games* and
+said 30%. Inferring a per-node cost from two different workloads is not a measurement.
+
+Charged at 20% rather than 12.2%, because §5.1.1 found the position hash costing 5.5% on this
+host and 9% on a real C64 and the target is not the host:
+
+| Level | budget, on vs off | Elo at equal time |
+|---|---|---|
+| 1 | 333 v 400 | **+28** |
+| 2 | 1,000 v 1,200 | **+102** |
+| 3 | 12,500 v 15,000 | **+51** |
+| 4 | 50,000 v 60,000 | **+32** |
+
+And the defect stays fixed under the cut: 54 of 60 at -20%, 50 of 60 at -30%, against 27 before.
+
+132 bytes. The Atari crossed its `DLIST` page boundary for the second time in a day and pays 256
+for it, leaving 1228 free with 128 bytes of padding.
+
+**What is not measured, and should be:** the 12.2% is a host figure. VICE is not installed on
+this machine, so `tests/c64search.c` never ran and the real per-node cost on a C64 is unknown.
+The 20% charge is an estimate scaled from the one previous case where both numbers exist.
+
+### The ladder and the anchor, both moved
+
+Third ladder of the project, and the price of a node still has not changed: the first-column
+spread was 443, then 443, and is now 441. Three strength changes have lifted the whole thing
+without altering its shape, which is a better argument for the 61-Elo-a-doubling figure than the
+original measurement was.
+
+Level 3 now draws level with Stockfish at one node - the dead heat level 4 held one version ago
+- and level 4 scores 71% there. The anchor puts the four levels near 1240, 1430, 1700 and 1950,
+with the usual warning attached and one new instance of it: every level moved up, so every level
+was read against a *stronger* rung than last time, and §4.3.1 shows the implied rating rises with
+the rung regardless. Level 4 reading 1946 against 1701 overstates a real gain rather than
+measuring it.
+
+### The test that should have existed
+
+`tests/search.c` gained `matein1`, which runs at each level's *own* budget. The positions are
+generated and verified rather than invented - the first attempt used hand-written mates and two
+of them were not mates, producing a page of failures that meant nothing. Level 1's floor is 10 of
+12 rather than 12, because 400 nodes genuinely cannot always finish depth 1 in a sharp position
+and a search that never finishes an iteration plays its first ordered move. Turning the fix off
+drops it to 5 and 11, so the test bites.
+
 ### Still open
 
 *A rated rung near 50%, measured before the next evaluation term lands.* Without it the next
@@ -1498,9 +1591,17 @@ plays 1.e4 every time the engine's reply is whatever the root randomiser makes o
 thin for the same reason the first move was. A real reply book needs keying on White's move,
 which is a different size of project.
 
-*The Atari has 4 bytes of `DLIST` alignment padding left.* The next byte added to `CODE`,
-`RODATA` or `DATA` costs 256 of its 1484. Not a problem, but it is the kind of thing that looks
+*The Atari has 128 bytes of `DLIST` alignment padding left*, and 1228 free. The byte that
+exhausts the padding costs 256 at once. Not a problem, but it is the kind of thing that looks
 like one in a link error six months from now.
+
+*The per-node cost of check evasions has never been measured on a C64.* Everything about it in
+Phase 10 rests on a host figure scaled by a factor taken from one previous case. `tests/c64search.c`
+under VICE is a minute's work for anyone who has VICE installed.
+
+*Level 1 still misses 2 mates in 12, and 5 in 60.* Those are positions where 400 nodes cannot
+finish depth 1 at all, so the search plays its first ordered move - a capture. Raising the budget
+would fix them and make the level slower; nobody has decided which matters more.
 
 ---
 

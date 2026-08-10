@@ -68,6 +68,8 @@ int main(int argc, char **argv)
 		printf("\n");
 		failures += test_RunSearchTactics(verbose);
 		printf("\n");
+		failures += test_RunSearchMateInOne(verbose);
+		printf("\n");
 		failures += test_RunSearchAlwaysMoves(verbose);
 		printf("\n");
 		failures += test_RunMatchSanity(0);
@@ -79,6 +81,9 @@ int main(int argc, char **argv)
 
 	if(!strcmp(command, "tactics"))
 		return test_RunSearchTactics(1) ? 1 : 0;
+
+	if(!strcmp(command, "matein1"))
+		return test_RunSearchMateInOne(1) ? 1 : 0;
 
 	if(!strcmp(command, "alwaysmoves"))
 		return test_RunSearchAlwaysMoves(1) ? 1 : 0;

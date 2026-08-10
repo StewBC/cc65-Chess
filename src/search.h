@@ -41,6 +41,18 @@ extern char geSearchRepetition;
 #endif
 
 /*-----------------------------------------------------------------------*/
+// Check evasions in quiescence, switchable so its cost can be measured against
+// its absence.  Without it quiescence stands pat and looks only at captures
+// even when the side to move is in check, which makes checkmate invisible to a
+// depth 1 search - and level 1's 400 nodes rarely reach depth 2.
+#ifdef EVAL_TUNING
+extern char geSearchCheckEvasion;
+#define SEARCH_CHECK_EVASION	geSearchCheckEvasion
+#else
+#define SEARCH_CHECK_EVASION	1
+#endif
+
+/*-----------------------------------------------------------------------*/
 // Opening randomisation, switchable the same way.  Note the direction: unlike
 // every other switch here this one is a *feature* of the shipped game rather
 // than a term being measured, so the 8-bit build has it permanently on and the

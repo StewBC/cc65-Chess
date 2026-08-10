@@ -158,6 +158,96 @@ int test_RunSearchTactics(int verbose)
 }
 
 /*-----------------------------------------------------------------------*/
+// Mate in one, at the budget each skill level actually plays with.
+//
+// This exists because the tactics table above searches every position with
+// 60000 nodes - the level 4 budget - so for the whole life of the project no
+// test had ever asked the two weak levels whether they could see a mate.  They
+// could not: level 1 found 27 of 60 mates in one, which a player at the board
+// reported long before any test did.
+//
+// The cause was that quiescence stood pat and looked only at captures even when
+// the side to move was in check, so a mating move looked quiet and mate in one
+// was invisible to a depth 1 search - and 400 nodes rarely reaches depth 2.
+//
+// The positions are generated rather than invented, and that matters: the first
+// attempt at this test used hand-written "mates" and two of them were not mates
+// at all, which produced a page of failures that meant nothing.  These come out
+// of random games, each has exactly one mating move, and each was verified by
+// playing it and checking the opponent is in check with no legal reply
+int test_RunSearchMateInOne(int verbose)
+{
+	static const struct { const char *fen; const char *mate; } sc_mates[] =
+	{
+		{ "8/N3k1nr/3p4/3q2p1/P1P2r2/1P2K3/2b4P/B5R1 b - - 0 1", "d5d3" },
+		{ "r1bqkb2/pp1pp1pr/2n5/2p2pNp/2QP2nP/2P1P3/PP2BPP1/RNB1K2R w KQq - 8 1", "c4f7" },
+		{ "2r2bn1/R7/2p1p3/2pp1kp1/1n1P1P1r/Q3B1qp/PP4b1/RNK2B2 b - f3 0 1", "g3e1" },
+		{ "rn2kbr1/2p1pp2/3p3p/p5p1/3P2Q1/4Bq2/1PP2P1n/RN2K1NR w q - 2 1", "g4c8" },
+		{ "3k4/pr4br/3p1p2/4p2q/4P3/5PR1/n5K1/5R2 b - - 1 1", "h5h2" },
+		{ "6k1/2p3nr/6Q1/2bpP3/1p3R1P/3Bn2K/8/3qB3 w - - 5 1", "g6h7" },
+		{ "5bk1/nr2p3/1q1pPpp1/p2P1P2/1pp2Nn1/PPN2B2/RB1P3P/1Q3K1R b - - 1 1", "b6f2" },
+		{ "5k1b/rb2p3/2np4/P1P2p2/N1B1Pn1Q/B1P2P1N/P6R/R3K3 w - - 1 1", "h4h8" },
+		{ "6N1/1Nk5/2P3p1/8/2P1nrp1/6P1/7q/R1K2R2 b - - 0 1", "f4f1" },
+		{ "1n3r2/4br2/1ppp3k/p2P2Rp/P4P1B/RP4Nb/2P5/3Q1B1K w - - 2 1", "d1h5" },
+		{ "2kq3r/p2nb2p/2N2P2/2p3p1/2N5/1r1p3P/5PBR/B4K2 b - - 4 1", "b3b1" },
+		{ "1rbqkbnr/pp1pp1p1/5pn1/2p5/2PP2p1/N2QPP1P/PP6/R1B1KBNR w KQk - 2 1", "d3g6" },
+	};
+	// Level 1 is not held to a clean sweep, and the reason is not slack.  Its
+	// 400 nodes sometimes cannot complete even depth 1 in a sharp position -
+	// tests/budget.c measures depth 1 at up to 3228 nodes there - and a search
+	// that never finishes an iteration plays its first ordered move, which is a
+	// capture.  That is the documented trade in gcSearchSkill, not a defect to
+	// fix here.  The floor is set at what it actually achieves, so a change that
+	// moves it in either direction gets noticed
+	static const int sc_floor[SEARCH_NUM_SKILLS] = { 10, 12, 12, 12 };
+	int count = (int)(sizeof(sc_mates)/sizeof(sc_mates[0]));
+	int failures = 0, level, i;
+
+	printf("mate in one, at each level's own budget\n");
+
+	for(level = 0; level < SEARCH_NUM_SKILLS; ++level)
+	{
+		int missed = 0;
+
+		for(i = 0; i < count; ++i)
+		{
+			t_searchResult result;
+			char side = test_EngineSetFEN(sc_mates[i].fen);
+			char got[5];
+
+			search_Best(side, gcSearchSkill[level].m_depth,
+			            gcSearchSkill[level].m_nodes, &result);
+
+			if(!result.m_haveMove)
+			{
+				++missed;
+				continue;
+			}
+			moveName(&result.m_move, got);
+			if(strncmp(got, sc_mates[i].mate, 4))
+			{
+				++missed;
+				if(verbose)
+					printf("    level %d  %s: wanted %s got %s\n",
+					       level + 1, sc_mates[i].fen, sc_mates[i].mate, got);
+			}
+		}
+
+		// always printed: the count is the interesting number even when it
+		// passes, because this is a figure that has moved before
+		printf("  level %d (%5u nodes) %2d of %d%s\n",
+		       level + 1, gcSearchSkill[level].m_nodes, count - missed, count,
+		       (count - missed) < sc_floor[level] ? "   BELOW FLOOR" : "");
+
+		if((count - missed) < sc_floor[level])
+			++failures;
+	}
+
+	printf("  -> %d failing\n", failures);
+	return failures;
+}
+
+/*-----------------------------------------------------------------------*/
 // The AI must never fail to produce a move when it has one.
 //
 // This is a regression test for a bug that reached a real board: in a sharp

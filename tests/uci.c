@@ -274,6 +274,8 @@ static void cmdSetOption(char *args)
 	// "true"/"false" or 1/0
 	else if(0 == strcmp(name, "Repetition"))
 		geSearchRepetition = (char)(0 == strcmp(value, "true") || atoi(value));
+	else if(0 == strcmp(name, "CheckEvasion"))
+		geSearchCheckEvasion = (char)(0 == strcmp(value, "true") || atoi(value));
 #endif
 }
 
@@ -291,6 +293,7 @@ static void cmdUci(void)
 	printf("option name Nodes type spin default 0 min 0 max %ld\n", UCI_MAX_NODES);
 #ifdef EVAL_TUNING
 	printf("option name Repetition type check default true\n");
+	printf("option name CheckEvasion type check default true\n");
 #endif
 	say("uciok");
 }

@@ -47,19 +47,19 @@ Since the endgame tables it is also the only setting that fits:
 
 | | optsize | optspeed |
 |---|---|---|
-| atari | 1484 free below the framebuffer | **does not link — 562 bytes over** |
-| apple2 | 1876 free in MAIN, 2122 in BSS | links with **12 bytes** spare |
+| atari | 1228 free below the framebuffer | **does not link — 562 bytes over** |
+| apple2 | 1744 free in MAIN, 2122 in BSS | links with **12 bytes** spare |
 
 **The Atari's headroom does not shrink smoothly, and the number above hides a cliff.** `DLIST`
 is page-aligned inside `MAIN`, so code growth is absorbed by the padding in front of it until
 the padding runs out and the display list jumps a page — 256 bytes, gone at once. That has now
-happened once: the opening table crossed it, which is why the Atari lost 256 bytes for 302
-bytes of code while the Apple II lost exactly 302.
+happened twice: the opening table crossed it, and then check evasions crossed it again, which
+is why the Atari lost 256 bytes each time while the Apple II lost the 302 and 132 the code
+actually costs.
 
-**There are 4 bytes of that padding left.** The next thing added to `CODE`, `RODATA` or `DATA`
-— anything at all — takes the Atari to about 1228. Check `DATA`'s end against `DLIST`'s start
-in an `ld65 -m` map rather than reading the free-space number on its own; the two tell
-different stories and only one of them predicts the next change.
+**There are 128 bytes of padding left.** Check `DATA`'s end against `DLIST`'s start in an
+`ld65 -m` map rather than reading the free-space number on its own; the two tell different
+stories and only one of them predicts what the next change will cost.
 
 `Makefile.options` defaults to `optsize` and that is why. Raising it would mean raising it
 everywhere, which the Atari cannot take - so treat `optsize` as fixed, and check anything
@@ -116,6 +116,16 @@ C89 declarations at the top of a block. `char` for nearly everything: cc65's `ch
 the 8-bit builds; test-only helpers must stay out of the cc65 build entirely.
 
 ## Traps that have already caught someone
+
+**A test that runs at one budget has not tested the skill levels.** The tactics suite searched
+every position with 60,000 nodes — the level 4 budget — so for the life of the project nothing
+had asked levels 1 and 2 whether they could see a mate in one. They could not: level 1 solved
+27 of 60, and a person playing on an Apple II found it before any test did. Anything that
+depends on how much the engine searches has to be exercised at `gcSearchSkill`'s own numbers.
+
+**Self-play cannot see a defect both sides share.** That is twice now: the repetition blindness
+of §5.1 and the mate blindness of §5.1.5 both produced perfectly balanced matches. A balanced
+result means the two configurations are equal, not that either is right.
 
 **A green suite can be a stale binary.** `tests/Makefile` did not list the engine headers as
 prerequisites, so editing `search.h` and running `make test` reported green for code that was

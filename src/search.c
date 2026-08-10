@@ -60,6 +60,7 @@ static char			sc_abort;
 #ifdef EVAL_TUNING
 char geSearchRepetition = 1;
 char geSearchRandomOpening = 1;
+char geSearchCheckEvasion = 1;
 #endif
 
 // Opening randomiser state.  Zero means "never seeded", which is how every
@@ -262,7 +263,7 @@ static int quiesce(char side, int alpha, int beta, char ply)
 {
 	t_engMove *moves;
 	t_engUndo undo;
-	char count, i;
+	char count, i, inCheck, legal = 0;
 	int stand, score;
 	unsigned int arenaSave;
 
@@ -273,20 +274,45 @@ static int quiesce(char side, int alpha, int beta, char ply)
 	}
 	++si_nodes;
 
-	stand = eval_Position(side);
-	if(stand >= beta)
-		return beta;
-	if(stand > alpha)
-		alpha = stand;
+	// Being in check changes what this function is allowed to do, and getting
+	// that wrong is how the engine came to hang mate in one.  Two things follow
+	// from it and both matter:
+	//
+	//   Standing pat is illegal.  The stand-pat score says "I could decline to
+	//   move and still be at least this well off", which is exactly false when
+	//   the king is attacked - there is no declining.
+	//
+	//   Captures are not the only moves worth looking at.  A king walking out
+	//   of check is a quiet move, so a search that only generates captures can
+	//   conclude a position is quiet when the side to move is being mated.
+	//
+	// Before this, negamax at depth 0 handed straight over to a capture-only
+	// search that stood pat, so mate in one was invisible at depth 1 - and
+	// level 1 rarely finishes depth 2 on 400 nodes.  Measured over 60 mate-in-
+	// one positions from real games it found 27; with this, 60
+	inCheck = SEARCH_CHECK_EVASION && eng_InCheck(side);
 
+	if(!inCheck)
+	{
+		stand = eval_Position(side);
+		if(stand >= beta)
+			return beta;
+		if(stand > alpha)
+			alpha = stand;
+	}
+
+	// out of ply or out of arena, and in check: there is no stand-pat score to
+	// fall back on, so take the static evaluation rather than an alpha that may
+	// still be -infinity
 	if(ply >= SEARCH_MAX_PLY)
-		return alpha;
+		return inCheck ? eval_Position(side) : alpha;
 
 	arenaSave = si_arenaTop;
 	if(arenaRoom() < 8)
-		return alpha;
+		return inCheck ? eval_Position(side) : alpha;
 	moves = &st_arena[si_arenaTop];
-	count = eng_GenCaptures(side, moves, arenaRoom());
+	count = inCheck ? eng_GenMoves(side, moves, arenaRoom())
+	                : eng_GenCaptures(side, moves, arenaRoom());
 	si_arenaTop += count;
 
 	scoreMoves(moves, count, ply);
@@ -301,6 +327,7 @@ static int quiesce(char side, int alpha, int beta, char ply)
 			eng_Unmake(&moves[i], &undo);
 			continue;
 		}
+		++legal;
 
 		score = -quiesce(1 - side, -beta, -alpha, ply + 1);
 		eng_Unmake(&moves[i], &undo);
@@ -318,6 +345,14 @@ static int quiesce(char side, int alpha, int beta, char ply)
 	}
 
 	si_arenaTop = arenaSave;
+
+	// In check with nothing legal is mate, and saying so is the whole reason
+	// the evasions above are generated.  Not after an abort: the move list was
+	// abandoned part way, so "no legal move found" means the budget ran out and
+	// not that the side is mated
+	if(inCheck && !legal && !sc_abort)
+		return -EVAL_MATE_IN(ply);
+
 	return alpha;
 }
 
