@@ -1686,7 +1686,12 @@ off; at four plies it cannot, and a king that is not already close when the enem
 the edge spends moves walking there while the counter runs. Proximity is the term that pays
 inside the horizon, so this engine wants far more of it than a deep one would.
 
-### What it was worth
+### What it was worth — measured on the version that turned out to be wrong
+
+Everything in this section and the next was measured before the term met an opponent from
+outside this repository, and the two sections after them are what happened when it did. The
+figures are kept as they were taken, because which of them survived contact is the whole
+lesson. **The authoritative numbers are the table under "The second gate".**
 
 Won endings finished before the fifty-move rule, thirteen positions, the engine defending
 itself, `chesstest convert`:
@@ -1727,7 +1732,7 @@ sides, so the only variable is the engine:
 
 ### Head to head it is level, and Phase 8 already explained why
 
-Played against its own absence, `chesstest match drive`: from the endgame set at 3,000 nodes,
+Still the first version. Played against its own absence, `chesstest match drive`: from the endgame set at 3,000 nodes,
 **245-246-21**. From the openings, 221-220-71. Dead level both ways. Only at level 1's budget
 does it show in the score at all, 244-232-36, which is +12 games and about half a sigma.
 
@@ -1736,23 +1741,97 @@ failure anyway - an engine can score dead level and still turn won endings into 
 conversion metric was built for exactly this, and it is the one that moved. The Sargon games
 are the same statement from outside: level score, every draw a piece up.
 
+### The first version lost the match it was built to win
+
+Everything above was measured before the fix was played against anything outside this
+repository. Against **Sargon II**, the opponent whose games started the phase, it was a
+disaster: over 32 games at the same settings as the pre-fix baseline, **51.6% became 31.2%**.
+
+The eight fifty-move draws went to zero exactly as designed. They became *losses*.
+
+The cause was the gate, and it is worth stating plainly because the term itself was never the
+problem. The drive was gated on `gePhase < PHASE_ENDGAME` — and `PHASE_ENDGAME` is **3200**,
+which is two rooks and two minors still on the board. That is a middlegame. "Walk the enemy
+king to the corner" is not weak advice there, it is meaningless advice, and it was being
+applied at every node of one.
+
+The divergence was found by diffing one game against its baseline and asking the two binaries
+what they thought of the position where they parted, at move 34:
+
+```
+pre-fix : score cp -463  bestmove Kc2
+post-fix: score cp -561  bestmove b4
+```
+
+cc65 was **a piece down** there, at gePhase 1650. The gate `|score| > 400` was written to ask
+"am I winning"; it also answers "am I losing", and the term fired for the opponent, correctly
+in evaluation terms and disastrously in practice.
+
+### Why every instrument here missed it, and one did not
+
+- `chesstest convert` and the Stockfish endgame benchmark contain **only bare-king endings**,
+  every one below gePhase 1000. Neither ever exercised the term outside the range it was
+  designed for, so both reported a clean win.
+- `match sanity` and `match drive` are **self-play**. Both sides carry the term, the harm
+  cancels, and they came out level or better — `match sanity` conversion actually read *higher*
+  with the broken gate, 85% against the fixed version's 81%.
+
+**The number that looked best belonged to the version that lost.** That is the third time this
+document has recorded self-play flattering a change, and the first time it did so by enough to
+have shipped a regression.
+
+### The second gate
+
+`DRIVE_PHASE`, set at 1100, and it is deliberately just above what has been measured rather
+than at a guess about what else might benefit:
+
+| | gePhase |
+|---|---|
+| king and rook, and rook against a pawn | 500 |
+| bishop and knight | 660 |
+| queen | 900 |
+| two rooks | 1000 |
+| **the position that caused the regression** | **1650** |
+
+Queen against a lone minor is 1220 and is *not* covered. Nothing here has measured it, and the
+lesson of the first version is what a gate set by reasoning rather than by measurement costs.
+
+Everything the term was built for survives the tightening, and the interference does not:
+
+| | pre-fix | gate on score alone | **gate on phase too** |
+|---|---|---|---|
+| `chesstest convert`, by level | 5/11/8/13 | 12/13/13/13 | **12/13/13/13** |
+| Stockfish, 100 won endings, level 1 | 42 | 75 | **75** |
+| Stockfish, 100 won endings, level 2 | 61 | 75 | **75**, and faster mates |
+| the move at the divergence | `-463 Kc2` | `-561 b4` | **`-463 Kc2`** |
+| self-play conversion | 79% | 85% | **81%** |
+| self-play fifty-move draws | 22 | 12 | **14** |
+| **Sargon II, 32 games** | **51.6%** | **31.2%** | **57.8%** |
+
+Against Sargon by colour, which is where the mechanism is visible rather than inferred:
+
+| | pre-fix | gated |
+|---|---|---|
+| **White** | 7W **0L** 9D | **14W 0L 2D** |
+| Black | 1W 7L 8D | 1W 10L 5D |
+
+**Nine White draws became seven wins, with the loss column still empty.** The Black column
+moves the other way and is noise: only four distinct Black games exist in 32, six draws became
+losses and four losses became draws or wins, and Sargon's own replies differ run to run.
+
+### A caution about this instrument that outlived the measurement
+
+**Sargon is not reproducible.** The harness seeds `$4E` before the level is typed, but the
+keyboard-wait counter keeps advancing afterwards, so its book choices depend on host timing.
+The same seed opened `1.d4 Nf6` in one run and `1.d4 d5` in the next, with cc65's own moves
+identical. A paired replay is therefore impossible and every comparison here is unpaired.
+
+Worse for the arithmetic: **64 games is 17 distinct games**, and Black is four. The fifteen
+fifty-move draws in the pre-fix baseline were one game played fifteen times. Scores from this
+rig move in large steps and must be read as such - which is exactly why the colour split and
+the termination counts above carry the argument rather than the percentage.
+
 ### The cost could not be measured, and the gap is honest
-
-Over 1,500 searches of 60,000 nodes from three endgame positions - so the term firing at every
-node of every one - the host gives 6.80s without and 6.63s with, where the run-to-run spread is
-larger than the difference. It is two array reads and six shifts against a node that costs
-hundreds of cycles, and it cannot run outside an endgame at all.
-
-**It has not been measured on a 6502, and that is a real gap rather than a shrug.**
-`tests/c64search.c` and `tests/c64evasion.c` both run from the opening or from a fixed game
-that starts there, where this term cannot fire by construction - so either would faithfully
-report zero. Charging it honestly on target needs an endgame position added to that benchmark
-first. Three times now this project has been told that a cost measured on a desktop is not the
-cost, so the claim here is only that the host cannot see it.
-
-Size, `optsize`, all seven targets still linking: **+309 bytes** on the C64, Apple II, Oric and
-Plus/4, +302 on the X16, +256 on the Atari. The Apple II is the binding one and goes from 1,744
-bytes spare to **1,435**.
 
 ### Still open
 

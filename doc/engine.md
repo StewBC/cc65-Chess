@@ -599,13 +599,14 @@ anything done per node is paid twenty thousand times a move — it should have b
 twice.
 
 **Why it is affordable anyway, and this is the general point.** It is not cheaper than the
-terms that were rejected. It runs *somewhere else*. It sits inside the `gePhase <
-PHASE_ENDGAME` test that already existed for the endgame blend, behind a material gate, so:
+terms that were rejected. It runs *somewhere else*. It sits behind two gates — `gePhase <=
+1100`, so only a handful of pieces are left, and `|score| > 400`, so one side is decisively
+ahead — which means:
 
 - in a middlegame it does not execute at all — the branch it lives in is already skipped, and
   the cost is a comparison that was being made anyway;
-- where it does execute, the position is an ending, and an ending is one the search walks at a
-  few hundred nodes rather than twenty thousand.
+- where it does execute, the position is a bare-king ending, and such an ending is one the
+  search walks at a few hundred nodes rather than twenty thousand.
 
 **The expensive place and the place this fires are disjoint.** Every previous term was judged
 on what it cost per node; this one got in on where its nodes are. That is a different question
@@ -623,11 +624,23 @@ conversions to seven. The cause is depth: the textbook ratio assumes a search th
 corner drive pay off, and at four plies it cannot, so the term that pays inside the horizon is
 the one that has to be large. The full table is in Phase 11.
 
-**What it was worth.** Conversion over the 512-game self-play match, 79% → **85%**, with
-"drew still a piece up" falling from 36 to 14 and stalemate draws from 6 to 0. Against
-Stockfish defending 100 random won endings, level 1 went from 42 to **75** and level 2 from 61
-to **75**. Head to head it is level — an engine can score dead level and still turn won endings
-into draws, which is exactly why the conversion metric exists.
+**The phase gate is the whole difference between this working and not, and it cost a match to
+find.** The first version gated only on `PHASE_ENDGAME`, which is 3200 — two rooks and two
+minors still on the board. Every test in `tests/` passed, because `chesstest convert` and the
+Stockfish benchmark contain nothing but bare-king endings and the two match harnesses are
+self-play, where both sides carry the term and the harm cancels. Played against Sargon II it
+took 51.6% to 31.2% over 32 games: it was changing moves in positions where the engine was a
+piece *down*, at gePhase 1650. `doc/strength.md` §5.1.6 has the position and both binaries'
+opinion of it. The bound now sits just above the mates it exists for — rook 500, bishop and
+knight 660, queen 900, two rooks 1000 — rather than at a guess.
+
+**What it was worth.** Basic won endings finished before the fifty-move rule, by level:
+5/11/8/13 → **12/13/13/13**. Against Stockfish defending 100 random won endings, level 1 from
+42 to **75** and level 2 from 61 to **75**. Conversion over the 512-game self-play match, 79%
+→ **81%**. Against Sargon II, 51.6% → **57.8%** over 32 games, and by colour that is White
+going from 7W-0L-9D to **14W-0L-2D** — nine draws becoming seven wins with the loss column
+still empty. Head to head in self-play it is level, which is the point: an engine can score
+dead level and still turn won endings into draws.
 
 ## 5.4 Two good terms that were removed
 

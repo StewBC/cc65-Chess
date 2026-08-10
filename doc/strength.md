@@ -788,7 +788,11 @@ still turn won endings into draws.* The conversion metric built in Phase 8 could
 is that test now: thirteen basic won endings, the engine defending itself, counting mates before
 the fifty-move rule rather than wins.
 
-### What the fix was worth
+### What the fix was worth — first version, superseded below
+
+The figures here and in the next section were taken before the term met an outside opponent.
+They are kept as they were taken because which of them survived is the point; the shipped
+numbers are under "The second gate".
 
 | Level | conversions before | after |
 |---|---|---|
@@ -815,16 +819,73 @@ like — the same shape Phase 9 found for the endgame tables.
 On the 512-game self-play match, same configuration both sides: conversion **79% → 85%**, drew
 still a piece up **36 → 14**, stalemate draws **6 → 0**, total draws 126 → 100.
 
-### It does not show in W-L, and that is the point
+### The first version of the fix lost the match, and only Sargon could tell
 
-Played against its own absence: from the endgame set at 3,000 nodes, **245-246-21**. From the
-openings, 221-220-71. Only at level 1's budget does it register at all, 244-232-36 — about half
-a sigma.
+Everything above was measured inside this repository. Played against **Sargon II** — the
+opponent whose games started the section — the fix was a disaster: 32 games at the settings of
+the pre-fix baseline took **51.6% to 31.2%**. The fifty-move draws went to zero exactly as
+designed, and became losses.
 
-A reader who only had the ladder would conclude nothing happened. That is the same instrument
-failure Phase 8 described and built the conversion metric to escape, and it is worth recording
-that the escape hatch worked: the metric that was built for a defect nobody had reported is the
-one that measured a defect a match did report, two phases later.
+The term was not the problem; the gate was. It fired inside `gePhase < PHASE_ENDGAME`, and
+that constant is 3200 — two rooks and two minors still on the board. Asking the two binaries
+what they made of the position where one game parted from its baseline, at move 34:
+
+```
+pre-fix : score cp -463  bestmove Kc2
+post-fix: score cp -561  bestmove b4
+```
+
+cc65 was a piece **down** there. The `|score| > 400` gate was written to ask "am I winning" and
+it also answers "am I losing".
+
+**Every instrument in this document missed it.** `chesstest convert` and the Stockfish endgame
+benchmark hold nothing but bare-king endings, all below gePhase 1000, so neither ever exercised
+the term outside its design range. `match sanity` and `match drive` are self-play, where both
+sides carry the term and the harm cancels — and self-play conversion read **85%** for the
+broken version against **81%** for the fixed one. *The best number in the file belonged to the
+version that lost.*
+
+§2.4 says an instrument has to be validated before it is trusted, and Part VI says a self-play
+number is a reason to go and measure rather than a result. Both were already written down. It
+still took an outside opponent to apply them.
+
+### The second gate, and what survived it
+
+`DRIVE_PHASE` at 1100, set just above what has been measured rather than at a guess: king and
+rook is 500, bishop and knight 660, queen 900, two rooks 1000 — and the position that caused
+the regression is 1650. Queen against a lone minor is 1220 and is deliberately *not* covered,
+because nothing here has measured it and the first version is what a gate set by reasoning
+rather than measurement costs.
+
+| | pre-fix | gate on score alone | **shipped** |
+|---|---|---|---|
+| `chesstest convert`, levels 1-4 | 5/11/8/13 | 12/13/13/13 | **12/13/13/13** |
+| Stockfish, 100 won endings, level 1 | 42 | 75 | **75** |
+| Stockfish, 100 won endings, level 2 | 61 | 75 | **75** |
+| self-play conversion | 79% | 85% | **81%** |
+| **Sargon II, 32 games** | **51.6%** | **31.2%** | **57.8%** |
+
+By colour against Sargon, which is where the mechanism is visible rather than inferred:
+
+| | pre-fix | shipped |
+|---|---|---|
+| **White** | 7W **0L** 9D | **14W 0L 2D** |
+| Black | 1W 7L 8D | 1W 10L 5D |
+
+Nine White draws became seven wins with the loss column still empty. Black moves the other way
+and is noise — four distinct Black games exist in 32, and it churns in both directions.
+
+### What this rig can and cannot say
+
+**Sargon is not reproducible.** The harness seeds `$4E` before the level is typed, but the
+keyboard-wait counter keeps advancing, so its opening book depends on host timing: the same
+seed gave `1.d4 Nf6` in one run and `1.d4 d5` in the next, with cc65's own moves identical. No
+paired replay is possible and every figure here is unpaired.
+
+And **64 games is 17 distinct games**, four of them on the Black side. The fifteen fifty-move
+draws in the pre-fix baseline were one game played fifteen times. Percentages from this rig
+move in large steps, which is why the colour split and the termination counts carry the
+argument above and the percentage does not.
 
 ### The cost is below the host's noise floor, and unmeasured on target
 

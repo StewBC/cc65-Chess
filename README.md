@@ -45,15 +45,19 @@ mates in one before and 55 after. `doc/strength.md` §5.1.5 has it, along with t
 measured games never noticed — and the on-target measurement showing what it costs, which is
 why the times above are longer than they used to be.
 
-The ratings are unchanged by the most recent fix, and that is the interesting part of it. Played
-against **Sargon II** — a 1978 program, on an Apple II — the engine scored 21% against Sargon's
-second-weakest level, and every game it drew it was a clear piece or more up: it reached king
-and rook against a bare king on move 66 of one game, still had it on move 115, and drew by the
-fifty-move rule. The cause was that the endgame king table sends *both* kings to the centre,
-including the one being mated, so with bare kings every move scored the same. Basic won endings
-finished before the fifty-move rule went from 42 to 75 out of 100 at level 1. It does not move
-W-L at all, which is why it needed a test that asks for a mate rather than a result —
-`doc/strength.md` §5.1.6.
+The ratings are unchanged by the most recent fix, and the fix is the best story in the project.
+Played against **Sargon II** — a 1978 program, on an Apple II — the engine kept drawing games it
+had already won: it reached king and rook against a bare king on move 66 of one game, still had
+it on move 115, and drew by the fifty-move rule. The cause was that the endgame king table sends
+*both* kings to the centre, including the one being mated, so with bare kings every move scored
+the same. Basic won endings finished before the fifty-move rule went from 42 to **75** out of
+100 at level 1, and against Sargon the White column went from 7 wins and 9 draws to **14 wins
+and 2 draws** with no losses either way.
+
+The first version of that fix scored **better** on every test in this repository and was a
+twenty-point regression in real games — its gate was loose enough to change moves in
+middlegames, which only an outside opponent could see, because self-play applies the same harm
+to both sides. `doc/strength.md` §5.1.6 keeps the whole thing, wrong turn included.
 
 ## Playing it
 

@@ -157,7 +157,7 @@ recapture is a peak of +3 and means nothing, and counting those put 880 winning 
 games.
 
 Current baseline, shipped configuration against itself from the opening set (`match sanity`,
-the only same-config run here): **85%**, against 79% immediately before the mate drive of
+the only same-config run here): **81%**, against 79% immediately before the mate drive of
 Phase 11 and 78% when Phase 8 built the metric. `doc/strength.md` §5.1.6 has what moved it.
 
 The endgame-set figures printed by `match endgame` — 88 to 89% — are **not** a baseline of the
@@ -190,7 +190,14 @@ pessimistic ones need an outside defender:
 That instrument is not vendored either — it is a dozen lines of `python-chess` driving
 `tests/uci` against `stockfish` — but it is the one that produced the level 1 / level 2 figures
 in `doc/strength.md` §5.1.6, and self-play conversion ran about fifteen points optimistic
-against it. **King, bishop and knight against a bare king is 0 of 25 either way**, and no
+against it.
+
+**Neither of these could see the defect that mattered most in Phase 11**, and it is worth
+knowing why before trusting them. Both contain only bare-king endings. A term that misbehaves
+in positions with rooks and minors still on the board passes both of them perfectly, and both
+self-play harnesses too, because in self-play the harm is symmetric. It took an outside
+opponent — Sargon II on an Apple II — to find a change that had scored *better* on every
+instrument here and was a twenty-point regression in real games. **King, bishop and knight against a bare king is 0 of 25 either way**, and no
 amount of mate-drive weighting changes that; it needs a table that knows which corner.
 
 **`match sanity` is the check on the instrument itself.** A configuration against itself must

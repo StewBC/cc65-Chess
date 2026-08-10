@@ -377,6 +377,24 @@ static const signed char sc_centreDist[8] = { 3, 2, 1, 0, 0, 1, 2, 3 };
 // walking your king at an opponent who still has material is how you lose it
 #define DRIVE_GATE			400
 
+// And how little has to be left on the board.  **This bound is the whole
+// difference between a term that works and one that lost a match**, and it was
+// found by playing Sargon II rather than by any test in tests/.
+//
+// The first version gated only on PHASE_ENDGAME, which is 3200 - so the drive
+// was live with two rooks and two minors still on, where "walk the enemy king
+// to the corner" is not advice, it is nonsense.  Measured against Sargon over
+// 32 games it turned 8 fifty-move draws into 0 exactly as designed, and turned
+// them into *losses*: 51.6% became 31.2%.  The move it changed was in a
+// position where cc65 was a piece down, not up, at gePhase 1650.
+//
+// Every mate this term exists for is far below that: king and rook 500, bishop
+// and knight 660, queen 900, two rooks 1000.  The bound therefore sits just
+// above what has actually been verified rather than at a guess about what else
+// might benefit - queen against a lone minor is 1220 and is *not* covered,
+// deliberately, because nothing here has measured it
+#define DRIVE_PHASE			1100
+
 /*-----------------------------------------------------------------------*/
 // Two things, and they are the whole of every basic mate.  Push the losing
 // king away from the centre, because a king in the middle of the board cannot
@@ -443,15 +461,15 @@ int eval_Position(char side)
 
 		// And the reason to finish.  This is the only term that reads the board
 		// at eval time, which is the cost that killed two terms in Phase 4 - so
-		// note where it sits: inside the phase test, behind a material gate.  It
-		// is two array reads and a handful of shifts, it cannot run in a
-		// middlegame at all, and a position won by a piece is one the search
-		// reaches at a few hundred nodes rather than twenty thousand.  The
-		// expensive place and the place this fires are disjoint.
+		// note where it sits: behind *two* gates, one on how little is left and
+		// one on who is winning.  It is two array reads and a handful of shifts,
+		// it cannot run anywhere but a bare-king ending, and such an ending is
+		// one the search walks at a few hundred nodes rather than twenty
+		// thousand.  The expensive place and the place this fires are disjoint.
 		//
-		// Read after the blend on purpose: the gate is asking "am I winning",
-		// and the blended score is the engine's own answer to that
-		if(EVAL_HAS(EVAL_MATEDRIVE))
+		// Read after the blend on purpose: the second gate is asking "am I
+		// winning", and the blended score is the engine's own answer to that
+		if(EVAL_HAS(EVAL_MATEDRIVE) && gePhase <= DRIVE_PHASE)
 		{
 			if(score > DRIVE_GATE)
 				score += mateDrive(geKing[SIDE_WHITE], geKing[SIDE_BLACK]);

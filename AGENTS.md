@@ -215,6 +215,13 @@ have had that shape. `chesstest convert` asks for a mate before the fifty-move r
 for a result, and the conversion split in the match harness separates "drew still a piece up"
 from "gave it back" — those want different fixes.
 
+**A gate has to be measured, not reasoned about, and self-play cannot check one.** The mate
+drive's first version passed every test in `tests/` and scored *better* on the self-play
+conversion metric than the version that shipped — and lost twenty points against Sargon II,
+because its gate let it change moves in middlegames. The endgame tests contain only bare-king
+positions, so they never exercised it out of range, and in self-play both sides carried the
+same harm. Any term with a gate needs an outside opponent before it is believed.
+
 **A self-play number is a reason to go and measure, not a result.** It overstated repetition
 detection about threefold and understated the endgame tables by half — same instrument, both
 directions — so there is no correction factor, only an outside opponent. `doc/strength.md`
