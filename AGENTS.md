@@ -12,6 +12,15 @@ file is the short list of constraints that are easy to violate by accident.
 inside the engine and converts at the boundary. This is what lets the platform files that
 cannot be built here stay untouched.
 
+**There is one addition to `plat.h` since the freeze, and the bar it had to clear is the
+point.** `plat_GetSeed()` returns a byte of entropy for the opening randomiser. It went in
+because every machine has a free-running counter, cc65's own `asminc` names all of them, and
+the implementation is three lines a port that reads a register and cannot fail visibly — a
+wrong address gives repeating openings, which is what the engine did anyway. Anything asking
+to be added here should be held to that: no writes to hardware on a port that cannot be run,
+and a failure mode nobody has to debug. Note there are **eight** platform files, not six —
+`c64.chr` is a separate port and `term` is the one that must return a constant.
+
 **The frozen interface is wider than `plat.h`.** Every port also reads four globals
 directly, and this was discovered the hard way:
 
@@ -38,8 +47,15 @@ Since the endgame tables it is also the only setting that fits:
 
 | | optsize | optspeed |
 |---|---|---|
-| atari | 1742 free below the framebuffer | **does not link — 562 bytes over** |
-| apple2 | 2366 free in MAIN, 2124 in BSS | links with **12 bytes** spare |
+| atari | 1740 free below the framebuffer | **does not link — 562 bytes over** |
+| apple2 | 2178 free in MAIN, 2122 in BSS | links with **12 bytes** spare |
+
+**The Atari's headroom does not shrink smoothly, and the number above hides a cliff.** `DLIST`
+is page-aligned inside `MAIN`, so code growth is absorbed by the padding in front of it until
+the padding runs out and the display list jumps a page — 256 bytes of the 1740, gone at once.
+Opening randomisation added 188 bytes of code and cost the *free space* two, because 186 of it
+disappeared into that padding. **50 bytes of padding are left.** Check `DATA`'s end against
+`DLIST`'s start in an `ld65 -m` map before assuming a small addition is cheap.
 
 `Makefile.options` defaults to `optsize` and that is why. Raising it would mean raising it
 everywhere, which the Atari cannot take - so treat `optsize` as fixed, and check anything
@@ -96,6 +112,11 @@ C89 declarations at the top of a block. `char` for nearly everything: cc65's `ch
 the 8-bit builds; test-only helpers must stay out of the cc65 build entirely.
 
 ## Traps that have already caught someone
+
+**A green suite can be a stale binary.** `tests/Makefile` did not list the engine headers as
+prerequisites, so editing `search.h` and running `make test` reported green for code that was
+not in the binary. It does now — but note that `sed -i.bak` followed by `mv` restores the
+*original mtime*, which walks straight back into it. `touch` the header, or `make -B`.
 
 **The native suite validates logic, never machine width.** Anything that multiplies,
 accumulates, or sums toward a limit needs reading against a 16-bit `int` by hand. A node

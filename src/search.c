@@ -59,13 +59,49 @@ static char			sc_abort;
 
 #ifdef EVAL_TUNING
 char geSearchRepetition = 1;
+char geSearchRandomOpening = 1;
 #endif
+
+// Opening randomiser state.  Zero means "never seeded", which is how every
+// test harness gets the old behaviour to the digit without knowing this is here
+static char			sc_rand;
+static char			sc_randMoves;
 
 /*-----------------------------------------------------------------------*/
 // Most Valuable Victim / Least Valuable Attacker needs pieces ranked by
 // worth.  The piece constants in types.h are not in that order, so rank them
 // here: indexed by NONE, ROOK, KNIGHT, BISHOP, QUEEN, KING, PAWN
 static const char sc_mvvRank[PAWN+1] = { 0, 4, 2, 3, 5, 6, 1 };
+
+/*-----------------------------------------------------------------------*/
+// 8 bit Galois LFSR, x^8+x^6+x^5+x^4+1, period 255.  A shift, a test and an
+// xor - the whole randomiser has to be affordable on a 1MHz machine, and this
+// is about as small as a generator gets.  It never returns to zero from a
+// nonzero state, so "seeded" stays true for the life of the game
+static char randNext(void)
+{
+	char lsb = sc_rand & 1;
+
+	sc_rand >>= 1;
+	if(lsb)
+		sc_rand ^= 0xB8;
+
+	return sc_rand;
+}
+
+/*-----------------------------------------------------------------------*/
+void search_SetSeed(char seed)
+{
+	// A zero seed is honoured rather than replaced, and means "play this game
+	// without randomisation".  Zero is the LFSR's dead state, so that falls out
+	// of the arithmetic for free: randNext returns zero forever, nothing gets
+	// perturbed, and the engine plays the game it would have played before any
+	// of this existed.  It is also what the terminal build asks for, and what a
+	// hardware counter hands over about one game in 256 - where the only
+	// consequence is that one game opens the way the old engine did
+	sc_rand = seed;
+	sc_randMoves = 0;
+}
 
 /*-----------------------------------------------------------------------*/
 // How many moves will still fit in the arena, clamped to what a char can hold
@@ -414,6 +450,26 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 
 	scoreMoves(moves, count, 0);
 
+	// Break ties randomly for the first few moves of a game.  Alpha-beta
+	// returns the same move whatever order the moves are tried in, with one
+	// exception: among moves that score exactly equal the first one searched
+	// wins, because the test at the bottom of the loop is a strict >.  So
+	// perturbing the ordering score can only ever change which of several
+	// equally-best moves gets played - it cannot make the engine prefer a
+	// worse one.  That is the whole feature: the opening was identical every
+	// game because ties fell to whatever the generator happened to emit first,
+	// which is a property of the loop order and not of chess.
+	//
+	// Deliberately a small perturbation.  Move ordering is what makes
+	// alpha-beta cut, so shuffling it wholesale would cost nodes and buy
+	// nothing; +0..3 only reorders moves that were already ranked together.
+	// The 252 guard keeps it below the 255 the previous iteration's best is
+	// about to be given, and stops the addition wrapping a char
+	if(sc_rand && SEARCH_RANDOM_OPENING && sc_randMoves < SEARCH_RANDOM_MOVES)
+		for(i = 0; i < count; ++i)
+			if(moves[i].m_score < 252)
+				moves[i].m_score += randNext() & 3;
+
 	// the best move from the previous iteration is the best guess for this
 	// one, so try it first - that is most of what iterative deepening buys
 	if(result->m_haveMove)
@@ -554,4 +610,11 @@ void search_Best(char side, char maxDepth, unsigned int nodeBudget, t_searchResu
 	}
 
 	result->m_nodes = si_nodes;
+
+	// one more of this game's moves is behind us.  Counted here rather than in
+	// the caller so that every entry point gets it, and clamped so the count
+	// cannot wrap all the way round and switch the randomiser back on in the
+	// middle of an endgame
+	if(sc_randMoves < SEARCH_RANDOM_MOVES)
+		++sc_randMoves;
 }

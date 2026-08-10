@@ -622,6 +622,22 @@ int plat_ReadKeys(char blocking)
 }
 
 /*-----------------------------------------------------------------------*/
+char plat_GetSeed()
+{
+	// The Kernal's 60Hz TIMER is at $A03B in *bank 0* (cx16.inc), three bytes
+	// big endian, so $A03D is the fast one.  $A000 is banked RAM, so bank 0
+	// has to be paged in over whatever is there and put back afterwards - the
+	// bank register is $00, in the always-present low page
+	char bank = *(char*)0x00, seed;
+
+	*(char*)0x00 = 0;
+	seed = *(char*)0xA03D;
+	*(char*)0x00 = bank;
+
+	return seed;
+}
+
+/*-----------------------------------------------------------------------*/
 // Only gets called if gReturnToOS is true, which it isn't
 void plat_Shutdown()
 {

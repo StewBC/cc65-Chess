@@ -539,6 +539,16 @@ int plat_ReadKeys(char blocking)
 /*-----------------------------------------------------------------------*/
 // Restore the C64 to the state it was in before RUN was typed.  Only
 // ever gets called if gReturnToOS is true
+char plat_GetSeed()
+{
+	// TIME, the Kernal's 60Hz jiffy clock, is $A0..$A2 big endian (c64.inc).
+	// $A2 is the fastest moving byte, and the clock is certainly running: the
+	// only way to reach here is through cgetc, which spins waiting for the
+	// Kernal IRQ to put a key in the buffer
+	return *(char*)0xA2;
+}
+
+/*-----------------------------------------------------------------------*/
 void plat_Shutdown()
 {
 	CIA2.ddra		= sc_ddra;

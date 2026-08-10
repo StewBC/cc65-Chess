@@ -395,6 +395,16 @@ int plat_ReadKeys(char blocking)
 }
 
 /*-----------------------------------------------------------------------*/
+char plat_GetSeed()
+{
+	// Deliberately zero, which search_SetSeed reads as "no randomisation".
+	// The terminal build is what development plays against, and it is worth
+	// more that a game seen here can be reproduced under the harness than that
+	// its openings vary - the variety is for the machines with a player at them
+	return 0;
+}
+
+/*-----------------------------------------------------------------------*/
 void plat_Shutdown()
 {
 	endwin();

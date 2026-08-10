@@ -535,6 +535,16 @@ int plat_ReadKeys(char blocking)
 
 /*-----------------------------------------------------------------------*/
 // Only gets called if gReturnToOS is true, which it isn't
+char plat_GetSeed()
+{
+	// TIME, the Kernal's 60Hz jiffy clock, is $A0..$A2 big endian (c64.inc).
+	// $A2 is the fastest moving byte, and the clock is certainly running: the
+	// only way to reach here is through cgetc, which spins waiting for the
+	// Kernal IRQ to put a key in the buffer
+	return *(char*)0xA2;
+}
+
+/*-----------------------------------------------------------------------*/
 void plat_Shutdown()
 {
 	VIC.bordercolor = sc_vbc;

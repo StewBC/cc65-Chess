@@ -23,4 +23,15 @@ void plat_AddToLogWinTop(void);
 int plat_ReadKeys(char blocking);
 void plat_Shutdown(void);
 
+// One byte of entropy, read once a game, for the opening randomiser.  Every
+// machine here has a free running counter of some kind and cc65's asminc names
+// all of them, so no port has to guess an address.  A byte is enough: it seeds
+// an 8 bit LFSR, and the randomiser only ever picks between a handful of moves
+// the search has already scored equal.
+//
+// This is the one addition to this file since it was frozen, and it is only
+// worth it because it costs each port three lines and cannot fail visibly - a
+// bad seed makes the openings repeat, which is exactly what happens now.
+char plat_GetSeed(void);
+
 #endif //_PLAT_H_

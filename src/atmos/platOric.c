@@ -495,6 +495,14 @@ int plat_ReadKeys(char blocking)
   return keyMask;
 }
 
+char plat_GetSeed(void)
+{
+  // TIMER3 at $0276 (atmos.inc), decremented by the ROM's IRQ.  Same argument
+  // as the CBM machines: cgetc spins on KEYBUF waiting for that IRQ, so if it
+  // were not running there would be no way to have got here
+  return *(char*)0x0276;
+}
+
 void plat_Shutdown(void)
 {
   quit();

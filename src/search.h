@@ -41,6 +41,29 @@ extern char geSearchRepetition;
 #endif
 
 /*-----------------------------------------------------------------------*/
+// Opening randomisation, switchable the same way.  Note the direction: unlike
+// every other switch here this one is a *feature* of the shipped game rather
+// than a term being measured, so the 8-bit build has it permanently on and the
+// tuning build is the one that can turn it off - which is what lets its cost
+// be measured at all.
+//
+// It does nothing until search_SetSeed is called, which only the game does.
+// Every harness in tests/ leaves the seed at zero and therefore plays exactly
+// the games it played before this existed - the determinism every figure in
+// doc/strength.md depends on is a property of nobody calling that function,
+// not of a flag anyone has to remember to set
+#ifdef EVAL_TUNING
+extern char geSearchRandomOpening;
+#define SEARCH_RANDOM_OPENING	geSearchRandomOpening
+#else
+#define SEARCH_RANDOM_OPENING	1
+#endif
+
+// How many of the engine's own moves are randomised.  Its moves, not plies -
+// "my first five" is the same promise whichever colour it has
+#define SEARCH_RANDOM_MOVES		5
+
+/*-----------------------------------------------------------------------*/
 typedef struct tag_searchResult
 {
 	t_engMove		m_move;			// best move found
@@ -76,6 +99,13 @@ extern const t_searchSkill gcSearchSkill[SEARCH_NUM_SKILLS];
 // Iterative deepening means there is always a usable move from the last
 // iteration that finished
 void search_Best(char side, char maxDepth, unsigned int nodeBudget, t_searchResult *result);
+
+/*-----------------------------------------------------------------------*/
+// Start a game's opening randomisation from this seed, and restart the count
+// of randomised moves.  Called once a game, by the game.  Zero means no
+// randomisation - it is the LFSR's dead state, so it needs no special case,
+// and it is the same state the test harnesses are in by never calling this
+void search_SetSeed(char seed);
 
 /*-----------------------------------------------------------------------*/
 // Is the side to move mated, stalemated or fine?  Returns OUTCOME_CHECKMATE,

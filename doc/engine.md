@@ -1083,6 +1083,103 @@ currently does.
 This is also most of the groundwork for a transposition table, which is the other thing the
 absence of incremental hashing was blocking.
 
+## 6.11 The opening randomiser, and why it is nearly free
+
+From the starting position the engine played a knight to c3. Every game, on every machine,
+since 2014. Not a bad move — just always the same one, which made the first few moves of every
+game identical.
+
+The cause was never mysterious. The evaluation rates several opening moves *exactly* equal,
+and the root loop keeps a move only when it beats the incumbent:
+
+```c
+if(!legal || score > alpha)
+```
+
+A strict `>`. So among equal-scoring moves the first one searched wins, and which one that is
+comes from the order the generator emitted them — a property of two nested loops over the
+board, not of chess.
+
+**The fix exploits the one thing alpha-beta guarantees about move ordering: it does not
+change the answer.** Order the moves any way you like and the search returns a move with the
+same score; ordering changes only how fast it gets there. The single exception is exactly the
+case above — among equal scores, order decides. So perturbing the ordering score at the root
+can change *which* opening gets played and cannot make the engine prefer a worse move. There
+is no evaluation term to tune, no risk to weigh, and no match to run to prove it is not
+harmful, because the property is structural.
+
+```c
+if(sc_rand && SEARCH_RANDOM_OPENING && sc_randMoves < SEARCH_RANDOM_MOVES)
+    for(i = 0; i < count; ++i)
+        if(moves[i].m_score < 252)
+            moves[i].m_score += randNext() & 3;
+```
+
+Three details carry more weight than they look:
+
+**`+0..3`, not a shuffle.** Move ordering is what makes alpha-beta cut, so randomising it
+wholesale would cost nodes and buy nothing. A perturbation this small only reorders moves that
+were already ranked together.
+
+**The 252 guard.** The previous iteration's best move is given 255 so it is searched first;
+staying below that keeps iterative deepening's stability, and stops the addition wrapping a
+`char`.
+
+**It stops.** `SEARCH_RANDOM_MOVES` is five, counted in the engine's *own* moves so the
+promise is the same whichever colour it has. Past that the engine is the deterministic one it
+always was, which is what keeps the randomiser out of the endgames the piece-square tables of
+§5.4a were built for.
+
+### Where a 1 MHz machine finds entropy
+
+`plat_GetSeed()` is the only addition to `plat.h` since it was frozen, and it returns one
+byte. Each port reads a counter that is already running, all of them named in cc65's own
+`asminc`:
+
+| Port | Source | Why it is live |
+|---|---|---|
+| c64, c64.chr | `TIME` jiffy clock, $A0–$A2 | `cgetc` spins waiting for the Kernal IRQ to fill the key buffer |
+| plus4 | `TIME`, **$A3–$A5** | same — note the address differs from the C64's |
+| cx16 | `TIMER`, $A03B in bank 0 | banked RAM, so bank 0 is paged in for the read and put back |
+| apple2 | `RNDL`/`RNDH`, $4E/$4F | cc65's own `cgetc` increments them once per poll while waiting |
+| atmos | `TIMER3`, $0276 | maintained by the ROM IRQ that `cgetc` waits on |
+| atari | POKEY `RANDOM`, $D20A | a hardware polynomial counter; needs nothing to be running |
+| term | constant zero | development plays against this build and wants its games repeatable |
+
+The Apple II is the interesting one. It has no clock, and `$4E/$4F` is not a clock either —
+it is a counter cc65's keyboard poll increments while it waits, so what it holds is *how long
+the human took to press a key*. That is better entropy than a jiffy counter, not worse.
+
+**The seed is read once a game, and at one specific moment**: after the human has finished
+with the menu, not at `board_Init`. On a cold boot the menu is the only thing that has
+happened yet that the machine could not have predicted, and seeding before it would read the
+same value every time the machine was switched on.
+
+From there an 8-bit Galois LFSR (`x^8+x^6+x^5+x^4+1`, period 255) does the rest — a shift, a
+test and an xor. **A zero seed is honoured rather than replaced**: zero is the LFSR's dead
+state, so it costs no special case, and it means "play this game the way the old engine
+would". That is what the terminal build asks for, and what a hardware counter hands over about
+one game in 256, where the only consequence is one ordinary-looking opening.
+
+### What it cost
+
+| | |
+|---|---|
+| CODE | +188 bytes |
+| BSS | +2 bytes (the LFSR state and the move counter) |
+| Speed | nothing measurable — a handful of xors on the first five moves |
+| Strength | structurally zero; the move played is always one the search scored equal-best |
+
+**The harness never seeds, and that is the whole determinism story.** No flag has to be
+remembered and no build has to differ: `search_SetSeed` is called by `main.c`, which is not in
+the test build at all, so every figure in `doc/strength.md` was measured by an engine sitting
+in the LFSR's dead state. The ladder rung that anchors that claim reproduces to the digit
+across this change — level 4 against Stockfish at one node, 248–129–135 before and after.
+
+`tests/opening.c` checks the two things that could silently go wrong: that different seeds
+actually produce different openings, and that a seeded search and an unseeded one always agree
+on the *score* even when they disagree on the move.
+
 ---
 
 # Part VII — The seams

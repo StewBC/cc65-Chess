@@ -13,6 +13,7 @@
 #include "cpu.h"
 #include "human.h"
 #include "frontend.h"
+#include "search.h"
 #include "plat.h"
 
 /*-----------------------------------------------------------------------*/
@@ -71,7 +72,19 @@ void mainLoop()
 			{
 				outcome = frontend_Menu(activeGame);
 				if(outcome < OUTCOME_ABANDON)
+				{
+					// Seed the opening randomiser here, and only here.  This is
+					// the first instant in a cold boot at which anything has
+					// happened that the machine could not have predicted - the
+					// human has just walked the menu, which takes an
+					// unrepeatable number of jiffies.  Seeding at board_Init
+					// instead would read the same counter value every time the
+					// machine is switched on.
+					// !activeGame makes it once a game rather than once a menu
+					if(!activeGame)
+						search_SetSeed(plat_GetSeed());
 					activeGame = 1;
+				}
 			}
 			
 			if(outcome <= OUTCOME_STALEMATE)

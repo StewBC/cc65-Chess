@@ -563,6 +563,15 @@ int plat_ReadKeys(char blocking)
 
 /*-----------------------------------------------------------------------*/
 // Only gets called if gReturnToOS is true, which it isn't
+char plat_GetSeed()
+{
+    // TIME is at $A3 here, not $A0 as on the C64 (plus4.inc) - three bytes,
+    // big endian, so $A5 is the one that moves every jiffy.  cgetc waits on
+    // the Kernal IRQ to fill the key buffer, so the clock is running
+    return *(char*)0xA5;
+}
+
+/*-----------------------------------------------------------------------*/
 void plat_Shutdown()
 {
     // restore Plus4 specific hardware values

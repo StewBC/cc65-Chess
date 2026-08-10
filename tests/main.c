@@ -28,6 +28,7 @@ static void usage(const char *argv0)
 	printf("  fuzz [seed] [games]       random games through the game path, undo/redo checked\n");
 	printf("  castle                    castling and en passant rules\n");
 	printf("  repeat                    repetition detection and its history\n");
+	printf("  opening                   opening randomisation, and that it stops\n");
 	printf("  selfplay [games] [plies]  AI against itself, with timings\n");
 	printf("\noptions: -v for more detail\n");
 }
@@ -55,6 +56,8 @@ int main(int argc, char **argv)
 		failures += test_RunCastle(verbose);
 		printf("\n");
 		failures += test_RunRepetition(verbose);
+		printf("\n");
+		failures += test_RunOpening(verbose);
 		printf("\n");
 		failures += test_RunGameFuzz(1, 150, verbose);
 		failures += test_RunGameFuzz(5000, 150, verbose);
@@ -121,6 +124,9 @@ int main(int argc, char **argv)
 
 	if(!strcmp(command, "repeat"))
 		return test_RunRepetition(verbose) ? 1 : 0;
+
+	if(!strcmp(command, "opening"))
+		return test_RunOpening(verbose) ? 1 : 0;
 
 	if(!strcmp(command, "selfplay"))
 		return test_RunSelfPlay(argc > 2 && argv[2][0] != '-' ? atoi(argv[2]) : 1,

@@ -462,6 +462,15 @@ int plat_ReadKeys(char blocking)
 }
 
 /*-----------------------------------------------------------------------*/
+char plat_GetSeed()
+{
+	// POKEY's RANDOM register at $D20A: a 17 bit polynomial counter clocked by
+	// the hardware itself, so it needs nothing to be running and is the best
+	// source on any of these machines
+	return *(char*)0xD20A;
+}
+
+/*-----------------------------------------------------------------------*/
 void plat_Shutdown()
 {
 }

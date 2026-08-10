@@ -1387,15 +1387,63 @@ repetitions were winnable.
 
 Not a case for removing anything. It retires an open question, which is what it was for.
 
+### The opening randomiser, and a premise that was wrong
+
+This was parked for two phases behind "`plat.h` exposes no clock, so entropy has to come from
+human input". Both halves turned out to be wrong, and the second one was wrong in the useful
+direction.
+
+**Every one of these machines has a free-running counter, and cc65's own `asminc` names all of
+them.** The jiffy clock on the CBM machines, `TIMER3` at $0276 on the Oric, POKEY's `RANDOM`
+at $D20A on the Atari. So the entropy was never the problem; nobody had looked. Three of the
+six recipes needed correcting on the way through, and the corrections are the instructive part:
+
+- **The SID noise recipe reads the wrong address.** 54272 is $D400, voice-1 frequency low and
+  write-only; the oscillator-3 readback is $D41B. It is also the only source of the six that
+  *writes* to hardware, which on a port that cannot be run here is the difference between bad
+  entropy and a side effect nobody can observe. `TIME` is read-only and was used instead.
+- **The Plus/4's jiffy clock is at $A3, not the C64's $A0.** Assuming the C64 address carried
+  over would have read something else entirely and looked like it worked.
+- **The Apple II has no clock and did not need one.** `$4E/$4F` is a counter cc65's own `cgetc`
+  increments while it waits for a key, so it holds how long the human took - better entropy
+  than a jiffy counter, not worse. This one was called wrong twice in the same session, first
+  as "probably dead" and then confirmed live from cc65's source, which is where it should have
+  been checked in the first place.
+
+Whether the clocks are *running* did not need an emulator either. `cgetc` on the CBM machines
+and the Oric spins waiting for the IRQ to fill the key buffer - if that IRQ were not running
+there would be no way to have reached the code asking the question.
+
+**And the whole "it needs a measurement" worry was misplaced**, which is the better finding.
+Alpha-beta returns a move of the same score whatever order the moves are tried in; ordering
+decides only among moves that already score *exactly* equal - which is precisely the tie the
+old engine was breaking by generator order. Perturbing the ordering score at the root
+therefore varies the opening and **cannot** play a worse move. It is a structural property,
+not a statistical one, so there was no 512-game match to run.
+
+188 bytes of code and 2 of BSS, and it uncovered a wrinkle in the Atari's budget worth
+recording: `DLIST` is page-aligned inside `MAIN`, so 186 of those 188 bytes vanished into the
+padding in front of it and the free space fell by two. **50 bytes of padding are left**, and
+the byte that exhausts them costs 256 in one step.
+
+### Two things caught in passing
+
+**A green suite can be a stale binary.** `tests/Makefile` did not list the engine headers as
+prerequisites, so a mutation test on `search.h` - deliberately breaking the feature to check
+that the new test noticed - reported green from a binary that never saw the change. It nearly
+became evidence that the test was worthless. Headers are prerequisites now. The related trap
+is that `sed -i.bak` and `mv` restore the *original mtime*, which walks straight back into it.
+
+**The eighth port.** `src/c64.chr` is a separate platform file and the build found it the way
+these things are always found, by failing to link after the other seven were done.
+
 ### Still open
 
-*Opening randomisation.* Unchanged from Phase 8: the engine plays the same first move every
-game, there is room for the term at `optsize`, and `plat.h` exposes no clock, so entropy has to
-come from human input and the first move after a cold boot stays deterministic whatever is
-done. This one needs a decision before it needs code.
-
 *A rated rung near 50%, measured before the next evaluation term lands.* Without it the next
-change gets the same three-instruments-three-answers treatment as this one.
+change gets the same three-instruments-three-answers treatment as the endgame tables did.
+
+*The Apple II and Atari have not been run since this landed.* Both can be, and neither has -
+see the note at the top of this section about checking rather than assuming.
 
 ---
 

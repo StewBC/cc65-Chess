@@ -403,6 +403,16 @@ int plat_ReadKeys(char blocking)
 
 /*-----------------------------------------------------------------------*/
 // Only ever gets called if gReturnToOS is true
+char plat_GetSeed()
+{
+    // RNDL/RNDH at $4E/$4F (apple2.inc).  There is no clock in this machine,
+    // but cc65's own cgetc increments this pair once per poll while it waits
+    // for a keypress, so it holds how long the human took - which is better
+    // entropy than a jiffy counter, not worse
+    return *(char*)0x4E;
+}
+
+/*-----------------------------------------------------------------------*/
 void plat_Shutdown()
 {
     hires_Done();

@@ -40,9 +40,15 @@ HARNESS := \
 	gamefuzz.c \
 	castle.c \
 	repetition.c \
+	opening.c \
 	selfplay.c
 
-chesstest: $(ENGINE) $(HARNESS) testutil.h
+# The engine headers are prerequisites too.  Without them an edit to search.h
+# leaves a stale binary and the suite reports green for code that is no longer
+# there - which cost an afternoon once and is invisible when it happens
+HEADERS := $(wildcard $(SRCDIR)/*.h) testutil.h
+
+chesstest: $(ENGINE) $(HARNESS) $(HEADERS)
 	$(CC) $(CFLAGS) -o $@ $(ENGINE) $(HARNESS)
 
 test: chesstest
@@ -54,17 +60,17 @@ test: chesstest
 # that ships.  engineperft.c comes along only for its FEN parser
 UCIFLAGS := -I$(SRCDIR) -funsigned-char -O2 -Wall -Wno-char-subscripts
 
-uci: $(ENGINE) uci.c testutil.c engineperft.c platStub.c testutil.h
+uci: $(ENGINE) uci.c testutil.c engineperft.c platStub.c $(HEADERS)
 	$(CC) $(UCIFLAGS) -o $@ $(ENGINE) uci.c testutil.c engineperft.c platStub.c
 
 # The same adapter WITH the tuning switches, for A/B matches against an outside
 # opponent - the ladder can then be re-run with one term off.  It is not the
 # binary any published figure is measured with: tuning costs nodes, so the two
 # builds must be shown to play the same games before an A/B means anything
-uci-tuning: $(ENGINE) uci.c testutil.c engineperft.c platStub.c testutil.h
+uci-tuning: $(ENGINE) uci.c testutil.c engineperft.c platStub.c $(HEADERS)
 	$(CC) $(CFLAGS) -o $@ $(ENGINE) uci.c testutil.c engineperft.c platStub.c
 
-genbook: $(ENGINE) genbook.c testutil.c platStub.c testutil.h
+genbook: $(ENGINE) genbook.c testutil.c platStub.c $(HEADERS)
 	$(CC) $(UCIFLAGS) -o $@ $(ENGINE) genbook.c testutil.c platStub.c
 
 # book.epd - 256 openings, four plies deep - is checked in rather than built,

@@ -641,19 +641,28 @@ throwing away one game in six that it had already won (§5.1), which is a defect
 proposal. What the test does retire is the open question: the shallow levels do not pay a
 meaningful price for it, and §5.1.2's concern can stop being carried forward.
 
-## 5.2 The opening is dull, and the reason is mundane
+## 5.2 The opening was dull, and the reason was mundane
 
-From the starting position the engine plays a knight to c3. Every time. It is not a bad move;
-it is simply always the same move, which makes the first few moves of every game identical.
+From the starting position the engine played a knight to c3. Every time. Not a bad move;
+simply always the same one, which made the first few moves of every game identical.
 
-The cause is not mysterious. The evaluation frequently rates several opening moves exactly
-equal, and ties are broken by whichever move the generator produced first — which is a
-property of the loop order, not of chess.
+The cause was not mysterious. The evaluation frequently rates several opening moves exactly
+equal, and ties fell to whichever move the generator produced first — a property of the loop
+order, not of chess.
 
-The fix is inexpensive: pick randomly among moves within a few hundredths of a pawn of the
-best. The complication is that it would destroy the determinism that every measurement in
-this document depends on, so it needs to be switchable rather than simply added — random for
-a human opponent, deterministic for the harness.
+**This has been fixed, and it cost the measurements nothing.** §6.11 of `doc/engine.md` has
+the mechanism; what matters here is why it does not appear anywhere in this document's
+numbers. The randomiser perturbs move *ordering* at the root, and ordering cannot change what
+alpha-beta returns except among moves that already score exactly equal — so the move it plays
+is always one the search ranked equal-best. There was nothing to measure, because there is
+nothing to lose.
+
+The determinism this document depends on is preserved by a stronger mechanism than a flag:
+the randomiser does nothing until it is seeded, and it is seeded by `main.c`, which is not in
+the test build. Every harness in `tests/` therefore plays exactly the games it played before
+the feature existed. The check that this is true rather than merely intended is that the
+ladder reproduces to the digit across the change — level 4 against Stockfish at one node,
+248–129–135 on both sides of it.
 
 ## 5.3 The other thing that did not happen
 
