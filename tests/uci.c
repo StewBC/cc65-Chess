@@ -276,6 +276,13 @@ static void cmdSetOption(char *args)
 		geSearchRepetition = (char)(0 == strcmp(value, "true") || atoi(value));
 	else if(0 == strcmp(name, "CheckEvasion"))
 		geSearchCheckEvasion = (char)(0 == strcmp(value, "true") || atoi(value));
+	else if(0 == strcmp(name, "MateDrive"))
+	{
+		if(0 == strcmp(value, "true") || atoi(value))
+			geEvalTerms |= EVAL_MATEDRIVE;
+		else
+			geEvalTerms &= ~EVAL_MATEDRIVE;
+	}
 #endif
 }
 
@@ -294,6 +301,7 @@ static void cmdUci(void)
 #ifdef EVAL_TUNING
 	printf("option name Repetition type check default true\n");
 	printf("option name CheckEvasion type check default true\n");
+	printf("option name MateDrive type check default true\n");
 #endif
 	say("uciok");
 }

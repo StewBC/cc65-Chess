@@ -1618,6 +1618,163 @@ would fix them and make the level slower; nobody has decided which matters more.
 
 ---
 
+## Phase 11 - every draw was a win it did not finish
+
+Started from a different kind of report than Phase 10's. Not a player at a board but a match:
+the engine was being played against Sargon II on an Apple II, and it was scoring 21% against
+Sargon's *level 1*, the second-weakest of the seven settings a 1978 program offers.
+
+The obvious reading was that the engine is weaker than it claims. It is not what the games say.
+Running the material balance over all twelve games of that batch:
+
+**Every single game it drew, it was a clear piece or more up.** Not one draw was a balanced
+position. Playing White it reached a clean king and rook against a bare king on move 66, still
+had it on move 115, and drew by the fifty-move rule - twice, from two different openings,
+because the two are the same game. In another it reached king and queen against king and pawn
+on ply 129 and let the pawn promote.
+
+So the score was not a strength problem at all. It was **the entire margin sitting in endings
+it had already won.**
+
+### The cause was a table saying the same thing to both kings
+
+`sc_pstKingEnd` sends a king to the middle of the board once the queens are off, which is
+right, and it is a *per-piece* table, so it says it to the king being mated as well. The
+engine could see that its own king should come out and had no opinion whatever about where the
+enemy king should be. With bare kings every rook move therefore scored alike, and it wandered
+until the counter ran out.
+
+This is §5.4a's lesson one layer on. The endgame king table alone was nearly worthless because
+the pawns had no reason to move; the endgame tables together are nearly worthless in a bare-king
+ending because *neither* king has a reason to go anywhere in particular.
+
+### The term could not be a running total, and that turned out not to matter
+
+Every evaluation term since Phase 5 has had to be a property of a piece on a square, because
+that is what `eval_MoveDelta` can carry. A mate drive takes **both kings**, so it is not, and
+by the rule that has governed this file since Phase 5 it should have been unaffordable.
+
+It is affordable because of *where* it runs rather than what it costs. It sits inside the
+`gePhase < PHASE_ENDGAME` test that was already there for the endgame blend, behind a material
+gate - so it cannot execute in a middlegame at all, and the positions where it does execute are
+ones the search reaches at a few hundred nodes rather than twenty thousand. **The expensive
+place and the place this fires are disjoint.** That is the whole argument, and it is the first
+time in this project that a term got in by being placed correctly rather than by being cheap.
+
+### The weights are not the textbook ones
+
+The standard formulation weights corner-drive about three times king-proximity - 4.7 and 1.6.
+Built that way it was clearly worse than weighting them nearly equally. Five ratios, measured
+over the thirteen endings now in `tests/search.c`, counting mates before the fifty-move rule at
+each of the four levels:
+
+| corner : proximity | L1 | L2 | L3 | L4 |
+|---|---|---|---|---|
+| 10 : 2 | 7 | 10 | 13 | 13 |
+| 6 : 4 | 10 | 9 | 13 | 13 |
+| 10 : 4 | 12 | 12 | 13 | 13 |
+| 10 : 6 | 9 | 13 | 13 | 13 |
+| **10 : 8** | **12** | **13** | **13** | **13** |
+
+10:8 also gave the fastest mate at every level. **The first guess was that proximity was too
+strong** - the queen endings were the ones failing, and a king chasing instead of confining is
+what that looks like - so the first experiment halved it. That made level 1 collapse from 12 to
+7, which is the opposite of the prediction and settled the question in one run.
+
+The reason is depth. The textbook weights assume a search that can see the corner drive pay
+off; at four plies it cannot, and a king that is not already close when the enemy king reaches
+the edge spends moves walking there while the counter runs. Proximity is the term that pays
+inside the horizon, so this engine wants far more of it than a deep one would.
+
+### What it was worth
+
+Won endings finished before the fifty-move rule, thirteen positions, the engine defending
+itself, `chesstest convert`:
+
+| Level | before | after |
+|---|---|---|
+| 1 (400 nodes) | 5 of 13, mean 35 plies | **12 of 13, mean 32** |
+| 2 (1,200) | 11 of 13, mean 40 | **13 of 13, mean 30** |
+| 3 (15,000) | 8 of 13, mean 28 | **13 of 13, mean 23** |
+| 4 (60,000) | 13 of 13, mean 20 | **13 of 13, mean 19** |
+
+**Level 3 was worse than level 2 before the change**, 8 against 11, which is worth staring at.
+Searching deeper into a flat evaluation finds more equally-scored ways to wander, not fewer.
+
+Against an opponent that actually defends - 100 random won endings, Stockfish holding the weak
+side at fixed depth:
+
+| | before | after |
+|---|---|---|
+| level 1 (400 nodes) | 42 of 100 | **75 of 100** |
+| level 2 (1,200) | 61 of 100 | **75 of 100** |
+
+King and queen against a bare king went from 18 of 25 at a mean of 51 plies to **25 of 25 at
+17**; king and rook, which is what the Sargon game actually threw away, from 21 of 25 at 48 to
+**25 of 25 at 20**. **Level 1 now converts as well as level 2 does**, which is what it looks
+like when a term substitutes knowledge for search.
+
+On the project's own instrument, the 512-game sanity match with the same configuration on both
+sides, so the only variable is the engine:
+
+| | before | after |
+|---|---|---|
+| conversion | 338 of 424 (79%) | **364 of 424 (85%)** |
+| drew still a piece up | 36 | **14** |
+| fifty-move draws | 22 | **12** |
+| stalemate draws | 6 | **0** |
+| total draws | 126 | **100** |
+
+### Head to head it is level, and Phase 8 already explained why
+
+Played against its own absence, `chesstest match drive`: from the endgame set at 3,000 nodes,
+**245-246-21**. From the openings, 221-220-71. Dead level both ways. Only at level 1's budget
+does it show in the score at all, 244-232-36, which is +12 games and about half a sigma.
+
+That is not a disappointment, it is Phase 8's own point coming back: *"W-L-D cannot see this
+failure anyway - an engine can score dead level and still turn won endings into draws."* The
+conversion metric was built for exactly this, and it is the one that moved. The Sargon games
+are the same statement from outside: level score, every draw a piece up.
+
+### The cost could not be measured, and the gap is honest
+
+Over 1,500 searches of 60,000 nodes from three endgame positions - so the term firing at every
+node of every one - the host gives 6.80s without and 6.63s with, where the run-to-run spread is
+larger than the difference. It is two array reads and six shifts against a node that costs
+hundreds of cycles, and it cannot run outside an endgame at all.
+
+**It has not been measured on a 6502, and that is a real gap rather than a shrug.**
+`tests/c64search.c` and `tests/c64evasion.c` both run from the opening or from a fixed game
+that starts there, where this term cannot fire by construction - so either would faithfully
+report zero. Charging it honestly on target needs an endgame position added to that benchmark
+first. Three times now this project has been told that a cost measured on a desktop is not the
+cost, so the claim here is only that the host cannot see it.
+
+Size, `optsize`, all seven targets still linking: **+309 bytes** on the C64, Apple II, Oric and
+Plus/4, +302 on the X16, +256 on the Atari. The Apple II is the binding one and goes from 1,744
+bytes spare to **1,435**.
+
+### Still open
+
+*The Sargon match harness cannot vary the engine's Black games.* Of the twelve games in that
+batch there are four distinct ones - the UCI seed is left at zero, so cc65 is fully
+deterministic whenever it has Black, and one loss appears four times. The 21% has far wider
+error bars than twelve games suggests. That is a harness fix, not an engine one, and it belongs
+to whoever is running the match.
+
+*King, bishop and knight against a bare king is 0 of 25 and this does not touch it.* It needs a
+table that knows which corner, and the technique runs past thirty moves. Recorded so nobody
+mistakes it for something the mate drive should have fixed.
+
+*A check extension.* The Sargon II manual is unexpectedly useful on this: at its **weakest**
+setting Sargon examines only its next move *"except where the check is involved"*, and it
+*"will automatically search more deeply"* in the opening and the endgame. The engine it is
+being measured against has extensions and this one has none. It spends nodes, so it has to be
+charged at equal time, and the level 1 cell of Phase 10's table is the warning about what that
+can do.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

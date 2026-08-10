@@ -42,7 +42,8 @@ extern const int gcPieceValue[PAWN+1];
 #define EVAL_MATERIAL		SET_BIT(0)
 #define EVAL_PST			SET_BIT(1)
 #define EVAL_ENDGAME		SET_BIT(4)
-#define EVAL_ALL			(EVAL_MATERIAL|EVAL_PST|EVAL_ENDGAME)
+#define EVAL_MATEDRIVE		SET_BIT(5)
+#define EVAL_ALL			(EVAL_MATERIAL|EVAL_PST|EVAL_ENDGAME|EVAL_MATEDRIVE)
 
 // Two terms were built, measured and taken out again; see the Phase 4 notes.
 //
@@ -75,6 +76,16 @@ extern const int gcPieceValue[PAWN+1];
 // With a steep endgame pawn table alongside it: +44 Elo at equal nodes, +30 at
 // equal time charged the C64's 9%, and conversion from 69% to 78%.  The two
 // terms are worth far more together than the king was alone.
+//
+// SET_BIT(5), EVAL_MATEDRIVE, is the third one and the same story a layer on.
+// The endgame king table sends *both* kings to the middle, because it is a
+// per-piece table and cannot tell which of them is being mated.  So with bare
+// kings there was no gradient at all: every rook move scored the same, and the
+// engine wandered until the fifty-move rule drew a game it had already won.
+// This is the one term here that is not a property of a piece on a square - it
+// takes both kings - so it is computed at eval time out of geKing rather than
+// carried.  That is affordable for exactly one reason: it cannot fire outside
+// the endgame, which is where nodes are cheapest.  See eval.c.
 
 #ifdef EVAL_TUNING
 extern char geEvalTerms;

@@ -444,7 +444,10 @@ That is the difference between an engine that plays and an engine that only appe
 
 ## 5.2 What it actually measures
 
-Two terms, in `eval.c`:
+Two terms carry the middlegame, and they are the ones to read first. Two more apply only once
+the pieces come off — a second set of tables for pawns and kings (§5.4a) and a reason to finish
+a won ending (§5.4b) — and both are gated on the phase, so in a middlegame the evaluation is
+exactly what follows and nothing else:
 
 **Material.** `gcPieceValue`: pawn 100, knight 320, bishop 330, rook 500, queen 900. The king
 is 0 — losing it is not a score, it is the end of the search, and it is handled by mate
@@ -507,6 +510,9 @@ property of *a piece on a square*. Material and piece-square tables qualify. Paw
 (doubled, isolated, passed pawns) does not, because it is a property of the whole pawn
 configuration — it would need a per-file pawn count carried alongside the score.
 
+There is exactly one term in the engine that does not obey this, and §5.4b is about why it was
+allowed to: it got in by running only where nodes are cheap, rather than by being cheap.
+
 `tests/gamefuzz.c` checks the running total against a full recount after every move, undo and
 redo, over 300 games weighted toward castling, en passant and promotion — the three moves
 whose delta is not simply "a piece left one square and arrived on another".
@@ -557,6 +563,71 @@ home to the seventh earned it 45 centipawns — nine a move — while the promot
 the march is worth 800 and sits past the horizon. Giving the king somewhere to go without
 giving the pawns a reason to move fixed nothing. The two terms are worth three times together
 what one was worth alone.
+
+## 5.4b The one term that is not a property of a piece
+
+§5.3 states the rule that has governed the evaluation since Phase 5: a term folds in cheaply
+only if it is a property of *a piece on a square*, because that is what `eval_MoveDelta` can
+carry. `mateDrive` is the one term in the engine that breaks it, and the reason it is here
+anyway is worth more than the term itself.
+
+**The problem it solves.** `sc_pstKingEnd` sends a king to the middle of the board once the
+queens are off. It is a per-piece table, so it says that to *both* kings — including the one
+being mated, which belongs on the edge. With bare kings the consequence is total: every rook
+move scores identically, the engine has no gradient to climb, and it wanders until the
+fifty-move rule draws a game it had already won. Measured over thirteen basic won endings,
+level 1 finished five of them and level 2 eleven.
+
+This is §5.4a's lesson one layer on. The endgame king table alone was nearly worthless because
+the pawns had no reason to move; both endgame tables together are nearly worthless in a
+bare-king ending because neither king has a reason to go anywhere in particular.
+
+**Why it cannot be carried.** The term is a function of *both* kings:
+
+```c
+static int mateDrive(char winner, char loser)
+{
+    corner = sc_centreDist[lf] + sc_centreDist[lr];   // loser away from the middle
+    apart  = |wf - lf| + |wr - lr|;                   // winner up close
+    return corner * 10 + (14 - apart) * 8;
+}
+```
+
+There is no piece-and-square this is a property of, so there is nothing for make/unmake to add
+and subtract. By the Phase 5 rule it should have been unaffordable, and by the Phase 4 rule —
+anything done per node is paid twenty thousand times a move — it should have been unaffordable
+twice.
+
+**Why it is affordable anyway, and this is the general point.** It is not cheaper than the
+terms that were rejected. It runs *somewhere else*. It sits inside the `gePhase <
+PHASE_ENDGAME` test that already existed for the endgame blend, behind a material gate, so:
+
+- in a middlegame it does not execute at all — the branch it lives in is already skipped, and
+  the cost is a comparison that was being made anyway;
+- where it does execute, the position is an ending, and an ending is one the search walks at a
+  few hundred nodes rather than twenty thousand.
+
+**The expensive place and the place this fires are disjoint.** Every previous term was judged
+on what it cost per node; this one got in on where its nodes are. That is a different question
+and it is worth asking of anything added here in future.
+
+The cost bears it out: 1,500 searches of 60,000 nodes from endgame positions — the term firing
+at every node — measured 6.80s with it switched out and 6.63s with it in, on a host whose
+run-to-run spread is larger than that. It has **not** been measured on a 6502, and
+`doc/rework-log.md` Phase 11 says why that gap is harder to close than it sounds.
+
+**The weights are not the standard ones.** The usual formulation weights corner-drive about
+three times king-proximity. Measured here across five ratios, weighting them nearly equally
+(10 and 8) beat it at every level, and *halving* proximity collapsed level 1 from twelve
+conversions to seven. The cause is depth: the textbook ratio assumes a search that can see the
+corner drive pay off, and at four plies it cannot, so the term that pays inside the horizon is
+the one that has to be large. The full table is in Phase 11.
+
+**What it was worth.** Conversion over the 512-game self-play match, 79% → **85%**, with
+"drew still a piece up" falling from 36 to 14 and stalemate draws from 6 to 0. Against
+Stockfish defending 100 random won endings, level 1 went from 42 to **75** and level 2 from 61
+to **75**. Head to head it is level — an engine can score dead level and still turn won endings
+into draws, which is exactly why the conversion metric exists.
 
 ## 5.4 Two good terms that were removed
 

@@ -23,8 +23,9 @@ static void usage(const char *argv0)
 	printf("  qgen                      capture generator against the filtered full one\n");
 	printf("  divide <fen> <depth>      per-move node counts for the new core\n");
 	printf("  tactics                   search finds the obvious moves\n");
+	printf("  convert                   won endings finished before the fifty-move rule\n");
 	printf("  bench                     search speed on the host\n");
-	printf("  match [sanity|terms|depth|repeat]  configuration A vs B over the opening set\n");
+	printf("  match [sanity|terms|depth|repeat|drive|endgame]  configuration A vs B\n");
 	printf("  fuzz [seed] [games]       random games through the game path, undo/redo checked\n");
 	printf("  castle                    castling and en passant rules\n");
 	printf("  repeat                    repetition detection and its history\n");
@@ -70,6 +71,8 @@ int main(int argc, char **argv)
 		printf("\n");
 		failures += test_RunSearchMateInOne(verbose);
 		printf("\n");
+		failures += test_RunSearchConversion(verbose);
+		printf("\n");
 		failures += test_RunSearchAlwaysMoves(verbose);
 		printf("\n");
 		failures += test_RunMatchSanity(0);
@@ -85,6 +88,9 @@ int main(int argc, char **argv)
 	if(!strcmp(command, "matein1"))
 		return test_RunSearchMateInOne(1) ? 1 : 0;
 
+	if(!strcmp(command, "convert"))
+		return test_RunSearchConversion(1) ? 1 : 0;
+
 	if(!strcmp(command, "alwaysmoves"))
 		return test_RunSearchAlwaysMoves(1) ? 1 : 0;
 
@@ -97,6 +103,7 @@ int main(int argc, char **argv)
 		if(!strcmp(what, "endgame")) return test_RunMatchEndgame(verbose);
 		if(!strcmp(what, "ladder")) return test_RunMatchLadder(verbose);
 		if(!strcmp(what, "repeat")) return test_RunMatchRepetition(verbose);
+		if(!strcmp(what, "drive")) return test_RunMatchMateDrive(verbose);
 		return test_RunMatchSanity(verbose);
 	}
 

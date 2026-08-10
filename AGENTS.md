@@ -202,6 +202,19 @@ seconds; there is no excuse for a short one.
 That is not the question a player is asking, and it overturned two terms that had already
 been accepted.
 
+**Ask where a term runs, not only what it costs.** `eval_MoveDelta` can only carry a term that
+is a property of *a piece on a square*, and for five phases that was treated as the boundary of
+what the evaluation could contain. `mateDrive` in `eval.c` is not such a term — it takes both
+kings — and it is in the engine anyway because it sits inside the phase test, where it cannot
+execute in a middlegame at all and the positions it does run in are ones the search walks at a
+few hundred nodes. It is not an oversight and it must not be "corrected" into a running total;
+`doc/engine.md` §5.4b is the argument.
+
+**W-L-D cannot see an engine that wins positions and does not finish them.** Two defects here
+have had that shape. `chesstest convert` asks for a mate before the fifty-move rule rather than
+for a result, and the conversion split in the match harness separates "drew still a piece up"
+from "gave it back" — those want different fixes.
+
 **A self-play number is a reason to go and measure, not a result.** It overstated repetition
 detection about threefold and understated the endgame tables by half — same instrument, both
 directions — so there is no correction factor, only an outside opponent. `doc/strength.md`

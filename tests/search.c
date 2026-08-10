@@ -16,6 +16,8 @@
 #include "engine.h"
 #include "eval.h"
 #include "search.h"
+#include "board.h"
+#include "undo.h"
 #include "testutil.h"
 
 /*-----------------------------------------------------------------------*/
@@ -376,4 +378,122 @@ int test_RunSearchBench(int verbose)
 	}
 
 	return 0;
+}
+
+/*-----------------------------------------------------------------------*/
+// Can it finish?
+//
+// A won ending is not won until it is mated, and for a long time this engine
+// could not do it.  The Sargon II games are where it showed: playing White it
+// reached a clean king and rook against a bare king on move 66, still had it
+// on move 115, and drew by the fifty-move rule.  Twice, from two different
+// openings, because it is the same game.
+//
+// The cause was that nothing in the evaluation preferred one bare-king
+// position to another.  sc_pstKingEnd sends a king to the middle, and it is a
+// per-piece table, so it said the same thing to the king being mated - the
+// engine could see that its own king should come out and had no opinion at all
+// about where the enemy king should be.  Every rook move scored alike and it
+// wandered.  eval.c's mateDrive is the fix and this is the measurement.
+//
+// The move limit is the fifty-move rule itself rather than a number chosen
+// here.  That is the constraint the engine actually failed, and it is stricter
+// than it looks: a mate that takes 24 moves from a clean start is lost anyway
+// when the ending is reached with half the counter already spent.  So the
+// plies-to-mate column matters as much as the count, and it is printed.
+//
+// Both sides are the engine at the level under test, which makes the whole
+// suite self-contained and every run identical.  It also means the defence is
+// weak, so these numbers are the optimistic case - measured against Stockfish
+// defending, level 2 converts 72 of 100 random won endings rather than the
+// clean sweep below.  doc/measuring.md has that instrument
+static const struct { const char *m_name; const char *m_fen; } stc_wins[] =
+{
+	// king and rook: the ending from the Sargon game first
+	{ "KRK  a", "8/8/8/6R1/2K1k3/8/8/8 w - - 0 1" },
+	{ "KRK  b", "4k3/8/8/8/8/8/6R1/4K3 w - - 0 1" },
+	{ "KRK  c", "8/8/8/8/8/4k3/8/R3K3 w - - 0 1" },
+	{ "KRK  d", "7k/8/8/8/8/8/R7/7K w - - 0 1" },
+	{ "KRK  e", "8/2k5/8/8/8/8/5R2/4K3 w - - 0 1" },
+	// king and queen, where the danger is stalemate rather than the counter
+	{ "KQK  a", "8/8/8/4k3/8/8/8/3QK3 w - - 0 1" },
+	{ "KQK  b", "3k4/8/8/8/8/8/5Q2/6K1 w - - 0 1" },
+	{ "KQK  c", "8/8/4k3/8/8/2Q5/8/6K1 w - - 0 1" },
+	{ "KQK  d", "8/5k2/8/8/8/8/1Q6/K7 w - - 0 1" },
+	// two rooks, which needs no king at all and should never fail
+	{ "KRRK a", "4k3/8/8/8/8/8/8/R3K2R w - - 0 1" },
+	{ "KRRK b", "8/8/3k4/8/8/8/8/R5RK w - - 0 1" },
+	// and with something left to defend with, which is what a real game hands
+	// over rather than a bare king
+	{ "KRvKP", "8/8/8/4k3/8/4p3/8/R3K3 w - - 0 1" },
+	{ "KQvKP", "8/8/8/3k4/8/8/6p1/2Q1K3 w - - 0 1" },
+};
+
+int test_RunSearchConversion(int verbose)
+{
+	// What each level manages today.  Held to what it achieves rather than to
+	// what it ought to, so that a change in either direction gets noticed -
+	// the same rule as the mate-in-one floors above.  Level 1 has 400 nodes and
+	// is not expected to sweep
+	static const int sc_floor[SEARCH_NUM_SKILLS] = { 11, 13, 13, 13 };
+	int count = (int)(sizeof(stc_wins)/sizeof(stc_wins[0]));
+	int failures = 0, level, i;
+
+	printf("won endings finished before the fifty-move rule\n");
+
+	for(level = 0; level < SEARCH_NUM_SKILLS; ++level)
+	{
+		int mated = 0, plies = 0;
+
+		for(i = 0; i < count; ++i)
+		{
+			char side = test_EngineSetFEN(stc_wins[i].m_fen);
+			const char *why = "still going";
+			int ply;
+
+			undo_Init();
+
+			// 200 plies is well past the fifty-move rule and is only here so a
+			// capture that resets the counter cannot loop forever.  A queen
+			// left en prise does exactly that, and finding out took a while
+			for(ply = 0; ply < 200; ++ply)
+			{
+				t_searchResult result;
+				char outcome = search_Outcome(side);
+
+				if(OUTCOME_CHECKMATE == outcome)
+				{
+					++mated;
+					plies += ply;
+					why = 0;
+					break;
+				}
+				// stalemate and the counter are both the full point lost, and
+				// the queen endings can produce either
+				if(OUTCOME_STALEMATE == outcome)      { why = "stalemate";  break; }
+				if(geHalfmove >= 100)                 { why = "fifty-move"; break; }
+
+				search_Best(side, gcSearchSkill[level].m_depth,
+				            gcSearchSkill[level].m_nodes, &result);
+				if(!result.m_haveMove)                { why = "no move";    break; }
+
+				board_ApplyMove(&result.m_move, side);
+				side = 1 - side;
+			}
+
+			if(verbose && why)
+				printf("    level %d  %s: %s\n", level + 1, stc_wins[i].m_name, why);
+		}
+
+		printf("  level %d (%5u nodes) %2d of %d, mean %3d plies%s\n",
+		       level + 1, gcSearchSkill[level].m_nodes, mated, count,
+		       mated ? plies / mated : 0,
+		       mated < sc_floor[level] ? "   BELOW FLOOR" : "");
+
+		if(mated < sc_floor[level])
+			++failures;
+	}
+
+	printf("  -> %d failing\n", failures);
+	return failures;
 }

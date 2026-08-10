@@ -41,7 +41,7 @@ happened twice, and both evaluation terms were removed as a result.
 cd tests && make test
 ```
 
-21 seconds, exits non-zero if anything failed. **Never carry a red suite forward.** In order,
+35 seconds, exits non-zero if anything failed. **Never carry a red suite forward.** In order,
 it runs:
 
 | Suite | What it establishes |
@@ -52,6 +52,8 @@ it runs:
 | `eperft` to depth 5 | Move generation exact against the five standard reference positions |
 | `qgen` | The capture-only generator is an exact subsequence of the full one |
 | `tactics` | The search finds the obvious moves |
+| `matein1` | Mate in one at each level's *own* budget, not level 4's |
+| `convert` | Thirteen basic won endings, mated before the fifty-move rule |
 | `alwaysmoves` | A move is returned whenever one exists, at any budget down to a single node |
 | `match sanity` | A configuration playing itself comes out exactly level |
 | `selfplay` | A full game at each skill level, with timings |
@@ -98,6 +100,7 @@ the generator is wrong, and every measurement downstream of it is meaningless.
 ./chesstest match ladder     # does each skill level beat the one below
 ./chesstest match endgame    # terms that only apply once the queens are off
 ./chesstest match repeat     # what repetition detection is worth, and at equal time
+./chesstest match drive      # the mate drive, from endgames and from openings
 ```
 
 Two configurations play 512 games — 256 generated openings, each twice with the colours
@@ -153,8 +156,42 @@ own conversion. And the advantage has to last ten plies: a piece hanging for one
 recapture is a peak of +3 and means nothing, and counting those put 880 winning sides in 512
 games.
 
-Current baselines, shipped configuration against itself: **78%** from openings, **90%** from
-endgame positions.
+Current baseline, shipped configuration against itself from the opening set (`match sanity`,
+the only same-config run here): **85%**, against 79% immediately before the mate drive of
+Phase 11 and 78% when Phase 8 built the metric. `doc/strength.md` §5.1.6 has what moved it.
+
+The endgame-set figures printed by `match endgame` — 88 to 89% — are **not** a baseline of the
+same kind. The two configurations in that comparison differ, so the number is pooled across two
+engines and only means anything against another run of the same comparison.
+
+### Conversion is not the whole answer either, and `convert` is the rest of it
+
+Conversion counts *wins*, so it credits a game won by the opponent resigning into a lost
+position as readily as one finished properly. It also cannot say whether the failures are
+near-misses or hopeless. The suite therefore also runs `convert`, which asks a stricter and
+narrower question: from thirteen basic won endings — king and rook, king and queen, two rooks,
+and two with a pawn still on the board — can the engine **mate before the fifty-move rule**,
+and in how many plies?
+
+The move limit is the fifty-move rule itself rather than a number picked here, because that is
+the constraint the engine actually failed against Sargon II. The mean-plies column matters as
+much as the count: a mate that takes 24 moves from a clean start is lost anyway when the ending
+arrives with half the counter already spent.
+
+Both sides are the engine at the level under test, which keeps the suite self-contained and
+every run identical. That also makes the defence weak, so these are the optimistic numbers. The
+pessimistic ones need an outside defender:
+
+```bash
+# 100 random won endings per build, Stockfish holding the weak side at fixed
+# depth so the defence is identical across builds being compared
+```
+
+That instrument is not vendored either — it is a dozen lines of `python-chess` driving
+`tests/uci` against `stockfish` — but it is the one that produced the level 1 / level 2 figures
+in `doc/strength.md` §5.1.6, and self-play conversion ran about fifteen points optimistic
+against it. **King, bishop and knight against a bare king is 0 of 25 either way**, and no
+amount of mate-drive weighting changes that; it needs a table that knows which corner.
 
 **`match sanity` is the check on the instrument itself.** A configuration against itself must
 come out exactly level, because the harness plays every opening twice with the colours

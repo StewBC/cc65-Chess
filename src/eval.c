@@ -17,6 +17,11 @@
  *	node is paid for twenty thousand times a move.  Now the score moves with
  *	the pieces - a handful of table lookups per move made - and asking for it
  *	is a read.
+ *
+ *	One term is not a running total and could never be: mateDrive takes both
+ *	kings, so it is not a property of a piece on a square.  It is affordable
+ *	anyway because of *where* it runs rather than what it costs - see the note
+ *	above it.
  */
 
 #include "types.h"
@@ -363,6 +368,54 @@ int eval_MoveDelta(const t_engMove *move, char piece, char captured)
 }
 
 /*-----------------------------------------------------------------------*/
+// Manhattan distance from the centre, by file or by rank.  The two added give
+// 0 on the middle four squares and 6 in a corner
+static const signed char sc_centreDist[8] = { 3, 2, 1, 0, 0, 1, 2, 3 };
+
+// How far ahead the winning side has to be before chasing the enemy king is
+// the right idea.  A minor piece: below that the position is not won, and
+// walking your king at an opponent who still has material is how you lose it
+#define DRIVE_GATE			400
+
+/*-----------------------------------------------------------------------*/
+// Two things, and they are the whole of every basic mate.  Push the losing
+// king away from the centre, because a king in the middle of the board cannot
+// be mated by a rook; and bring the winning king up to it, because no lone
+// piece mates without its king.
+//
+// **The weights are not the textbook ones, and that is a measurement rather
+// than an oversight.**  The literature uses about 4.7 and 1.6 - corner drive
+// worth three times king proximity - and tried here that is clearly worse than
+// weighting them almost equally.  Five ratios measured over the thirteen
+// endings in tests/search.c, counting mates before the fifty-move rule at all
+// four levels: 10:4 gave 12/12/13/13, 10:6 gave 9/13/13/13, 6:4 gave
+// 10/9/13/13, and 10:8 gave 12/13/13/13 with the fastest mate at every level.
+// Halving proximity to 10:2 collapsed level 1 to 7 of 13.
+//
+// The reason is depth.  The textbook weights assume a search that can see the
+// corner drive pay off; at four plies it cannot, and a king that is not already
+// close when the enemy king reaches the edge has to spend moves walking there
+// while the fifty-move counter runs.  Proximity is the term that pays inside
+// the horizon, so this engine wants far more of it than a deep one would.
+//
+// Only the losing king's square matters for the first term.  The winning king
+// is already told where to go by sc_pstKingEnd, and saying it twice would have
+// the two terms fighting over the same squares
+static int mateDrive(char winner, char loser)
+{
+	char lf = ENG_FILE(loser),  lr = loser >> 4;
+	char wf = ENG_FILE(winner), wr = winner >> 4;
+	char corner, apart;
+
+	corner = sc_centreDist[lf] + sc_centreDist[lr];
+	apart  = ((wf > lf) ? (wf - lf) : (lf - wf)) +
+	         ((wr > lr) ? (wr - lr) : (lr - wr));
+
+	// x10 and x8 as shifts, for the same reason the blend below uses them
+	return (int)((corner << 3) + (corner << 1)) + (int)((14 - apart) << 3);
+}
+
+/*-----------------------------------------------------------------------*/
 int eval_Position(char side)
 {
 	// the running total is white-positive; hand it back the way round the
@@ -373,16 +426,37 @@ int eval_Position(char side)
 	// middlegame, all of it with bare kings, in four steps.  Four steps rather
 	// than a true interpolation because the weight then costs shifts instead of
 	// a multiply, and the middlegame leaves immediately without touching it
-	if(EVAL_HAS(EVAL_ENDGAME) && gePhase < PHASE_ENDGAME)
+	if(gePhase < PHASE_ENDGAME)
 	{
-		int adj = geEvalEnd;
-
-		switch((char)((PHASE_ENDGAME - gePhase) >> 10))
+		if(EVAL_HAS(EVAL_ENDGAME))
 		{
-			case 0:  score += adj >> 2;               break;
-			case 1:  score += adj >> 1;               break;
-			case 2:  score += (adj >> 1) + (adj >> 2); break;
-			default: score += adj;                    break;
+			int adj = geEvalEnd;
+
+			switch((char)((PHASE_ENDGAME - gePhase) >> 10))
+			{
+				case 0:  score += adj >> 2;               break;
+				case 1:  score += adj >> 1;               break;
+				case 2:  score += (adj >> 1) + (adj >> 2); break;
+				default: score += adj;                    break;
+			}
+		}
+
+		// And the reason to finish.  This is the only term that reads the board
+		// at eval time, which is the cost that killed two terms in Phase 4 - so
+		// note where it sits: inside the phase test, behind a material gate.  It
+		// is two array reads and a handful of shifts, it cannot run in a
+		// middlegame at all, and a position won by a piece is one the search
+		// reaches at a few hundred nodes rather than twenty thousand.  The
+		// expensive place and the place this fires are disjoint.
+		//
+		// Read after the blend on purpose: the gate is asking "am I winning",
+		// and the blended score is the engine's own answer to that
+		if(EVAL_HAS(EVAL_MATEDRIVE))
+		{
+			if(score > DRIVE_GATE)
+				score += mateDrive(geKing[SIDE_WHITE], geKing[SIDE_BLACK]);
+			else if(score < -DRIVE_GATE)
+				score -= mateDrive(geKing[SIDE_BLACK], geKing[SIDE_WHITE]);
 		}
 	}
 

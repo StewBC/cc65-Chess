@@ -45,6 +45,16 @@ mates in one before and 55 after. `doc/strength.md` §5.1.5 has it, along with t
 measured games never noticed — and the on-target measurement showing what it costs, which is
 why the times above are longer than they used to be.
 
+The ratings are unchanged by the most recent fix, and that is the interesting part of it. Played
+against **Sargon II** — a 1978 program, on an Apple II — the engine scored 21% against Sargon's
+second-weakest level, and every game it drew it was a clear piece or more up: it reached king
+and rook against a bare king on move 66 of one game, still had it on move 115, and drew by the
+fifty-move rule. The cause was that the endgame king table sends *both* kings to the centre,
+including the one being mated, so with bare kings every move scored the same. Basic won endings
+finished before the fifty-move rule went from 42 to 75 out of 100 at level 1. It does not move
+W-L at all, which is why it needed a test that asks for a mate rather than a result —
+`doc/strength.md` §5.1.6.
+
 ## Playing it
 
 Built images for every platform are in the releases tab. There is a video of the game
@@ -117,7 +127,7 @@ easy to violate by accident, and the traps that have already caught someone.
 cd tests && make test
 ```
 
-21 seconds, exits non-zero on failure. Move generation is verified against perft — the
+35 seconds, exits non-zero on failure. Move generation is verified against perft — the
 standard correctness test — exactly to depth 5 on all five reference positions, and to depth
 6 on the two that publish one. Beyond that there is a game fuzzer, a match harness for
 measuring whether a change actually made the engine stronger, on-target benchmarks that run

@@ -754,6 +754,97 @@ and now check evasions — each individually affordable, and about 60% together.
 in the executive summary is updated; levels 3 and 4 have not been re-measured directly, because
 a single level 4 move is now around three quarters of an hour on a stock C64.
 
+## 5.1.6 Every draw was a win it did not finish
+
+The second defect found by playing rather than measuring, and the second one this document had
+been in a position to see and did not.
+
+The engine was played against **Sargon II on an Apple II**, a 1978 program, and scored 21%
+against Sargon's *level 1* — the second-weakest of its seven settings. The obvious reading is
+that the ratings in Part IV are too generous. It is not what the games say.
+
+Running the material balance over all twelve games of that batch gives one fact that settles
+it: **every single game the engine drew, it was a clear piece or more up.** Not one draw was a
+balanced position. Playing White it reached a clean king and rook against a bare king on move
+66, still had it on move 115, and drew by the fifty-move rule. In another it reached king and
+queen against king and pawn on ply 129 and let the pawn promote.
+
+The entire margin between 21% and an even score was sitting in endings already won.
+
+### The cause, and why every instrument here missed it
+
+`sc_pstKingEnd` sends a king to the centre once the queens are off. It is a per-piece table, so
+it says that to **both** kings, including the one being mated — which belongs on the edge. With
+bare kings every rook move therefore scored identically. The engine had no gradient and
+wandered.
+
+Nothing in `tests/` asked the question. The ladder and the anchor both measure W-L-D, and
+Phase 8 had already written down why that is blind here: *an engine can score dead level and
+still turn won endings into draws.* The conversion metric built in Phase 8 could see it and did
+— 79% of clear advantages converted, with 36 of the failures still a piece up at the end — but
+79% had been read as "good and improving" rather than as "one game in five thrown away".
+
+**What was missing was a test that asks for a mate rather than a result.** `chesstest convert`
+is that test now: thirteen basic won endings, the engine defending itself, counting mates before
+the fifty-move rule rather than wins.
+
+### What the fix was worth
+
+| Level | conversions before | after |
+|---|---|---|
+| 1 — 400 nodes | **5 / 13**, mean 35 plies | 12 / 13, mean 32 |
+| 2 — 1,200 | 11 / 13, mean 40 | **13 / 13**, mean 30 |
+| 3 — 15,000 | 8 / 13, mean 28 | **13 / 13**, mean 23 |
+| 4 — 60,000 | 13 / 13, mean 20 | 13 / 13, mean 19 |
+
+**Level 3 scored below level 2 before the change**, which is the clearest possible statement of
+the disease: searching deeper into a flat evaluation finds more equally-scored ways to wander.
+
+Against an opponent that defends properly — 100 random won endings with Stockfish holding the
+weak side at fixed depth, so the defence is identical across builds:
+
+| | before | after |
+|---|---|---|
+| level 1 | 42 / 100 | **75 / 100** |
+| level 2 | 61 / 100 | **75 / 100** |
+
+King and queen against a bare king went from 18 of 25 at a mean of 51 plies to 25 of 25 at 17.
+Level 1 now converts as well as level 2, which is what knowledge substituting for search looks
+like — the same shape Phase 9 found for the endgame tables.
+
+On the 512-game self-play match, same configuration both sides: conversion **79% → 85%**, drew
+still a piece up **36 → 14**, stalemate draws **6 → 0**, total draws 126 → 100.
+
+### It does not show in W-L, and that is the point
+
+Played against its own absence: from the endgame set at 3,000 nodes, **245-246-21**. From the
+openings, 221-220-71. Only at level 1's budget does it register at all, 244-232-36 — about half
+a sigma.
+
+A reader who only had the ladder would conclude nothing happened. That is the same instrument
+failure Phase 8 described and built the conversion metric to escape, and it is worth recording
+that the escape hatch worked: the metric that was built for a defect nobody had reported is the
+one that measured a defect a match did report, two phases later.
+
+### The cost is below the host's noise floor, and unmeasured on target
+
+1,500 searches of 60,000 nodes from endgame positions, the term firing at every node: 6.80s
+without, 6.63s with, on a host whose run-to-run spread exceeds that. The term cannot execute
+outside an endgame at all — it lives inside the phase test the endgame blend already needed.
+
+**No 6502 figure exists**, and this document has been burned three times by host costs that
+were not target costs. `tests/c64search.c` and `tests/c64evasion.c` both run from the opening
+or a fixed game starting there, where this term cannot fire by construction, so either would
+report zero honestly and uselessly. An endgame position has to be added to the on-target
+benchmark before this can be charged the way check evasions were in §5.1.5. Until then the
+claim is only that the host cannot see it.
+
+**The ratings in Part IV are unchanged by this section.** They are measured against node-limited
+Stockfish, which does not reach these endings, and Phase 9 already established that a change
+which is pure endgame knowledge is worth far more against opponents that do not search endgames
+than against ones that do. What this section changes is a different claim: the engine finishes
+what it wins.
+
 ## 5.2 The opening was dull, and the reason was mundane
 
 From the starting position the engine played a knight to c3. Every time. Not a bad move;

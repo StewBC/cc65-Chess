@@ -492,3 +492,52 @@ int test_RunMatchRepetition(int verbose)
 	runMatch(&costed, &blind, 240, verbose);
 	return 0;
 }
+
+/*-----------------------------------------------------------------------*/
+// The mate drive, played against its own absence.
+//
+// Measured from the endgame set as well as from the openings, because that is
+// where a term gated on the phase can show anything at all - from the opening
+// most games never reach a position where it fires, and the difference is
+// diluted by every game that did not.
+//
+// There is no equal-time half to this one, and that is a measurement rather
+// than an omission.  Every other term here had to be charged what it costs per
+// node; this one could not be made to show a cost at all.  1500 searches of
+// 60000 nodes over three endgame positions - so the term firing at every node
+// of every one of them - came to 6.80s without and 6.63s with, on a host where
+// the run-to-run spread is larger than the difference.  The reason is where it
+// sits: outside the phase test it does not run, and inside it, it is two array
+// reads and six shifts against a node that costs hundreds of cycles.
+//
+// **Not measured on a 6502, and that gap is real.**  The instrument for it is
+// tests/c64search.c under VICE, and it benchmarks from the opening position,
+// where this term cannot fire by construction - so it would faithfully report
+// zero.  Charging this term honestly on target needs an endgame position added
+// to that benchmark first
+int test_RunMatchMateDrive(int verbose)
+{
+	t_Config drives = { "drives the king",  EVAL_ALL, 4, 3000, 1 };
+	t_Config blind  = { "no reason to",     EVAL_ALL & ~EVAL_MATEDRIVE, 4, 3000, 1 };
+
+	printf("match: the mate drive, from thinned-out positions\n");
+	sc_useEndgames = 1;
+	runMatch(&drives, &blind, 240, verbose);
+	sc_useEndgames = 0;
+
+	printf("match: the same from the openings, where most games never reach it\n");
+	runMatch(&drives, &blind, 240, verbose);
+
+	// And at level 1's budget, because Phase 9 found endgame knowledge is worth
+	// most to the level that searches least, and this is the same shape of term
+	{
+		t_Config weakOn  = { "drives, 400 nodes", EVAL_ALL, 3, 400, 1 };
+		t_Config weakOff = { "no reason, 400",    EVAL_ALL & ~EVAL_MATEDRIVE, 3, 400, 1 };
+
+		printf("match: from endgames at level 1's budget\n");
+		sc_useEndgames = 1;
+		runMatch(&weakOn, &weakOff, 240, verbose);
+		sc_useEndgames = 0;
+	}
+	return 0;
+}
