@@ -469,7 +469,7 @@ int eval_Position(char side)
 		//
 		// Read after the blend on purpose: the second gate is asking "am I
 		// winning", and the blended score is the engine's own answer to that
-		if(EVAL_HAS(EVAL_MATEDRIVE) && gePhase <= DRIVE_PHASE)
+		if(EVAL_MATEDRIVE_ON && EVAL_HAS(EVAL_MATEDRIVE) && gePhase <= DRIVE_PHASE)
 		{
 			if(score > DRIVE_GATE)
 				score += mateDrive(geKing[SIDE_WHITE], geKing[SIDE_BLACK]);

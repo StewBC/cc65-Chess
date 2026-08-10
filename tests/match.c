@@ -501,20 +501,23 @@ int test_RunMatchRepetition(int verbose)
 // most games never reach a position where it fires, and the difference is
 // diluted by every game that did not.
 //
-// There is no equal-time half to this one, and that is a measurement rather
-// than an omission.  Every other term here had to be charged what it costs per
-// node; this one could not be made to show a cost at all.  1500 searches of
-// 60000 nodes over three endgame positions - so the term firing at every node
-// of every one of them - came to 6.80s without and 6.63s with, on a host where
-// the run-to-run spread is larger than the difference.  The reason is where it
-// sits: outside the phase test it does not run, and inside it, it is two array
-// reads and six shifts against a node that costs hundreds of cycles.
+// The equal-time half is charged at 2%, and getting that number needed a new
+// on-target benchmark rather than an existing one.  The host cannot see this
+// term's cost at all - 1500 searches of 60000 nodes over endgame positions came
+// to 6.80s without and 6.63s with, a difference smaller than the run-to-run
+// spread.  And tests/c64search.c could not price it either, for a reason worth
+// keeping: it runs from the opening, where gePhase is 6400 against the term's
+// bound of 1100, so it would have reported zero faithfully and uselessly.
 //
-// **Not measured on a 6502, and that gap is real.**  The instrument for it is
-// tests/c64search.c under VICE, and it benchmarks from the opening position,
-// where this term cannot fire by construction - so it would faithfully report
-// zero.  Charging this term honestly on target needs an endgame position added
-// to that benchmark first
+// tests/c64drive.c is the instrument, replaying the pre-fix Sargon game that
+// reached king and rook against a bare king and searching only from where
+// gePhase falls to 1100.  On a real C64 under VICE, identical positions in both
+// builds: 43.225 nodes/sec without the term and 42.361 with, so **a node is
+// 2.04% dearer**.  That is the cost where the term applies; it is zero in a
+// middlegame, which the phase test cannot enter.
+//
+// Against check evasions at 22.7% this is nearly free, and 1200 nodes less 2%
+// is 1176
 int test_RunMatchMateDrive(int verbose)
 {
 	t_Config drives = { "drives the king",  EVAL_ALL, 4, 3000, 1 };
@@ -537,6 +540,17 @@ int test_RunMatchMateDrive(int verbose)
 		printf("match: from endgames at level 1's budget\n");
 		sc_useEndgames = 1;
 		runMatch(&weakOn, &weakOff, 240, verbose);
+		sc_useEndgames = 0;
+	}
+
+	// and the same at equal TIME, charged the 2.04% a node costs on a real C64
+	{
+		t_Config costed = { "drives, 2940 nodes", EVAL_ALL, 4, 2940, 1 };
+		t_Config blindly = { "no reason, 3000",   EVAL_ALL & ~EVAL_MATEDRIVE, 4, 3000, 1 };
+
+		printf("match: the same at equal TIME, charged the C64's 2%%\n");
+		sc_useEndgames = 1;
+		runMatch(&costed, &blindly, 240, verbose);
 		sc_useEndgames = 0;
 	}
 	return 0;

@@ -612,10 +612,12 @@ ahead — which means:
 on what it cost per node; this one got in on where its nodes are. That is a different question
 and it is worth asking of anything added here in future.
 
-The cost bears it out: 1,500 searches of 60,000 nodes from endgame positions — the term firing
-at every node — measured 6.80s with it switched out and 6.63s with it in, on a host whose
-run-to-run spread is larger than that. It has **not** been measured on a 6502, and
-`doc/rework-log.md` Phase 11 says why that gap is harder to close than it sounds.
+The cost bears it out. The host cannot see it at all — 1,500 searches of 60,000 nodes from
+endgame positions measured 6.80s without and 6.63s with, smaller than the run-to-run spread. On
+a real C64, using `tests/c64drive.c` to replay a fixed ending so both builds walk identical
+positions, **a node is 2.04% dearer** — 43.225 nodes/sec against 42.361. Check evasions cost
+22.7% by the same method. Charged that 2%, the term still wins its own A/B, which makes it the
+second term here to survive the equal-time test and the first to survive it comfortably.
 
 **The weights are not the standard ones.** The usual formulation weights corner-drive about
 three times king-proximity. Measured here across five ratios, weighting them nearly equally
@@ -637,9 +639,9 @@ knight 660, queen 900, two rooks 1000 — rather than at a guess.
 **What it was worth.** Basic won endings finished before the fifty-move rule, by level:
 5/11/8/13 → **12/13/13/13**. Against Stockfish defending 100 random won endings, level 1 from
 42 to **75** and level 2 from 61 to **75**. Conversion over the 512-game self-play match, 79%
-→ **81%**. Against Sargon II, 51.6% → **57.8%** over 32 games, and by colour that is White
-going from 7W-0L-9D to **14W-0L-2D** — nine draws becoming seven wins with the loss column
-still empty. Head to head in self-play it is level, which is the point: an engine can score
+→ **81%**. Against Sargon II over 64 games, 42.97% → **55.47%**, with the games that ended still holding
+a rook against a bare king going from **15 to 0** and conversion from 26% to **92%**. By colour
+that is White going from 9W-3L-20D to **25W-2L-5D**. Head to head in self-play it is level, which is the point: an engine can score
 dead level and still turn won endings into draws.
 
 ## 5.4 Two good terms that were removed

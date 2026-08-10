@@ -374,6 +374,21 @@ diverge at the first disagreement and then measure different work. That mistake 
 host first and put the cost of check evasions at 30%; identical work put it at 12.2% on the
 host and 22.7% on the target.
 
+**And make sure the positions are ones the term can reach.** This is the trap `c64drive.c`
+exists for. The mate drive cannot execute above gePhase 1100, and `c64search.c` runs from the
+opening position where gePhase is 6400 — it would have reported the cost as zero, faithfully
+and uselessly. `c64evasion.c` has the right shape and the wrong positions for the opposite
+reason: it replays a middlegame, because check evasions cost nothing where nobody is in check.
+A gated term needs a replay that spends its time inside the gate, and `c64drive.c` therefore
+replays the pre-fix Sargon game that reached king and rook against a bare king, searching only
+from the ply where gePhase first falls to 1100.
+
+**Size the cycle limit from the work.** `vice-run.sh` takes it as the third argument, and these
+programs print their results and then spin so the screen still holds them — so the run lasts
+until the limit fires, not until the work finishes. A limit picked as a round number rather
+than computed spends the difference doing nothing; 148 level-2 searches need about 3.4e9
+cycles, and 8e9 wasted half the run.
+
 | Program | Measures |
 |---|---|
 | `c64perft.c` | Raw move generation |
@@ -381,6 +396,7 @@ host and 22.7% on the target.
 | `c64level1.c` | Per-move time through a real game at the easiest setting |
 | `c64skill.c` | Per-move time and depth reached, per skill level, over 20 plies |
 | `c64evasion.c` | Cost of a node with and without check evasions, over a fixed game |
+| `c64drive.c` | Cost of a node with and without the mate drive, over a fixed *ending* — measured 2.04% |
 
 **The profile in `doc/rework-log.md` was taken with a program that is not in the tree** — it
 needed a modified engine as well as a driver, so it was done on a scratch fork and not kept.

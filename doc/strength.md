@@ -863,17 +863,35 @@ rather than measurement costs.
 | Stockfish, 100 won endings, level 1 | 42 | 75 | **75** |
 | Stockfish, 100 won endings, level 2 | 61 | 75 | **75** |
 | self-play conversion | 79% | 85% | **81%** |
-| **Sargon II, 32 games** | **51.6%** | **31.2%** | **57.8%** |
+| **Sargon II, first 32 games** | **51.6%** | **31.2%** | **57.8%** |
 
-By colour against Sargon, which is where the mechanism is visible rather than inferred:
+The shipped version then ran the full 64, against the pre-fix baseline of the same size and
+settings:
 
-| | pre-fix | shipped |
+| Sargon II, 64 games | pre-fix | shipped |
 |---|---|---|
-| **White** | 7W **0L** 9D | **14W 0L 2D** |
-| Black | 1W 7L 8D | 1W 10L 5D |
+| W-L-D | 10W 19L 35D | **27W 20L 17D** |
+| score | 42.97% | **55.47%** |
+| fifty-move draws | 15 | **2** |
+| conversion | 6 of 23 (**26%**) | 26 of 28 (**92%**) |
+| drew still a piece up | **15** | **0** |
+| cc65 as White | 9W 3L 20D — 59.4% | **25W 2L 5D — 85.9%** |
+| cc65 as Black | 1W 16L 15D — 26.6% | 2W 18L 12D — 25.0% |
 
-Nine White draws became seven wins with the loss column still empty. Black moves the other way
-and is noise — four distinct Black games exist in 32, and it churns in both directions.
+Fifteen games ended still holding a rook against a bare king; now none. Twenty White draws
+became five. Black does not move and should not: a term that helps finish won positions does
+nothing for a side that is rarely winning.
+
+**The percentage on its own is not significant and should not be quoted as though it were.**
+Naive 95% intervals are 30.8–55.1% and 43.3–67.6%, overlapping, over an effective sample of 16
+to 17 distinct games rather than 64. The conversion count and the fifty-move column carry the
+argument, because they are categorical outcomes tied to the mechanism.
+
+**The colour split is the more interesting number.** Sargon scores 75.0% with White and cc65
+now scores 85.9% with it, so on equal footing cc65 is ahead — but sixty points between colours
+is not first-move advantage, it is an opening-book gap. cc65 has a book only as White and four
+entries deep; Sargon has one on both sides. The remaining half of the deficit is an opening
+problem rather than an endgame one, and §5.2 is where that thread continues.
 
 ### What this rig can and cannot say
 
@@ -887,18 +905,28 @@ draws in the pre-fix baseline were one game played fifteen times. Percentages fr
 move in large steps, which is why the colour split and the termination counts carry the
 argument above and the percentage does not.
 
-### The cost is below the host's noise floor, and unmeasured on target
+### What it costs on a 6502
 
-1,500 searches of 60,000 nodes from endgame positions, the term firing at every node: 6.80s
-without, 6.63s with, on a host whose run-to-run spread exceeds that. The term cannot execute
-outside an endgame at all — it lives inside the phase test the endgame blend already needed.
+The host cannot see this term: 1,500 searches of 60,000 nodes from endgame positions, the term
+firing at every node, came to 6.80s without and 6.63s with — smaller than the run-to-run spread.
 
-**No 6502 figure exists**, and this document has been burned three times by host costs that
-were not target costs. `tests/c64search.c` and `tests/c64evasion.c` both run from the opening
-or a fixed game starting there, where this term cannot fire by construction, so either would
-report zero honestly and uselessly. An endgame position has to be added to the on-target
-benchmark before this can be charged the way check evasions were in §5.1.5. Until then the
-claim is only that the host cannot see it.
+Neither existing on-target benchmark could price it either. `c64search.c` runs from the opening,
+where gePhase is 6400 against the term's bound of 1100, so it would have reported zero
+faithfully and uselessly; `c64evasion.c` has the right shape but replays a middlegame, because
+check evasions cost nothing where nobody is in check. `tests/c64drive.c` is the instrument that
+could: `c64evasion.c`'s fixed replay with the positions inverted, running the pre-fix Sargon
+game that reached king and rook against a bare king and searching only from where gePhase falls
+to 1100. Both halves are the shipping configuration built twice, since `EVAL_TUNING` makes every
+node dearer and a node's cost is what is being measured.
+
+On a real C64 under VICE, identical positions in both builds: **43.225 nodes/sec without the
+term and 42.361 with, so a node is 2.04% dearer.** That is the cost where it applies; in a
+middlegame it is zero by construction. Check evasions cost 22.7% by the same method.
+
+**Charged at 2%, it still wins** — `match drive` at equal time, 2,940 nodes against 3,000, comes
+to 246-238-28 where equal nodes gave 245-240-27. That makes it the second evaluation term in the
+project to survive the equal-time test and the first to survive it comfortably; pawn structure
+and the endgame king table both died there.
 
 **The ratings in Part IV are unchanged by this section.** They are measured against node-limited
 Stockfish, which does not reach these endings, and Phase 9 already established that a change

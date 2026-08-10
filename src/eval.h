@@ -95,6 +95,22 @@ extern char geEvalTerms;
 #endif
 
 /*-----------------------------------------------------------------------*/
+// The mate drive, switchable at compile time as well as through geEvalTerms.
+//
+// This exists for the same reason SEARCH_CHECK_EVASION's -D form does, and the
+// reason is worth repeating rather than cross-referencing: **the tuning build
+// cannot price a node**, because EVAL_TUNING makes every node dearer and what
+// is being measured is exactly what a node costs.  Building the shipping
+// configuration twice, once with -DEVAL_MATEDRIVE_ON=0, is the only way to get
+// two numbers from the same compiler on the same machine.
+//
+// EVAL_HAS is still consulted first, so the tuning build's switch keeps
+// working for A/B match play; this only removes the term from a shipping build
+#ifndef EVAL_MATEDRIVE_ON
+#define EVAL_MATEDRIVE_ON	1
+#endif
+
+/*-----------------------------------------------------------------------*/
 // The running score, always from white's point of view.  Nothing outside
 // eval.c and the two make/unmake functions should write it
 extern int geEvalScore;

@@ -239,6 +239,14 @@ digit before its differences mean anything.
 repeated N times. If you make it non-deterministic, that has to be switchable — every
 measurement in `doc/strength.md` depends on it.
 
+**Every defect that mattered here was found by playing, not by measuring, and the reason is
+structural: self-play cannot see a weakness both sides share.** Three times now — repetition
+detection in Phase 5, mate in one in Phase 10 (found by a player at a board, after 40,000
+measured games had not), and the mate drive's gate in Phase 11, where every instrument in
+`tests/` preferred the version that lost twenty points to Sargon II. Internal harnesses tell you
+whether a change is consistent with the evaluation you already have. They cannot tell you it is
+right. Play the thing.
+
 ## Provenance
 
 This engine was rewritten with AI assistance, and the repo is open about it. `doc/`

@@ -1621,8 +1621,11 @@ would fix them and make the level slower; nobody has decided which matters more.
 ## Phase 11 - every draw was a win it did not finish
 
 Started from a different kind of report than Phase 10's. Not a player at a board but a match:
-the engine was being played against Sargon II on an Apple II, and it was scoring 21% against
-Sargon's *level 1*, the second-weakest of the seven settings a 1978 program offers.
+the engine was being played against Sargon II on an Apple II, and at *Very Easy* it was scoring
+21% against Sargon's **level 1** - the second-weakest of the seven settings a 1978 program
+offers. (Everything measured below is at Easy against the same Sargon level, because that is
+where the 64-game baseline was recorded; the twelve-game Very Easy batch is what raised the
+question, not what answered it.)
 
 The obvious reading was that the engine is weaker than it claims. It is not what the games say.
 Running the material balance over all twelve games of that batch:
@@ -1806,18 +1809,50 @@ Everything the term was built for survives the tightening, and the interference 
 | the move at the divergence | `-463 Kc2` | `-561 b4` | **`-463 Kc2`** |
 | self-play conversion | 79% | 85% | **81%** |
 | self-play fifty-move draws | 22 | 12 | **14** |
-| **Sargon II, 32 games** | **51.6%** | **31.2%** | **57.8%** |
+| **Sargon II, first 32 games** | **51.6%** | **31.2%** | **57.8%** |
 
-Against Sargon by colour, which is where the mechanism is visible rather than inferred:
+The shipped version was then run to the full 64, against the recorded pre-fix baseline of the
+same size and settings:
 
-| | pre-fix | gated |
+| Sargon II, 64 games | pre-fix | shipped |
 |---|---|---|
-| **White** | 7W **0L** 9D | **14W 0L 2D** |
-| Black | 1W 7L 8D | 1W 10L 5D |
+| W-L-D | 10W 19L 35D | **27W 20L 17D** |
+| score | 42.97% | **55.47%** |
+| fifty-move draws | 15 | **2** |
+| threefold draws | 18 | 13 |
+| checkmates | 29 | 47 |
 
-**Nine White draws became seven wins, with the loss column still empty.** The Black column
-moves the other way and is noise: only four distinct Black games exist in 32, six draws became
-losses and four losses became draws or wins, and Sargon's own replies differ run to run.
+And on the metric the term was built for — a clear piece up for ten plies or more:
+
+| | pre-fix | shipped |
+|---|---|---|
+| conversion | 6 of 23 (**26%**) | 26 of 28 (**92%**) |
+| drew still a piece up | **15** | **0** |
+| gave the material back | 2 | 2 |
+
+**Fifteen games that ended still holding a rook against a bare king, and now none.** That is the
+defect the phase opened with, closed against the opponent that exposed it.
+
+By colour, which is where the mechanism is visible rather than inferred:
+
+| | pre-fix | shipped |
+|---|---|---|
+| **cc65 as White** | 9W 3L 20D — 59.4% | **25W 2L 5D — 85.9%** |
+| cc65 as Black | 1W 16L 15D — 26.6% | 2W 18L 12D — 25.0% |
+
+Twenty White draws became five. Black does not move, and should not have: a term that helps
+finish won positions does nothing for a side that is rarely winning.
+
+**The colour split is worth more attention than the headline.** Sargon scores 75.0% with the
+White pieces and cc65 now scores 85.9% with them, so on equal footing cc65 is ahead - but a
+sixty-point gap between colours is not first-move advantage, it is an opening-book gap. cc65
+has a book only as White, four entries deep; Sargon has one on both sides. **The remaining half
+of the deficit is an opening problem, not an endgame one.**
+
+**And the headline percentage on its own is not significant.** Naive 95% intervals are
+30.8-55.1% and 43.3-67.6% and they overlap, over an effective sample of 16 to 17 distinct games
+rather than 64. What carries the argument is the conversion count and the fifty-move column,
+because those are categorical outcomes tied to the mechanism rather than aggregate noise.
 
 ### A caution about this instrument that outlived the measurement
 
@@ -1831,7 +1866,49 @@ fifty-move draws in the pre-fix baseline were one game played fifteen times. Sco
 rig move in large steps and must be read as such - which is exactly why the colour split and
 the termination counts above carry the argument rather than the percentage.
 
-### The cost could not be measured, and the gap is honest
+### What it costs on a 6502, and the benchmark that had to be built to find out
+
+The host cannot see this term at all. 1,500 searches of 60,000 nodes from endgame positions -
+the term firing at every node - came to 6.80s without and 6.63s with, a difference smaller than
+the run-to-run spread.
+
+**Neither on-target benchmark could price it either, and the reason is the same trap in two
+forms.** `c64search.c` runs from the opening position, where gePhase is 6400 against the term's
+bound of 1100: it cannot execute, so that benchmark would have reported zero faithfully and
+uselessly. `c64evasion.c` has the right shape - a fixed replay, so both builds walk identical
+positions - but the wrong positions, because it replays a middlegame; check evasions cost
+nothing where nobody is in check, and this term is the opposite selection problem.
+
+So `tests/c64drive.c`, which is `c64evasion.c`'s shape with the positions inverted. It replays
+the pre-fix Sargon baseline game that reached king and rook against a bare king - the defect
+itself - and searches only from ply 83, where gePhase first falls to 1100, giving 148 timed
+searches of which the term is live in about two thirds. Both halves are the shipping
+configuration, built twice, because `EVAL_TUNING` makes every node dearer and a node's cost is
+the thing being measured; `eval.h` gained a `-DEVAL_MATEDRIVE_ON=0` override for exactly that,
+the same shape `SEARCH_CHECK_EVASION` already had.
+
+On a real C64 under VICE, identical positions in both builds:
+
+| | nodes | jiffies | nodes/sec |
+|---|---|---|---|
+| mate drive off | 137,323 | 190,616 | 43.225 |
+| mate drive on | 139,977 | 198,262 | 42.361 |
+
+**A node is 2.04% dearer.** Against check evasions at 22.7% that is nearly free, and it is the
+cost *where the term applies* - in a middlegame it is zero, because the phase test cannot be
+entered. Charged at 2%, level 2's 1,200 nodes become 1,176, which at 61 Elo a doubling is about
+1.8 Elo.
+
+And charged, it still wins. `chesstest match drive` at equal time, 2,940 nodes against 3,000:
+**246-238-28**, where equal nodes gave 245-240-27. **This is the second evaluation term in the
+project to survive the equal-time test**, after the endgame tables - and the first to survive it
+comfortably rather than by a nose. Pawn structure died there at +2.0σ becoming +0.6σ, and the
+endgame king table died there twice.
+
+One practical note that cost twenty minutes. These benchmarks print their results and then spin
+so the screen still holds them, so a run lasts until `-limitcycles` fires rather than until the
+work is done. The limit has to be computed from the work: 148 level-2 searches need about
+3.4e9 cycles, and the 8e9 picked as a round number spent half the run doing nothing.
 
 ### Still open
 
