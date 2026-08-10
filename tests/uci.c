@@ -32,6 +32,7 @@
 #include "engine.h"
 #include "eval.h"
 #include "search.h"
+#include "cpu.h"
 #include "testutil.h"
 
 #define UCI_LINE_MAX	16384		// a 400 ply "position ... moves" line and room over
@@ -46,6 +47,20 @@ static char s_side = SIDE_WHITE;
 static char s_skill = SEARCH_NUM_SKILLS;	// 1..4, the menu's levels
 static long s_optDepth;						// 0 = take it from the skill level
 static long s_optNodes;						// 0 = take it from the skill level
+
+// The opening tables in cpu.c, off by default.  Off is not timidity: the whole
+// of doc/strength.md was measured through this adapter, so the default has to
+// be the configuration those games were played in, and OwnBook true has to be
+// something a runner asks for.  Until this existed nothing in the repository
+// could reach cpu.c at all - tests/uci calls search_Best directly, and
+// sargon/match.py had a copy of the white table written out in Python - so the
+// tables shipped for two releases with no harness able to play them
+static char s_ownBook;
+static char s_bookSeed = 1;
+
+// what cmdPosition replayed: how many moves, and white's first, as 0..63 tiles
+static char s_ply;
+static char s_firstFrom, s_firstTo;
 
 /*-----------------------------------------------------------------------*/
 static void say(const char *line)
@@ -140,6 +155,8 @@ static void cmdPosition(char *args)
 		moves += 5;
 	}
 
+	s_ply = 0;
+
 	if(0 == strncmp(args, "startpos", 8))
 	{
 		eng_SetStartPosition();
@@ -149,6 +166,9 @@ static void cmdPosition(char *args)
 	{
 		s_side = test_EngineSetFEN(args + 4);
 		readHalfmove(args + 4);
+		// a game that did not start at the start position has no move one for
+		// the tables to answer, so put the ply count out of their reach
+		s_ply = 2;
 	}
 	else
 		return;
@@ -168,6 +188,14 @@ static void cmdPosition(char *args)
 				fflush(stdout);
 				return;
 			}
+			if(0 == s_ply)
+			{
+				s_firstFrom = ENG_TO_TILE(move.m_from);
+				s_firstTo   = ENG_TO_TILE(move.m_to);
+			}
+			if(s_ply < 2)
+				++s_ply;
+
 			eng_Make(&move, &undo);		// never unmade - the GUI replays the whole game
 			s_side = 1 - s_side;
 			tok = strtok(NULL, " \t\r\n");
@@ -204,6 +232,26 @@ static void cmdGo(char *args)
 	if(depth > SEARCH_MAX_PLY) depth = SEARCH_MAX_PLY;
 	if(nodes < 1) nodes = 1;
 	if(nodes > UCI_MAX_NODES) nodes = UCI_MAX_NODES;
+
+	// The game's own move-one path, when a runner has asked for it.  This is
+	// the shipping front end's behaviour and not an approximation of it: the
+	// same table, consulted by the same function, and the same randomiser
+	// deciding which entry comes up
+	if(s_ownBook && s_ply < 2)
+	{
+		search_SetSeed(s_bookSeed);
+		if(cpu_BookMove(s_side, s_ply, s_firstFrom, s_firstTo, &result.m_move))
+		{
+			char bookName[8];
+
+			memset(bookName, 0, sizeof(bookName));
+			moveName(&result.m_move, bookName);
+			printf("info depth 0 score cp 0 nodes 0 string book\n");
+			printf("bestmove %s\n", bookName);
+			fflush(stdout);
+			return;
+		}
+	}
 
 	search_Best(s_side, depth, (unsigned int)nodes, &result);
 
@@ -269,6 +317,16 @@ static void cmdSetOption(char *args)
 		s_optDepth = atol(value);
 	else if(0 == strcmp(name, "Nodes"))
 		s_optNodes = atol(value);
+	else if(0 == strcmp(name, "OwnBook"))
+		s_ownBook = (char)(0 == strcmp(value, "true") || atoi(value));
+	else if(0 == strcmp(name, "BookSeed"))
+	{
+		// zero is the randomiser's dead state and means "do not randomise", so
+		// it is a legal thing to ask for and reproduces the unseeded engine
+		int v = atoi(value);
+		if(v >= 0 && v <= 255)
+			s_bookSeed = (char)v;
+	}
 #ifdef EVAL_TUNING
 	// only the tuning build has anything to switch; a runner is free to send
 	// "true"/"false" or 1/0
@@ -298,6 +356,11 @@ static void cmdUci(void)
 	       SEARCH_NUM_SKILLS, SEARCH_NUM_SKILLS);
 	printf("option name Depth type spin default 0 min 0 max %d\n", SEARCH_MAX_PLY);
 	printf("option name Nodes type spin default 0 min 0 max %ld\n", UCI_MAX_NODES);
+	// OwnBook defaults false so this adapter keeps playing the games every
+	// figure in doc/strength.md was measured from.  BookSeed is which entry
+	// comes up, and is the game's plat_GetSeed byte by another name
+	printf("option name OwnBook type check default false\n");
+	printf("option name BookSeed type spin default 1 min 0 max 255\n");
 #ifdef EVAL_TUNING
 	printf("option name Repetition type check default true\n");
 	printf("option name CheckEvasion type check default true\n");

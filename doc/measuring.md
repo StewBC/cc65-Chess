@@ -247,6 +247,33 @@ Two things about it are deliberate:
 Node budgets are clamped to 65535, because that is what a 16-bit counter holds on the target.
 Asking for more would measure a configuration no C64 can reach.
 
+### `OwnBook`, and a feature nothing could play
+
+The adapter has two more options, and the reason they exist is a warning rather than a
+convenience:
+
+| option | default | |
+|---|---|---|
+| `OwnBook` | `false` | consult the opening tables in `cpu.c` for the first move of a game |
+| `BookSeed` | `1` | which entry comes up — the game's `plat_GetSeed()` byte by another name |
+
+**`false` is the important half of that table.** Every figure in `doc/strength.md` was measured
+through this adapter, so the default has to be the configuration those games were played in.
+`OwnBook true` also seeds the randomiser, which perturbs root move ordering for the first few
+searches exactly as the shipping game does — so it is a different engine from the one the
+ladder measures, and it says so.
+
+Until these existed, **nothing in this repository could reach `cpu.c` at all.** The adapter
+calls `search_Best` directly and never goes through `cpu_Play`; nothing in `tests/` calls
+`search_SetSeed`, which the tables are gated behind; and `sargon/match.py` needed White's
+opening to vary, so it carried a copy of the table written out again in Python. The tables
+shipped for two releases with no instrument able to play them, and a Python copy of a table is
+a copy of what the table was *believed* to hold. `doc/strength.md` §5.1.7 is what that cost.
+
+The general rule this is an instance of: **a feature the harness cannot execute is not
+covered, however green the suite is.** Before trusting a measurement of anything, check that
+the binary being measured can actually reach the code in question.
+
 ### Switching a term off against an outside opponent
 
 `make uci-tuning` builds the same adapter *with* `-DEVAL_TUNING`, which exposes the tuning

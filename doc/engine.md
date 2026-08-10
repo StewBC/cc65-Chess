@@ -1289,9 +1289,11 @@ honest version of that is "no evidence of harm, and the direction favours the ta
 
 Three details:
 
-**It fires in exactly one position.** White, and `undo_CanUndo()` false, which is true only
-while no move has been played. Black's first move is a *reply*, and a fixed reply is not sound
-against an arbitrary opening — that would need a real book keyed on what White played.
+**It fires in exactly two positions**, and it used to be one. White with `undo_CanUndo()`
+false, which is true only while no move has been played — and Black with exactly one move on
+the undo stack, keyed on what that move was. This paragraph used to say a Black reply "would
+need a real book keyed on what White played", meaning it as a reason not to have one. It turned
+out to be a five-entry table and thirty bytes; see below.
 
 **The roll is looked up in the generator's output** rather than trusted. A wrong square in a
 hand-written table would otherwise put an illegal move on the board; instead the entry matches
@@ -1302,6 +1304,44 @@ were black's pawns. `tests/opening.c` caught it by checking that the table plays
 
 **It costs no search at all**, which on a stock C64 is about eight seconds saved at level 1 and
 fifteen minutes at level 4 — on a move that was never in doubt.
+
+### 6.10b Black's reply, and why the reason is different
+
+Black answers White's first move from a second table: five entries — e4, d4, c4, Nf3, f4 — two
+replies each, and anything not listed falls through to the search exactly as before. Six bytes
+an entry, thirty in all.
+
+**The reason it exists is not the reason the White table exists**, and the difference is the
+interesting part. The White table is there because the search is *wrong* about the first move,
+and the measurement above shows it: the engine's own choice finishes last of five. Asking the
+same question of Black's reply gives a much duller answer — 192 openings a reply against
+Stockfish at two node budgets, and three of the five first moves produce nothing outside the
+noise:
+
+```
+1.e4    d5   38.0%   against Nc6 30.3%      a real difference
+1.f4    e5   39.1%   against Nc6 31.4%      a real difference
+1.d4    Nf6  34.6%   against Nc6 32.8%      noise
+1.c4    d5   34.0%   against Nc6 32.8%      noise
+1.Nf3   d5   32.8%   against Nc6 31.5%      noise
+```
+
+What the table is actually for is that **the engine is deterministic, so one reply means one
+game**. Against Sargon II the Black side of a 64-game run held five distinct games, one of
+which was a 103-ply loss that got counted fourteen times and dragged the Black score to 25%.
+Two replies an entry takes that from five to ten. `doc/strength.md` §5.1.7 is the whole story,
+including the part where the deficit turned out not to be an opening problem at all.
+
+**Knowing which move is on the board needs no new state.** `undo_FindUndoLine(1)` is false for
+exactly the first two plies of a game and `(0)` then loads White's move into `gTile` — the same
+two calls every port already makes to draw its move log.
+
+**The mirror of the tile trap is live here.** Tile 0 is a8, so Black's men are the *low*
+numbers: d7 is 11, not 51. An entry written with White's numbers describes a move by a piece
+that is not there, matches nothing, and quietly falls through to the search — which is a
+*legal* move that the other seeds did not play, so a broken half-entry looks exactly like
+working variety. `tests/opening.c` names the moves it expects for that reason, and was checked
+against three deliberately broken tables before it was believed.
 
 ## 6.11 The opening randomiser, and why it is nearly free
 

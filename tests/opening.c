@@ -228,6 +228,89 @@ static void everyBookMoveIsLegal(void)
 }
 
 /*-----------------------------------------------------------------------*/
+// The same check for the black reply table, and it needs to be a separate one
+// because the trap is the mirror image.  Tile 0 is a8, so black's men are the
+// low tiles: an entry written with white's numbers describes a move by a piece
+// that is not there, matches nothing, and the engine quietly searches - which
+// is exactly what the first draft of the white table did.
+//
+// The first version of this test only asked for a legal reply and more than one
+// distinct one, and it did not catch that trap - which is worth keeping in the
+// file, because the reason is the interesting part.  A dud entry does not play
+// an illegal move, it matches nothing and falls through to the search, and the
+// search's own reply is a perfectly legal move that the seeds before it did not
+// play.  A broken half-entry therefore looks *exactly* like working variety.
+//
+// So the table is written out again here and the test demands the moves
+// themselves.  Duplicating a hand written table in its test is normally a smell;
+// for this table it is the entire point, because there is nothing else to check
+// it against, and a wrong square has to be wrong in two files to get through
+static void everyBlackReplyIsLegal(void)
+{
+	// white's move, then the two replies sc_blackBook promises, as 0..63 tiles
+	static const char expect[] =
+	{
+		52,36,	11,27,	12,28,		// 1.e4  - d5, e5
+		51,35,	 6,21,	11,27,		// 1.d4  - Nf6, d5
+		50,34,	11,27,	12,28,		// 1.c4  - d5, e5
+		62,45,	11,27,	 6,21,		// 1.Nf3 - d5, Nf6
+		53,37,	12,28,	 6,21,		// 1.f4  - e5, Nf6
+	};
+	char o, s;
+	int illegal = 0, unexpected = 0, missing = 0;
+
+	for(o = 0; o < sizeof(expect); o += 6)
+	{
+		int sawFirst = 0, sawSecond = 0;
+
+		for(s = 1; s; ++s)			// every nonzero seed, then wraps and stops
+		{
+			t_engMove white;
+			char from, to;
+
+			board_Init();
+			undo_Init();
+			search_SetSeed(s);
+
+			// play white's move through the game's own path, so the undo stack
+			// is in the state cpu_Play reads to decide this is move one.
+			// board_FindMove takes 0..63 tiles, which is what the table holds
+			if(!board_FindMove(expect[o], expect[o + 1], 0, &white))
+			{
+				++illegal;
+				break;
+			}
+			board_ApplyMove(&white, SIDE_WHITE);
+
+			// cpu_Play is the game's entry point and the only caller of the
+			// table; undo_FindUndoLine(0) is how the ports read back what it did
+			cpu_Play(SIDE_BLACK);
+			if(!undo_FindUndoLine(0))
+			{
+				++illegal;
+				continue;
+			}
+			from = gTile[0];
+			to   = gTile[1];
+
+			if(from == expect[o + 2] && to == expect[o + 3])
+				sawFirst = 1;
+			else if(from == expect[o + 4] && to == expect[o + 5])
+				sawSecond = 1;
+			else
+				++unexpected;		// the search answered, so an entry is a dud
+		}
+
+		if(!sawFirst || !sawSecond)
+			++missing;
+	}
+
+	check("every white first move in the table gets a reply", illegal, 0);
+	check("no seed falls through to the search", unexpected, 0);
+	check("both replies of every entry come up", missing, 0);
+}
+
+/*-----------------------------------------------------------------------*/
 int test_RunOpening(int verbose)
 {
 	si_failures = 0;
@@ -237,6 +320,7 @@ int test_RunOpening(int verbose)
 	randomisedMovesScoreEqual();
 	randomisationStops();
 	everyBookMoveIsLegal();
+	everyBlackReplyIsLegal();
 
 	// leave the engine as the rest of the suite expects to find it
 	search_SetSeed(0);

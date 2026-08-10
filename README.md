@@ -59,6 +59,26 @@ twenty-point regression in real games — its gate was loose enough to change mo
 middlegames, which only an outside opponent could see, because self-play applies the same harm
 to both sides. `doc/strength.md` §5.1.6 keeps the whole thing, wrong turn included.
 
+That same Sargon match left one number unexplained: 85.9% with White against 25.0% with Black.
+This file used to call it an opening-book gap. **It was one lost game, played fourteen times.**
+All eighteen Black losses came from two openings; the fourteen `1.e4 Nc6` games were identical
+for all 103 plies; outside those two lines Black scored 57% and did not lose once. Play the
+engine from positions where no book fires and it scores the same with either colour — at level
+1, to the digit. A book helps by spreading the sample, not by improving the moves.
+
+Black now has a reply table too, thirty bytes of it. Played against Sargon II it took the Black
+score from 25.0% to **45.3%**, but the number worth reading is the other one: **five distinct
+games in thirty-two became twenty-four**, and the most-repeated game went from fourteen copies
+to five. The first attempt at the table put a *new* game in the same trap — one entry lost all
+21 of its games over 2 distinct games — and neither desktop measurement predicted it; the
+losing reply ranked second on score and **first** on a measure built specifically to count
+variety. Only the real opponent could see it.
+
+The thing that made the original mistake possible is the better story: **no harness in this
+repository could reach the opening table at all.** The UCI adapter called the search directly, and the Sargon harness had a copy of the
+table written out again in Python. It shipped for two releases with nothing able to play it.
+`doc/strength.md` §5.1.7.
+
 ## Playing it
 
 Built images for every platform are in the releases tab. There is a video of the game

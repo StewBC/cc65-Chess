@@ -1931,6 +1931,109 @@ can do.
 
 ---
 
+## Phase 12 - the colour split was a weighting, and two proxies said otherwise
+
+Started from the last unexplained number in Phase 11: 85.9% with White against 25.0% with
+Black. Phase 11 wrote down that this was an opening-book gap, said the remaining deficit was an
+opening problem rather than an endgame one, and moved on. That went into `doc/strength.md` as a
+conclusion. **It was a guess, and it survived because nobody sorted the games.**
+
+Sorting them took ten minutes. All eighteen Black losses are in two openings. The fourteen
+`1.e4 Nc6` games are **identical for all 103 plies**, mate included. Outside those two lines
+Black scores 57% and does not lose a game. Twenty-five percent is one loss counted fourteen
+times.
+
+Then the claim that the opening caused it, which was equally unchecked. Stockfish over the
+losing game: Black is **winning** on move 13 at −181 and throws it on move 17. Sargon's `Nxf7`,
+which looks like the refutation of the opening, is worth −139 *to Sargon* — objectively unsound
+and practically winning, at 1,200 nodes. And played from `book.epd`, where no book fires for
+either side, the engine scores 28.1% with White and 28.1% with Black at level 1. **There is no
+colour asymmetry in the engine at all.**
+
+So the deficit is a weighting. White's four-entry table gave 32 games twelve distinct openings;
+Black's absence of one gave 32 games five, and the biggest of the five was a loss.
+
+*The journal already knew.* Phase 11's open items contain "The Sargon match harness cannot vary
+the engine's Black games... one loss appears four times", filed as a harness fix for whoever
+runs the match. The right diagnosis was written down and deferred; the wrong one was written up
+and published. Worth remembering which of those two is the more dangerous kind of note.
+
+**Then the reason nobody had caught it: nothing in the repository could play the opening
+table.** `tests/uci` calls `search_Best` and never `cpu_Play`; nothing in `tests/` calls
+`search_SetSeed`, which the table is gated behind; and `sargon/match.py` had a copy of the
+White table written out again in Python because it needed the openings to vary. The feature
+shipped for two releases with no instrument able to execute it, and the rig was measuring a
+Python replica of what the table was believed to hold. `OwnBook` and `BookSeed` fix that, both
+default off so every published game still reproduces.
+
+The Black table is five entries, two replies each, thirty bytes. 253 bytes all in, the third
+change in this project to push the Atari's `DLIST` over a page boundary.
+
+### What the rig said, and the part worth keeping
+
+cc65 on Black in every game, three runs. **25.0% to 45.3%** - but the column that matters is
+the other one: **five distinct games out of thirty-two became twenty-four out of thirty-two**,
+and the worst repeat went from fourteen to five.
+
+```
+                          games   W- L- D     score   distinct   worst repeat
+no table                     32   2W 18L 12D  25.0%      5 (16%)      14x
+table, 1.e4 alt = d6         64  18W 34L 12D  37.5%     26 (41%)      12x
+table, 1.e4 alt = e5         32  10W 13L  9D  45.3%     24 (75%)       5x
+```
+
+There are three runs and not two because the middle one was half broken, and the per-entry
+breakdown is the interesting half:
+
+```
+1.e4 d5     15 games   3W  7L  5D   36.7%    11 distinct
+1.e4 d6     21 games   0W 21L  0D    0.0%     2 distinct
+1.d4 Nf6    12 games  12W  0L  0D  100.0%     1 distinct
+```
+
+`1.e4 d6` **rebuilt the exact defect the table was there to remove** - twenty-one games, two of
+them, all losses. `1.d4 Nf6` is the same failure winning instead of losing. Only `d5` works,
+and the games say why: `2.exd5 Qxd5` forces a capture and a recapture and Sargon diverges from
+there, where the closed replies let both programs replay one game.
+
+**Both desktop proxies picked `d6`.** On score it ranked second of eight replies to 1.e4. So a
+second instrument was written to measure the property that actually matters - count *distinct
+games*, perturbing the opponent's node budget as a stand-in for a real opponent's book - and
+`d6` came top of that as well, 13 of 16, the best of any reply. Against Sargon: two.
+
+That is worth more than the score line. §4.3 says a result against one opponent may not
+transfer. This says the *variety* a move produces does not transfer either, because variety
+against Sargon comes from Sargon's own book and search diverging and nothing on this desk
+perturbs those. Two reasonable proxies, both confidently wrong, one of them purpose-built. The
+rig is not a confirmation step; on this question it is the only instrument that exists.
+
+`1.e4`'s alternative is now `e5`, picked on the one mechanism the games demonstrated rather
+than on either proxy, and re-run:
+
+```
+1.e4 Nc6   14 games   0W 14L  0D    0.0%    1 distinct   (before any table)
+1.e4 d6    21 games   0W 21L  0D    0.0%    2 distinct
+1.e4 e5     5 games   1W  2L  2D   40.0%    5 distinct
+```
+
+Five games is not a score and 40% should not be quoted as one. Five games being five games is
+the whole point, and the hole is closed.
+
+### Open after this
+
+*The table is nine entries wide against a five-move opponent.* Sargon opened with e4, d4, c4,
+Nf3 and f4. A human plays other things, and every one of them falls through to the search and
+to whatever single reply it produces. Cheap to extend, and nothing measures it.
+
+*`1.d4 Nf6` wins twelve games out of twelve and they are one game.* Changing it on the variety
+argument would mean giving up a 100% entry on the strength of a proxy that has now failed
+twice. Left alone deliberately, and flagged so it is not mistaken for an oversight.
+
+*The middlegame is still where the games go.* Both losing lines reached move 13 equal or
+better. Nothing in this phase touched that, and it is where the next real strength is.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

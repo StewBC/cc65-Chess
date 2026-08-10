@@ -47,19 +47,35 @@ Since the endgame tables it is also the only setting that fits:
 
 | | optsize | optspeed |
 |---|---|---|
-| atari | 1228 free below the framebuffer | **does not link — 562 bytes over** |
-| apple2 | 1744 free in MAIN, 2122 in BSS | links with **12 bytes** spare |
+| atari | 716 free below the framebuffer | **does not link — 562 bytes over** |
+| apple2 | 1166 free in MAIN, 2122 in BSS | links with **12 bytes** spare |
 
 **The Atari's headroom does not shrink smoothly, and the number above hides a cliff.** `DLIST`
 is page-aligned inside `MAIN`, so code growth is absorbed by the padding in front of it until
 the padding runs out and the display list jumps a page — 256 bytes, gone at once. That has now
-happened twice: the opening table crossed it, and then check evasions crossed it again, which
-is why the Atari lost 256 bytes each time while the Apple II lost the 302 and 132 the code
-actually costs.
+happened three times: the opening table crossed it, check evasions crossed it again, and the
+black reply table crossed it a third time, which is why the Atari lost 256 bytes each time
+while the Apple II lost the 302, 132 and 253 the code actually costs.
 
-**There are 128 bytes of padding left.** Check `DATA`'s end against `DLIST`'s start in an
+**There are 62 bytes of padding left.** Check `DATA`'s end against `DLIST`'s start in an
 `ld65 -m` map rather than reading the free-space number on its own; the two tell different
-stories and only one of them predicts what the next change will cost.
+stories and only one of them predicts what the next change will cost. The full picture, all
+seven targets, measured rather than remembered — free space to the *real* ceiling, which on
+three of them is a framebuffer the linker cannot see:
+
+| target | ceiling | free |
+|---|---|---|
+| **atari** | `$9100` framebuffer | **716** — and 62 before the next `DLIST` page jump |
+| **apple2** | MAIN ends `$B700` | **1166**, plus 2122 in BSS at `$0800–$1FFF` |
+| atmos | RAMEND `$9900` less stack | 1971 |
+| plus4 | `$A000` bitmap | 2995 — **and the cfg does not cap it**, so an overrun would
+draw BSS on the screen rather than fail to link, exactly as the Atari used to |
+| cx16 | MAIN | 5693 — the framebuffer is in VERA and costs nothing here |
+| c64.chr | BSS ends `$C400` | 8276 |
+| c64 | `$C000` bitmap less stack | 10978 |
+
+Regenerate these with `cl65 -t <target> -C <cfg> --mapfile ...` against `obj/<target>/*.o`;
+the numbers above are from a clean build and will drift with the next change.
 
 `Makefile.options` defaults to `optsize` and that is why. Raising it would mean raising it
 everywhere, which the Atari cannot take - so treat `optsize` as fixed, and check anything
@@ -131,6 +147,21 @@ result means the two configurations are equal, not that either is right.
 prerequisites, so editing `search.h` and running `make test` reported green for code that was
 not in the binary. It does now — but note that `sed -i.bak` followed by `mv` restores the
 *original mtime*, which walks straight back into it. `touch` the header, or `make -B`.
+
+**And a *sub-second* mtime is enough to do it.** Patching a source, building, and running
+inside one second lets `make` decide the binary is newer than the file it was not built from.
+This bit while checking the black reply table: three deliberately broken tables in a row all
+reported green, which read as a useless test and was a stale one. Use `make -B` for anything
+that patches a source and rebuilds in a loop. Related, on macOS: `sed` does **not** expand
+`\t` in a pattern, so a tab-indented table silently never matches and the "control" edits
+nothing at all.
+
+**A test that only asks for a legal move cannot see a dead table entry.** The first version of
+the black reply check asked that the reply be legal and that more than one distinct reply come
+up. A table entry written with the wrong squares does not play an illegal move — it matches
+nothing, falls through to the search, and the search's reply is a legal move the other seeds
+did not play. A broken half-entry therefore looks *exactly* like working variety. The check
+has to name the moves it expects.
 
 **The native suite validates logic, never machine width.** Anything that multiplies,
 accumulates, or sums toward a limit needs reading against a 16-bit `int` by hand. A node

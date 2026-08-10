@@ -889,9 +889,15 @@ argument, because they are categorical outcomes tied to the mechanism.
 
 **The colour split is the more interesting number.** Sargon scores 75.0% with White and cc65
 now scores 85.9% with it, so on equal footing cc65 is ahead — but sixty points between colours
-is not first-move advantage, it is an opening-book gap. cc65 has a book only as White and four
-entries deep; Sargon has one on both sides. The remaining half of the deficit is an opening
-problem rather than an endgame one, and §5.2 is where that thread continues.
+is not first-move advantage.
+
+This paragraph used to continue "it is an opening-book gap", and go on to say that the
+remaining half of the deficit was an opening problem. **That was a hypothesis with nothing
+behind it, and §5.1.7 is what happened when it was finally checked.** It is wrong in its
+mechanism and right by accident in its conclusion, which is the least useful way for a claim
+to be half true. It is left standing here, struck through rather than quietly rewritten,
+because this document has a rule about unmeasured explanations and this is the second time in
+two sections that the rule caught its own author.
 
 ### What this rig can and cannot say
 
@@ -933,6 +939,210 @@ Stockfish, which does not reach these endings, and Phase 9 already established t
 which is pure endgame knowledge is worth far more against opponents that do not search endgames
 than against ones that do. What this section changes is a different claim: the engine finishes
 what it wins.
+
+## 5.1.7 Twenty-five percent as Black was one lost game, played fourteen times
+
+The colour split above is the largest number in this document that nobody had taken apart.
+Taking it apart took an afternoon and found that almost none of it means what it says.
+
+### The counting, which needed no engine at all
+
+Sorting the thirty-two Black games of the shipped run by their opening:
+
+| cc65 as Black | n | result |
+|---|---|---|
+| `1.e4 Nc6` | 14 | 0W **14L** 0D — **0%** |
+| `1.d4 Nc6` | 10 | 0W 0L 10D — 50% |
+| `1.c4 d5` | 4 | 0W **4L** 0D — **0%** |
+| `1.Nf3 Nc6` | 2 | 50% |
+| `1.f4 Nc6` | 2 | 100% |
+| **everything except the two 0% lines** | **14** | 2W **0L** 12D — **57.1%** |
+
+All eighteen losses are in two lines. Outside them Black does not lose a game and scores 57%.
+And the fourteen `1.e4` games are not fourteen games: they are **identical for all 103 plies**,
+mate included. Sargon is not reproducible in general (§5.1.6), but in that line it was, so
+one loss went into the average fourteen times.
+
+Twenty-five percent is therefore mostly a weighting. The Black side of a 64-game run holds
+**five distinct games**, and the largest of them is a loss.
+
+### The opening is not where those games were lost
+
+The obvious next claim — the losses come from a bad opening, so a book fixes them — is the one
+that was already assumed, so it got checked rather than repeated. Running Stockfish over the
+`1.e4 Nc6` game move by move:
+
+```
+move 10  Black −136 cp     a normal, slightly worse position
+move 13  Black −181 cp     Black is winning
+move 17  ...Bd6  +491 cp   the game is thrown here
+```
+
+Sargon's `11.Nxf7`, the sacrifice that looks like the refutation of the opening, is **worth
+−139 to Sargon** — objectively bad and practically winning, which is the difference between
+those two words at 1,200 nodes. The `1.c4` game has the same shape: Black at −115 on move 11,
+then twenty moves of drift. Both losing lines leave the engine equal or better out of the
+opening and lose in the middlegame.
+
+### There is no colour asymmetry to explain
+
+The engine plays `tests/book.epd` positions with both colours. Those start after four moves,
+so no book fires for either side and any gap is the engine itself. 256 openings played both
+ways, against Stockfish at 30 nodes:
+
+| | cc65 as White | cc65 as Black |
+|---|---|---|
+| level 2 | 39.6% | 33.6% |
+| level 1 | **28.1%** | **28.1%** |
+
+Level 1 is level to the digit; the level-2 gap is 6 points at about 3% standard error, which is
+first-move advantage and noise. **The engine is not weaker with Black.** Sixty points is not
+coming from anything the search does.
+
+What is left is the weighting. White has a four-entry table, so 32 White games hold twelve
+distinct openings and no single game can dominate. Black had no table, so 32 Black games hold
+five, and one of them is a 103-ply loss counted fourteen times. **The book helps White by
+spreading the sample, not by improving the moves** — which is the same claim §5.2 makes about
+the White table's own value, arrived at from the other end.
+
+### The instrument could not play the feature
+
+Then the reason nobody had noticed: **until this section, nothing in the repository could reach
+the opening table at all.** `tests/uci` calls `search_Best` directly and never goes through
+`cpu_Play`, and nothing in `tests/` calls `search_SetSeed`, which the table is gated behind. The
+Sargon harness needed White's opening to vary, so it had **a copy of the table written out
+again in Python**. Every figure in Parts IV and V was measured with the book off, and the only
+thing that had ever played it was the shipping 8-bit game.
+
+`tests/uci` now has `OwnBook` and `BookSeed`, both off and inert by default so every game in
+this document still reproduces, and `sargon/match.py` asks the engine instead of its own copy.
+A table that only one un-instrumented binary can execute is not a feature, it is a rumour.
+
+### The table, and how its entries were chosen
+
+Black now answers White's first move from a table, on the same terms as White's: five entries,
+two replies each, anything else falls through to the search. Every entry was picked by playing
+it — 192 openings a reply, cc65 as Black at 1,200 nodes, against Stockfish at 30 and at 100
+nodes:
+
+| | best reply | the move it played before |
+|---|---|---|
+| 1.e4 | **d5 38.0%** | Nc6 30.3% |
+| 1.f4 | **e5 39.1%** | Nc6 31.4% |
+| 1.d4 | Nf6 34.6% | Nc6 32.8% |
+| 1.c4 | d5 34.0% | Nc6 32.8% |
+| 1.Nf3 | d5 32.8% | Nc6 31.5% |
+
+**Three of the five are flat, and that is the finding rather than a disappointment.** Which
+reply gets played barely matters. The table is not buying opening theory; it is buying ten
+distinct Black games where there were five.
+
+Measured as a whole, against an outside opponent, in a paired design — White's first move
+forced through the five Sargon plays, Stockfish continuing from there at twenty different node
+budgets, so each book-off game has book-on games from the same opening against the same
+opponent:
+
+| cc65 | book off | book on | paired difference | |
+|---|---|---|---|---|
+| level 1 | 25.0% | 28.0% | +3.0% | t = +1.00 |
+| level 2 | 22.0% | 32.0% | **+10.0%** | **t = +3.29** |
+| level 2, replication | 15.5% | 28.5% | **+13.0%** | **t = +4.18** |
+| level 3 | 43.0% | 47.8% | +4.8% | t = +1.18 |
+
+Positive at every budget, over 100 pairings each. The level-2 row was run twice on **disjoint
+sets of opponent node budgets** — a replication rather than a re-reading of the same games —
+because a *t* computed over twenty settings of one opponent is treating correlated games as
+independent ones, and the honest check on that is to do it again somewhere else. It held: +10.0
+then +13.0, and 55 openings helped against 17 hurt on the second run.
+
+The per-opening breakdown disagrees with itself between levels — `1.d4` is +23.8% at level 2
+and −16.2% at level 3 — which is what a variety effect looks like and not what a better-move
+effect looks like. Read the whole thing as "not worse, and probably better at the level a
+person actually plays", and let the rig carry the rest.
+
+### What the rig said, including the part that went wrong
+
+cc65 as Black in every game — `sargon/match.py --cc-color black`, which exists because a colour
+question measured with alternating colours spends half its games on the other side. Three runs,
+against the shipped run's 32 Black games:
+
+| cc65 as Black vs Sargon L1 | no table | table, `1.e4` alt `d6` | table, `1.e4` alt `e5` |
+|---|---|---|---|
+| games | 32 | 64 | 32 |
+| W–L–D | 2W 18L 12D | 18W 34L 12D | **10W 13L 9D** |
+| score | 25.0% | 37.5% | **45.3%** |
+| **distinct games** | **5** (16%) | 26 (41%) | **24 (75%)** |
+| largest single game repeated | **14×** | 12× | **5×** |
+
+**The distinct-game column is the result and the score is the by-product.** Three quarters of
+the final run's games are their own game, against one sixth before; the worst repeat is five
+where it was fourteen. The score moved twenty points with it, over an effective sample that
+went from about five games to about twenty-four — which is the first time any figure from this
+rig has had a sample worth quoting.
+
+The middle column is why there are three runs and not two, and the per-entry breakdown is where
+this section earns its place:
+
+| | n | result | distinct games |
+|---|---|---|---|
+| `1.e4 d5` | 15 | 3W 7L 5D — 36.7% | **11** |
+| `1.e4 d6` | 21 | 0W **21L** 0D — **0%** | **2** |
+| `1.d4 Nf6` | 12 | 12W 0L 0D — 100% | **1** |
+| everything else | 16 | 3W 6L 7D | 12 |
+
+**`1.e4 d6` reproduced the exact defect the table was built to remove.** Twenty-one games, two
+distinct, every one of them a 105-ply loss. `1.d4 Nf6` is the same shape with the sign flipped:
+twelve wins that are one game. Only `1.e4 d5` behaves the way the whole table was supposed to,
+and the reason is visible in the moves — `2.exd5 Qxd5` forces a capture and a recapture, the
+queen comes out, and Sargon's replies diverge from there. The closed replies let both programs
+replay the same game.
+
+**Neither desktop instrument predicted this, and one of them was built specifically to.** On
+score, `d6` ranked second of eight replies to 1.e4 (33.6%). So a second measure was written —
+count *distinct games* rather than score, perturbing the opponent's node budget to stand in for
+a real opponent's own book — and `d6` came top of that too, 13 distinct games of 16, the best of
+any reply. Against Sargon it produced two.
+
+That is §4.3's non-transitivity warning arriving in a form nobody had allowed for. It is not
+only that a *score* against one opponent fails to transfer; the *variety* a reply produces
+fails to transfer as well, because variety against Sargon comes from Sargon's book and search
+diverging and nothing on this desk perturbs those. **Two proxies, both reasonable, both wrong,
+and the rig was the only thing that could tell.**
+
+The `1.e4` alternative is now `e5` rather than `d6`, chosen on the one mechanism the games
+actually showed — a reply that forces an exchange — and confirmed on the rig rather than on a
+proxy, because the proxies have now failed twice:
+
+| `1.e4` and the reply | n | result | distinct games |
+|---|---|---|---|
+| `Nc6`, before any table | 14 | 0W 14L 0D — 0% | **1** |
+| `d6` | 21 | 0W 21L 0D — 0% | **2** |
+| **`e5`** | 5 | 1W 2L 2D — 40.0% | **5** |
+| `d5`, both runs | 23 | 5W 11L 7D — 37.0% | 18 |
+
+**Read the right column.** `e5` is five games and 40% and that percentage means nothing at
+n=5; what means something is that five games produced five games. `d5` and `e5` between them
+now behave the way the entry was specified to, and the 0-of-21 hole is closed.
+
+Two things are deliberately left alone. `1.d4 Nf6` still wins twelve of twelve as one repeated
+game — changing it would mean trading a 100% entry for a proxy that has failed twice, so it is
+flagged rather than fixed. And the table answers five first moves because Sargon plays five; a
+human plays others, and every one of those still falls through to the search and to whatever
+single reply it produces.
+
+### What it costs
+
+253 bytes of code and data. The Apple II went from 1419 free to 1166; the Atari paid 256
+because those 253 bytes crossed the `DLIST` page boundary for the third time in this project,
+and has 716 left. Nothing else is close to a limit. No node is dearer — the table replaces a
+search rather than adding to one, so unlike every term in Part V this one is not charged at the
+board at all.
+
+**The ratings in Part IV are unchanged, and cannot be otherwise.** Every rung is played from
+`tests/book.epd`, four moves deep, where neither table can fire; and `OwnBook` defaults false,
+so the adapter those games were measured through still plays them. `match sanity` reproduces
+196-196-120 and 81% conversion to the digit across this change, which is the check that the
+harnesses really are seeing the engine they saw before.
 
 ## 5.2 The opening was dull, and the reason was mundane
 
