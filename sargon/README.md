@@ -51,6 +51,16 @@ f0ad0bd2c4b162f5a410f4b2ddb4e6a0e70e4a0bbadd247c604f80e0cd47e1b8
 shasum -a 256 sargon/Sargon-trimmed.dsk
 ```
 
+The copy these results were produced with came from:
+
+```text
+https://www.myabandonware.com/game/sargon-ii-54m#Apple%20II
+```
+
+Recorded as provenance, not as a recommendation or a guarantee - check the hash
+above rather than trusting any particular download, since what is served under
+one name changes over time.
+
 Two things that image is not.  The commonly circulated `Sargon.dsk` is 153,394
 bytes: the same 143,360-byte image followed by a 10,034-byte trailer, and a2m-v2
 will not boot the oversized raw file - trimming it to the first 143,360 bytes
