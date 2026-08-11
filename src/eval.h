@@ -43,7 +43,26 @@ extern const int gcPieceValue[PAWN+1];
 #define EVAL_PST			SET_BIT(1)
 #define EVAL_ENDGAME		SET_BIT(4)
 #define EVAL_MATEDRIVE		SET_BIT(5)
+#define EVAL_QUEENHOME		SET_BIT(6)
+#define EVAL_QUEENOUT		SET_BIT(7)
 #define EVAL_ALL			(EVAL_MATERIAL|EVAL_PST|EVAL_ENDGAME|EVAL_MATEDRIVE)
+
+// SET_BIT(6), EVAL_QUEENHOME, is deliberately **not** in EVAL_ALL, and neither
+// is SET_BIT(7).  Every other bit turns off something the shipping engine does;
+// these two turn candidates on, so off has to mean "what ships".  Both swap one
+// number in the queen table - d1, which the shipped table scores at -5 while
+// the middle scores +5, so the evaluation pays the queen ten centipawns to
+// leave home (doc/strength.md §5.2a).
+//
+// EVAL_QUEENHOME sets that differential to zero: d1 becomes +5.
+// EVAL_QUEENOUT triples it in the *other* direction: d1 becomes -15.
+//
+// The second one is not a candidate anybody would ship.  It is there because
+// the first measured as nothing, and a change that measures as nothing has two
+// explanations - the mechanism is not real, or the dose was too small.  Making
+// the incentive larger separates them: if the square matters at all, -15 should
+// be measurably worse than -5, and if it is not then this square is inert at
+// this magnitude and §5.2a's mechanism is not where the queen's cost comes from
 
 // Two terms were built, measured and taken out again; see the Phase 4 notes.
 //

@@ -555,3 +555,48 @@ int test_RunMatchMateDrive(int verbose)
 	}
 	return 0;
 }
+
+/*-----------------------------------------------------------------------*/
+// The queen table's ten centipawns, played against their own absence.
+//
+// doc/strength.md §5.2a measured the queen as the most expensive piece cc65 can
+// move in the opening - -85.5 cp a move over moves 1-15, four times a pawn or a
+// knight - and found a mechanism: sc_pstQueen scores d1 at -5 and the middle at
+// +5, so the evaluation pays the queen ten centipawns to leave home and nothing
+// anywhere penalises developing it early.  EVAL_QUEENHOME sets that
+// differential to zero and changes nothing else.
+//
+// **This match cannot settle it and is not meant to.**  Both sides here share
+// whatever is wrong with cc65's opening play, which is the failure mode
+// AGENTS.md names three times; and the effect is one number on one square, so a
+// wash is the expected result even if the change is right.  What this is for is
+// cheap and narrow: a sign, and the assurance that the switch is not inert.
+// The statistic comes from the Stockfish gauntlet and the confirmation from
+// Sargon, in that order - §5.1.7 is where a Stockfish ranking failed to
+// transfer to Sargon on both of the measures tried.
+//
+// No equal-time variant, and that is the unusual part: both configurations do
+// one table lookup of the same size, so a node costs exactly the same in each.
+// This is the only comparison in this file where equal nodes *is* equal time,
+// and the only one whose shipped form costs nothing on any target - the winning
+// numbers go into the one table the 8-bit build already carries
+int test_RunMatchQueen(int verbose)
+{
+	t_Config home    = { "queen stays home", EVAL_ALL | EVAL_QUEENHOME, 3, 2000, 1 };
+	t_Config shipped = { "shipped table",    EVAL_ALL,                  3, 2000, 1 };
+
+	printf("match: the queen table's ten centipawns, from the openings\n");
+	runMatch(&home, &shipped, 240, verbose);
+
+	// and at level 1's budget.  The §5.2a mechanism is that the punishment for
+	// an early sortie takes four preparatory moves and sits past the horizon,
+	// so it should bite *harder* the less the engine searches
+	{
+		t_Config weakHome = { "stays home, 400 nodes", EVAL_ALL | EVAL_QUEENHOME, 3, 400, 1 };
+		t_Config weakShip = { "shipped, 400 nodes",    EVAL_ALL,                  3, 400, 1 };
+
+		printf("match: the same at level 1's budget\n");
+		runMatch(&weakHome, &weakShip, 240, verbose);
+	}
+	return 0;
+}

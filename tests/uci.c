@@ -341,6 +341,22 @@ static void cmdSetOption(char *args)
 		else
 			geEvalTerms &= ~EVAL_MATEDRIVE;
 	}
+	// the two switches here that default off, because they turn candidates on
+	// rather than turning the shipping engine off
+	else if(0 == strcmp(name, "QueenHome"))
+	{
+		if(0 == strcmp(value, "true") || atoi(value))
+			geEvalTerms |= EVAL_QUEENHOME;
+		else
+			geEvalTerms &= ~EVAL_QUEENHOME;
+	}
+	else if(0 == strcmp(name, "QueenOut"))
+	{
+		if(0 == strcmp(value, "true") || atoi(value))
+			geEvalTerms |= EVAL_QUEENOUT;
+		else
+			geEvalTerms &= ~EVAL_QUEENOUT;
+	}
 #endif
 }
 
@@ -365,6 +381,8 @@ static void cmdUci(void)
 	printf("option name Repetition type check default true\n");
 	printf("option name CheckEvasion type check default true\n");
 	printf("option name MateDrive type check default true\n");
+	printf("option name QueenHome type check default false\n");
+	printf("option name QueenOut type check default false\n");
 #endif
 	say("uciok");
 }

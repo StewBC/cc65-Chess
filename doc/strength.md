@@ -1186,8 +1186,20 @@ hypothesis it produced did not survive being measured properly, which is the mor
 ```
 cc65 2 wins, 3 losses, 1 draw   (41.7%)
 6 games, 6 distinct openings, 3 with each colour
-8.4 hours, mean 84 minutes a game, about 45 seconds per Sargon move at max turbo
+8.4 hours, mean 84 minutes a game, about 45 seconds a ply at max turbo
 ```
+
+That last figure used to read "45 seconds per Sargon move", which was the same
+number under the wrong name: only half of those 666 plies are Sargon's, and
+cc65 answers in 8 ms at Very Hard on the host. **Per Sargon move it is 91
+seconds**, 73 to 137 across the six games. The mistake is worth keeping rather
+than quietly fixing, because a per-move cost is exactly the quantity a match
+design multiplies by, and this one was out by two in the cheap direction.
+
+Every Sargon level has since been timed - six minutes for all seven, in
+`sargon/README.md` - and the two numbers that matter here are that level 3
+costs 2.8 seconds a move against level 6's 91, and that a 64-game screen
+therefore costs 3 hours at level 3, 9 at level 4 and 93 at level 6.
 
 ### What this establishes, sample size notwithstanding
 
@@ -1199,8 +1211,8 @@ three separate games — twice in one of them, where cc65 walked into a forced m
 was let off, walked into another at move 38, and was let off again. A 155-ply win and a 191-ply
 draw are on the board partly because of this.
 
-The likely reason is the same defect class this project keeps finding in itself. At 45 seconds
-a move under emulation, level 6 on period hardware was hours a move — so it is the setting
+The likely reason is the same defect class this project keeps finding in itself. At a minute
+and a half a move under emulation, level 6 on period hardware was hours a move — so it is the setting
 Sargon's authors could least afford to play, and therefore the least exercised path in the
 program. `AGENTS.md` states the rule as *a test that runs at one budget has not tested the
 skill levels*, and Sargon's deepest level and cc65's mate blindness at levels 1 and 2 (§5.1.5)
@@ -1250,6 +1262,15 @@ mechanism and a candidate fix that costs *nothing* — the table is already 64 b
 looked up at `eval.c:278`, so changing its numbers is free on every target, including the
 Atari's 716 remaining bytes.
 
+> **Both tables above are unreliable, and §5.2b is why.** They are plain means over Stockfish
+> evaluation deltas, and mate scores clamp at ±10000, so a single move that walks into a mate
+> outweighs two hundred ordinary ones. With the clamped moves dropped the same statistic moves
+> by up to twelve-fold and the ordering changes. Replicated over 64 fresh games, the queen
+> ties with the **bishop** at about twice a pawn rather than four times — and a developing
+> bishop move is correct chess, which is the clue that this statistic is not measuring what it
+> was read as. The paragraphs below are kept as written because the reasoning they contain was
+> the right reasoning applied to a number that was wrong.
+
 **It is still not established, and two things stop it.** Fourteen queen moves across six games
 is a small sample. And Stockfish penalising an early queen sortie is close to definitional —
 it holds opening principles the same way a textbook does, so its agreement is weaker evidence
@@ -1259,6 +1280,135 @@ against an outside opponent, because §5.1.7 is the section where a Stockfish ra
 transfer to Sargon on both of the measures tried.
 
 Recorded as the most promising untested lead in the project, not as a finding.
+
+**It was tested, and it is closed. §5.2b.**
+
+## 5.2b The most promising lead in the project, measured and closed
+
+§5.2a proposed a mechanism and a fix that cost nothing: `sc_pstQueen` scores d1 at −5 and the
+middle squares at +5, so the evaluation pays the queen ten centipawns to leave home, and moving
+one number would stop it. `EVAL_QUEENHOME` is that switch — d1 from −5 to **+5**, the
+differential set to zero, nothing else touched. The shipping builds are byte-for-byte
+unchanged with it present: the atari and apple2 binaries hash identically to the ones built
+before it existed, because the table lives inside `#ifdef EVAL_TUNING`.
+
+This is also the rare comparison where **equal nodes is equal time**. Both configurations do
+one table lookup of the same size, so the correction that overturned pawn structure and the
+endgame king table (§5.1.2) is exactly 1.0 here, and no on-target price is needed.
+
+### Three measurements, in the order the project's own rules require
+
+**Self-play said nothing, as designed.** `chesstest match queen`: 199–200–113 at 2,000 nodes
+and 204–208–100 at 400. Dead level both ways. That is the expected result whether the change
+is right or wrong — both sides share whatever is wrong with cc65's opening — and it is
+recorded only to show the switch was live.
+
+**The Stockfish gauntlet is the statistic.** Twelve pairings, four levels against Stockfish at
+1, 30 and 100 nodes, 512 games each, 6,144 games a configuration. The baseline reproduces the
+§4.1 ladder within noise (+19 and +12 at level 3, +160 and +145 at level 4), which is the check
+that the tuning binary is the engine the ladder measured.
+
+```
+d1 = +5, the candidate:   mean score difference  -0.0072 +- 0.0066   (-1.09 sigma, about -10 Elo)
+```
+
+Not an improvement, and the point estimate has the wrong sign.
+
+**Then the dose, which is the part worth keeping.** A change that measures as nothing has two
+explanations — the mechanism is not real, or the dose was too small — and they are separated by
+making the dose *larger* rather than by trying another candidate until one wins.
+`EVAL_QUEENOUT` moves d1 the other way, to **−15**, so the evaluation pays the queen twenty
+centipawns to leave home instead of ten. Nobody would ship it. If the square matters, it must
+measure worse.
+
+```
+d1 = -15, triple the incentive:  mean score difference  +0.0026 +- 0.0065  (+0.40 sigma, about +4 Elo)
+```
+
+| d1 | what it means | mean score | vs shipped |
+|---|---|---|---|
+| **+5** | no reward for leaving home | 0.3627 | −0.0072 ± 0.0066 |
+| **−5** | what ships | 0.3699 | — |
+| **−15** | triple the reward for leaving | 0.3725 | +0.0026 ± 0.0065 |
+
+**Twenty centipawns of swing on that square moves the score by 0.010 ± 0.009, and the trend
+runs backwards in both directions.** The square is inert at this magnitude. §5.2a's mechanism
+is not where the queen's opening cost comes from, and the zero-byte fix it proposed does not
+exist. 18,432 games, about forty minutes, and the most promising untested lead in the project
+is closed.
+
+### The statistic behind §5.2a is the fourth wrong one in that sequence
+
+This section was first written saying the §5.2a *measurement* stood and only its explanation had
+failed. Then the measurement was replicated, and it does not stand either.
+
+`sargon/piececost.py` recomputes the per-piece, per-phase cost on an independent sample — the
+**64 games** of cc65 Harder against Sargon level 3 from `sargon/README.md`, a different level
+and an opponent the hypothesis was not formed on. **A mean over evaluation deltas is not a
+robust statistic, because mate scores clamp at ±10000 and one clamped move is worth two hundred
+ordinary ones:**
+
+| moves 16+ | plain mean | mean, mate scores dropped | median | clamped |
+|---|---|---|---|---|
+| king | −289.3 | −23.5 | −4.0 | 26 of 547 |
+| rook | −144.4 | −37.6 | −15.0 | 9 of 781 |
+| pawn | **+68.5** | −20.6 | −6.0 | 15 of 661 |
+| bishop | −5.7 | −40.5 | −20.0 | 1 of 258 |
+
+The king's mean is **twelve times** its own robust mean, and a pawn move reads as a *gain*
+until fifteen moves in 661 come out. §5.2a's table is fourteen opening queen moves over six
+games computed exactly this way, and at that sample size a single clamped move **is** the
+result. `analyse.py` has always carried a caution that the clamp confuses blunder counts; what
+it does to an average is worse, and nothing said so.
+
+What is left after the clamps come out does not support the claim it was used for:
+
+| moves 1–15 | mean, mates dropped | median | n |
+|---|---|---|---|
+| **bishop** | **−43.6** | −21.0 | 182 |
+| **queen** | **−43.4** | −23.0 | 137 |
+| knight | −25.1 | −8.0 | 267 |
+| king | −22.1 | −5.0 | 49 |
+| pawn | −20.2 | −8.0 | 283 |
+| rook | −9.5 | −4.0 | 41 |
+
+**The queen is not the most expensive piece cc65 can move in the opening. It ties with the
+bishop, at about twice a pawn rather than four times.** And that tie is the most informative
+number here, because *developing a bishop early is correct chess*. A statistic that charges the
+bishop the same as the queen is not measuring "this piece type is a mistake"; it is measuring
+where cc65's evaluation and Stockfish's disagree most, which for both long-range pieces is the
+opening. The one part of §5.2a that does replicate cleanly is the phase contrast: the queen's
+middlegame median is −3.5, near the cheapest of any piece.
+
+So the mechanism is refuted by the dose, and the measurement that motivated it is both smaller
+than reported and not specific to the queen. Three statistics were needed to reach §5.2a's
+table, and a fourth to find that the third was fragile and the effect it showed was not the
+effect it was read as. **The instrument warned about the clamp for blunder counts and nobody
+asked what it did to the averages.**
+
+The residue worth keeping is the qualitative shape: whatever the queen costs in the opening, it
+is not something a piece-square table can express. Nothing penalises developing the queen
+*early* as opposed to developing it *to a bad square*, and the punishment §5.2a described took
+four preparatory moves, which is a horizon problem rather than a table problem. No table of 64
+constants can say "not yet".
+
+**A mechanism that explains a measurement is not the cause of it**, and the cheap way to tell
+is to turn the mechanism up rather than off.
+
+### The rung, again
+
+One more reason not to have believed a single run. Level 4 against Stockfish at 100 nodes
+liked the candidate by +0.043 and level 4 against Stockfish at **one** node disliked it by
+−0.044 — the same engine, the same change, 512 games each, opposite signs. Had this been
+screened on the rung nearest 50% alone, as the obvious economy, it would have read as +30 to
++50 Elo and gone to Sargon for confirmation. §4.3.1 already says the anchor's answer depends on
+which rung you read it at; this says the same about an A/B, and the defence is the same — read
+the whole ladder, not its most flattering rung.
+
+**And no Sargon run was spent on it.** The rig confirms changes that ranked; this one did not.
+That is the order in §5.1.7 doing its job in the cheap direction for once — the 3 hours a
+64-game screen costs at Sargon level 3 was not spent on a candidate that 40 minutes of
+Stockfish had already closed.
 
 ## 5.3 The other thing that did not happen
 

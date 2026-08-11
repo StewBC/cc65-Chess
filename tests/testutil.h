@@ -51,5 +51,6 @@ int test_RunMatchEndgame(int verbose);
 int test_RunMatchLadder(int verbose);
 int test_RunMatchRepetition(int verbose);
 int test_RunMatchMateDrive(int verbose);
+int test_RunMatchQueen(int verbose);
 
 #endif //_TESTUTIL_H_

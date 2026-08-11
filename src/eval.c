@@ -103,6 +103,45 @@ static const signed char sc_pstQueen[64] =
 	-20,-10,-10, -5, -5,-10,-10,-20
 };
 
+#ifdef EVAL_TUNING
+// The same table with one number changed: d1 goes from -5 to +5, so it is
+// worth exactly as much as the best central square and the evaluation stops
+// paying the queen ten centipawns to leave home.  Nothing else moves - the
+// corners still score -20, so this is not "flatten the queen table", it is the
+// single differential doc/strength.md §5.2a named, set to zero.
+//
+// It lives in the tuning build only.  The shipping build carries one queen
+// table whichever numbers win, so this costs nothing on any target either way,
+// which also means the A/B is one of the few in this project where equal nodes
+// *is* equal time: both sides do one table lookup
+static const signed char sc_pstQueenHome[64] =
+{
+	-20,-10,-10, -5, -5,-10,-10,-20,
+	-10,  0,  0,  0,  0,  0,  0,-10,
+	-10,  0,  5,  5,  5,  5,  0,-10,
+	 -5,  0,  5,  5,  5,  5,  0, -5,
+	  0,  0,  5,  5,  5,  5,  0, -5,
+	-10,  5,  5,  5,  5,  5,  0,-10,
+	-10,  0,  5,  0,  0,  0,  0,-10,
+	-20,-10,-10,  5, -5,-10,-10,-20
+};
+
+// and the same square pushed the other way, d1 at -15, so the evaluation pays
+// the queen *twenty* centipawns to leave home instead of ten.  Nobody would
+// ship this.  It is the dose half of a dose-response: see eval.h
+static const signed char sc_pstQueenOut[64] =
+{
+	-20,-10,-10, -5, -5,-10,-10,-20,
+	-10,  0,  0,  0,  0,  0,  0,-10,
+	-10,  0,  5,  5,  5,  5,  0,-10,
+	 -5,  0,  5,  5,  5,  5,  0, -5,
+	  0,  0,  5,  5,  5,  5,  0, -5,
+	-10,  5,  5,  5,  5,  5,  0,-10,
+	-10,  0,  5,  0,  0,  0,  0,-10,
+	-20,-10,-10,-15, -5,-10,-10,-20
+};
+#endif
+
 // Middlegame king: stay home, stay behind the pawns
 static const signed char sc_pstKing[64] =
 {
@@ -271,11 +310,19 @@ static int pieceScore(char piece, char sq)
 	// pays for the tests
 	{
 		int value = 0;
+		char index = (piece & PIECE_WHITE) ? tile : (tile ^ 56);
 
 		if(EVAL_HAS(EVAL_MATERIAL))
 			value += gcPieceValue[kind];
 		if(EVAL_HAS(EVAL_PST))
-			value += sc_pst[kind][(piece & PIECE_WHITE) ? tile : (tile ^ 56)];
+		{
+			if(QUEEN == kind && EVAL_HAS(EVAL_QUEENHOME))
+				value += sc_pstQueenHome[index];
+			else if(QUEEN == kind && EVAL_HAS(EVAL_QUEENOUT))
+				value += sc_pstQueenOut[index];
+			else
+				value += sc_pst[kind][index];
+		}
 
 		return (piece & PIECE_WHITE) ? value : -value;
 	}

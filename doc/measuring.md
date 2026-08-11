@@ -101,6 +101,7 @@ the generator is wrong, and every measurement downstream of it is meaningless.
 ./chesstest match endgame    # terms that only apply once the queens are off
 ./chesstest match repeat     # what repetition detection is worth, and at equal time
 ./chesstest match drive      # the mate drive, from endgames and from openings
+./chesstest match queen      # the queen table's ten centipawns for leaving home
 ```
 
 Two configurations play 512 games — 256 generated openings, each twice with the colours
@@ -286,6 +287,35 @@ different number in an unpredictable direction.
 ./gauntlet.py --uci ./uci-tuning --uci-option Repetition=false \
               --games 512 --levels 1,2 --nodes 1,100,300
 ```
+
+The switches are `Repetition`, `CheckEvasion`, `MateDrive` and `QueenHome`.
+The first three default **true** and turn off something the shipping engine
+does; `QueenHome` defaults **false**, because it turns a candidate on rather
+than the engine off, and off has to mean what ships.
+
+**512 games a pairing is not a floor, it is the ceiling.** Both engines are
+deterministic and node limited, so `book.epd`'s 256 openings played twice with
+the colours swapped is every distinct game that exists at a given pairing.
+Asking for more replays them, and the interval keeps shrinking on games that
+carry no new information. Spend a bigger budget on more rungs, not more games.
+
+It is tempting to go one step further and call an A/B of two configurations
+**paired by construction** — same openings, same deterministic opponent, so
+every game where the change never came up should be the same game in both runs
+and should contribute nothing to the difference between them. That argument is
+written here because it is wrong, and it was checked rather than believed.
+
+Diffing the PGNs of the queen-table A/B in §5.2b, one evaluation term altered
+by ten centipawns on **one square**: 95% of games differed at level 1 and
+**100%** at level 4. A piece-square value shifts the score of nearly every
+position that piece appears in, which reorders moves, which changes the game.
+So there is no pool of identical games to discount, the naive interval is
+approximately right after all, and a difference has to be paid for in games.
+
+The general form is worth keeping: **the number of games that differ is a
+measurement, not a deduction**, and it costs one diff to take. A change that
+really is narrow — an endgame gate, a book entry — will show it there, and
+that is the case where the naive interval is genuinely too wide.
 
 `--uci-option` is repeatable and goes to our engine only. Any run that uses it prints the
 configuration in its header, because a table that does not say which engine produced it is a

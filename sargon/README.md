@@ -14,6 +14,15 @@ failure.
 - `match.py` drives Sargon through the a2m-v2 control port, drives the exact
   cc65-Chess engine through `tests/uci`, referees games with python-chess, and
   writes CSV, PGN, JSON summaries, and failure logs.
+- `levelcost.py` answers "how slow is each Sargon level" in six minutes, which
+  is the question that decides whether a match at some level is an afternoon or
+  a fortnight.  It shares the boot choreography, the control port and the
+  one-harness-at-a-time rule with `match.py`.
+- `analyse.py` runs Stockfish over a finished PGN and attributes every large
+  evaluation swing to the side that played it.
+- `piececost.py` answers "what does moving each kind of piece cost, per move,
+  by phase" - the third statistic in `doc/strength.md` §5.2a, and the one that
+  found the first two were measuring something else.
 - This file is the runbook.  Update it whenever a new Sargon display or
   emulator behavior is discovered.
 
@@ -286,6 +295,29 @@ python3 sargon/match.py \
   --output scratch/sargon-smoke-YYYYMMDD
 ```
 
+**`--only calibration` plays Sargon level 1 whatever `--sargon-level` says.**
+The calibration phase is the fixed screen from the original study - level 1,
+raise cc65 - and it hard-codes the level and the batch name to match.  Any
+other level is `--only match --sargon-level N --match-games N`, which is also
+what names the output `match-ccX-sargonY` instead of `calibration-...`.
+
+A colour-split screen is two runs, and they want **separate output
+directories**: `--cc-color` does not reach the batch name, so both halves would
+otherwise resume into one CSV and the second half would start at the first
+half's game index and inherit its seeds.
+
+```sh
+python3 sargon/match.py --only match --match-games 32 \
+  --cc-skill 3 --sargon-level 3 --cc-color white --move-timeout 300 \
+  --output scratch/sargon-l3-cc3-white-YYYYMMDD
+```
+
+And the cost of any of this before starting it:
+
+```sh
+python3 sargon/levelcost.py --output scratch/sargon-levelcost-YYYYMMDD
+```
+
 Do not run more than one harness on the default control port 6511.  A second
 read-only control client may also block because the active harness polls the
 same emulator continuously.
@@ -489,35 +521,159 @@ control for anything measured with them on.
 
 ## Sargon's deeper levels, and what they cost
 
-Everything measured in `doc/strength.md` is against **level 1**.  Level 6 has
-been played once, six games, and the operational numbers are:
+Every level has now been timed.  `levelcost.py` plays the opening of one
+throwaway game per level and times Sargon's replies; all seven levels take six
+minutes of emulator time.
 
 ```text
-~45 seconds per Sargon move at a2m-v2 max turbo
-84 minutes a mean game, 8.4 hours for six
+level   opening replies (s)      median   per Sargon move   64 games   512 games
+  0     0.1  0.1  0.1  0.1         0.07      ~0.3 s           20 min     2.5 h
+  1     0.3  0.3  0.4  0.4         0.34       0.6 s *         40 min       5 h
+  2     0.3  0.4  0.5  0.8         0.42      ~0.7 s           45 min     6.0 h
+  3     1.0  1.3  1.8  2.6         1.54       1.50 s *         1.6 h      13 h
+  4     4.2  4.8  5.4              4.79      5 to 10 s      5 to 11 h    40-85 h
+  5     7.3  8.9 16.5              8.95      9 to 18 s     10 to 19 h    80-150 h
+  6    44.7 48.6 191.0            48.59      90.7 s *          93 h    31 days
 ```
 
-Two practical consequences.
+`*` measured over whole games: the 64-game level-1 screen, the 64-game level-3
+screen below, and the six-game level-6 run.  Levels 4 and 5 are given as ranges
+on purpose, and the reason is the useful part.
 
-**`MOVE_TIMEOUT` is not enough at the deep levels.**  The default is 120s per
-Sargon move; a search that overruns it is scored as a bridge failure and the
-game is retried rather than waited for, which loses the game rather than the
-move.  `--move-timeout` raises it, and 1200 was used for level 6.
+**A one-factor model fitted two anchors and was wrong in the middle.**  With
+only levels 1 and 6 measured, one constant - the median opening reply times
+1.80 - reproduced both to within 4% across a range spanning a factor of 150.
+It predicted 2.8 s a move at level 3.  The level-3 screen then measured
+**1.50**, so the tidy model over-predicted by 87% at the one point between its
+two anchors.  Two anchors and a straight line through them is not a model, and
+this one agreed at both ends for different reasons at each end.
 
-**Estimate from the whole game, not from move four.**  Sargon's cost tracks the
-piece count, so an early move is the expensive case and endgames are cheap.
-Extrapolating a level-6 move-four time across a hundred moves predicted sixty
-hours for six games; it took eight.
+What the three measured levels actually say about the probe:
 
-### The band nobody has measured
+```text
+level 1    probe 0.34   whole game 0.6     probe is under, but see the overhead below
+level 3    probe 1.54   whole game 1.50    probe is the answer, to 3%
+level 6    probe 48.6   whole game 90.7    probe is half the answer
+```
 
-Levels 2 to 5 have never been played.  cc65 Easy against level 1 sits at 55%,
-and cc65 Very Hard against level 6 went 2W 3L 1D over six games - so the
-competitive band for the *upper* cc65 levels is somewhere in that gap and is
-the obvious place to point this rig next.  The calibration policy above
-(64-game screens, 35%-65% band) is the procedure; the gate is knowing how slow
-each level is, which is a handful of moves per level to establish and has not
-been done.
+So **the opening is representative through level 3 and cheap at level 6**, and
+the direction genuinely flips somewhere between - the deepest level is the one
+where a whole game costs much more per move than its opening does.  Use the
+probe as-is up to level 3, expect up to double it at 5 and 6, and check the
+first few games of any long run against the estimate rather than trusting it.
+
+The band the study needed is levels 2 to 5, and the shape of it is that **the
+wall between an afternoon and a fortnight sits between level 4 and level 6** -
+level 3 is under two hours for 64 games, level 4 an afternoon, and level 6 four
+days.
+
+Three things this corrected, two of them numbers that were written down here.
+
+**"45 seconds per Sargon move" was seconds per *ply*.**  The level-6 run is
+8.39 hours over 666 plies, and only half of those plies are Sargon's; cc65
+answers in 8 ms at Very Hard on this host, measured.  Per Sargon move it is
+90.7 seconds, 73 to 137 across the six games.  The 84-minutes-a-game figure was
+right and this one was out by two, which matters because the per-move number is
+the one that gets multiplied when a match is being sized.
+
+**"An early move is the expensive case" holds at the shallow levels and
+inverts at the deepest.**  This file used to state it flatly, off Sargon's cost
+tracking the piece count.  At level 6 a whole game costs 1.9x its opening per
+move, which is the opposite; at level 3 the opening is if anything slightly
+dearer, which is the original claim.  Neither is wrong, and the flip is
+somewhere between - deep searches in complicated middlegames are where level
+6's time goes, and that is not a piece-count story.
+
+Read the cheap end carefully, because at level 1 this harness is a large part
+of its own measurement: `player_move` types six keys at `KEY_DELAY`, which is
+0.15s before Sargon has thought at all, and the screen poll adds another 25ms.
+That is arithmetic off the constants rather than a measurement, and it is
+nearly a third of the level-1 figure against 0.2% of the level-6 one.  Anything
+inferred from the ratio between a probe and a game mean at the cheap levels is
+partly measuring the bridge.
+
+**And the host matters, which is worth 11%.**  The level-3 screen ran its White
+half while a 6-core Stockfish gauntlet had the machine and its Black half with
+the machine mostly idle: 1.67 s a move against 1.50.  Neither result changed -
+both programs are node limited, which is the whole reason this rig is allowed
+to share a host - but a timing figure taken under load is 11% pessimistic.
+
+**What actually broke the sixty-hour prediction was variance, not phase.**  One
+level-6 move in three took 191 seconds against a 48.6-second median for its own
+level - 4x.  That is the number to size `MOVE_TIMEOUT` against, because a
+search that overruns it is scored as a bridge failure and the game is retried
+rather than waited for, which loses the game rather than the move.  Allow about
+20x the projected per-move cost: the 120s default is ample through level 3, 300
+at level 4, 600 at level 5, and 1200 was used for level 6.
+
+### Completed level-3 screen (2026-08-11)
+
+The first use of the numbers above.  cc65 **Harder** against Sargon **level
+3**, 64 games, run as two single-colour halves of 32 so the colour split is
+measured rather than halved:
+
+```text
+cc65 Harder:  42 wins, 12 losses, 10 draws
+score:        47.0 / 64 = 73.4%
+openings:     27 distinct six-ply prefixes, most-repeated game 6x
+plies:        118 mean
+cost:         1.6 hours for the 64 games
+```
+
+By colour, and terminations:
+
+```text
+White: 26W  4L  2D = 84.4%   12 distinct in 32
+Black: 16W  8L  8D = 62.5%   15 distinct in 32
+
+checkmate 54, threefold 8, fifty-move 1, stalemate 1
+```
+
+**Two of these are the best numbers this rig has produced and neither is the
+score.**  27 distinct games in 64, against 16 to 17 in the level-1 study, with
+the worst repeat down from fourteen to six - so for the first time the
+effective sample is most of the games played.  And **one** fifty-move draw
+where the pre-fix baseline had fifteen, which is the endgame work holding at a
+level it had never been played at.  Black at 62.5% against 45.3% at level 1 is
+the reply table and the deeper search together.
+
+**73.4% is above the 35%-65% band, so level 3 is not the pairing**, and by the
+policy the next screen is level 4 at 5 to 11 hours for 64 games.
+
+### The levels do not sit on one scale, and this is where that shows
+
+Before the screen the levels were placed by interpolating between cc65 Easy at
+55.5% against level 1 and cc65 Very Hard at 41.7% against level 6: about 123
+rating points a level, which the timing appeared to corroborate at 2.7x more
+time per level and `doc/strength.md` §4.2's 60 points a doubling.  **That
+predicted 58% for this screen.  The answer was 73.4%.**
+
+The two ends will not reconcile, either.  Reading down from the level-3 result
+puts the levels about 44 points apart and level 6 near 1615 - at which cc65
+Very Hard, rated 1946, should have scored about 90% there instead of 41.7%.
+Six games cannot carry that weight; 64 games at level 3 cannot be waved away
+either.
+
+The honest reading is §4.3's non-transitivity arriving again: **Sargon's levels
+are not a ladder that can be interpolated, and cost per level is not strength
+per level.**  Level 6 costs sixty times level 3 in time and is plainly not
+sixty times anything in strength.  The band has to be walked one 64-game screen
+at a time, and the cost table is what says which rungs can be afforded.
+
+### What that means for a match
+
+A 64-game screen costs 40 minutes at level 1, **1.6 hours at level 3**, 5 to 11
+at level 4 and 93 at level 6.  A 512-game measured match costs 13 hours at
+level 3 and four to six days at level 5.
+
+**Read the calibration policy's "advance to a 512-game measured match" as
+retired above level 3 rather than inherited.**  At 64 games this rig now yields
+27 distinct games; at 512 it would yield perhaps 120, for a fortnight, at the
+levels that are actually competitive.  The statistics come from Stockfish and
+the confirmation comes from Sargon; `doc/strength.md` §5.1.7 is where a
+Stockfish ranking failed to transfer here on both of the measures tried, and
+§5.2b is the first time that order ran in the cheap direction - a candidate
+closed by forty minutes of Stockfish never cost this rig a game.
 
 ## Reading the games afterwards
 
@@ -540,6 +696,14 @@ Three cautions, all of them earned:
 - **Mate scores clamp at ±10000**, so walking into a forced mate and failing to
   deliver one both print as ~9000cp swings.  They are opposite errors and the
   blunder counts do not tell them apart.
+- **And what that clamp does to an average is worse.**  This caution used to
+  stop at blunder counts.  Over 21 games, five clamped moves in 231 turned the
+  mean cost of a middlegame pawn move from -27.9 into **+166.1** - a pawn move
+  reading as a large *gain* - and two in 94 turned an opening knight move from
+  -23.3 into -226.7.  Any mean over evaluation deltas needs the mate scores
+  dropped and a median printed beside it, which is what `piececost.py` does and
+  what `doc/strength.md` §5.2a did not.  That table is now believed to be
+  mostly this artifact; §5.2b has the replication.
 - **A per-game count is not a per-move cost.**  Counting cc65's queen moves per
   game correlated beautifully with the result and was close to meaningless,
   because a losing position invites queen moves.  Cost per move, split by game

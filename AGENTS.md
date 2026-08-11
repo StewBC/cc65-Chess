@@ -160,7 +160,28 @@ Counting cc65's early queen moves per game against Sargon gave losses 4, 4, 4 an
 which is what a real effect looks like and also what "a losing position invites queen moves"
 looks like. Cost per move reversed it (rooks twice as expensive), and cost per move *split by
 game phase* reversed it back, because rooks barely move before move 15. Three statistics over
-one set of six games, three different answers, and only the last controls for anything.
+one set of six games and three different answers — and then a **fourth** found the third was
+fragile too, because all three were plain means over evaluation deltas with mate scores in
+them. Controlling for a confounder does not make a statistic robust; those are two different
+problems and this table had both.
+
+**A mean over Stockfish evaluation deltas is not a robust statistic, and the instrument said so
+about a different column.** Mate scores clamp at ±10000, so one clamped move is worth two
+hundred ordinary ones. Over 64 games, 26 clamped moves in 547 turned the mean cost of a middlegame king move from
+−23.5 into **−289.3**, twelve times its own robust value, and 15 in 661 turned a pawn move from
+−20.6 into **+68.5** — a pawn move that reads as a gain. `analyse.py` has always
+warned that the clamp confuses blunder counts; nobody asked what it did to the averages, and
+`doc/strength.md` §5.2a's per-piece table is fourteen queen moves over six games computed
+exactly that way. Drop the mate scores and print a median beside the mean.
+
+**A mechanism that explains a measurement is not the cause of it, and turning the mechanism
+*up* is the cheap way to find out.** The queen was measured costing four times a pawn per move
+in the opening, and `sc_pstQueen` paying it ten centipawns to leave home was a mechanism that
+fitted perfectly. Removing those ten centipawns measured −1.1 sigma over 6,144 games; tripling
+them, which had to measure worse if the square mattered at all, measured **+0.4 sigma**. Both
+directions ran backwards, so the square is inert and the explanation was wrong while the
+measurement it explained was right. The dose cost twenty minutes and settled what another
+candidate table would not have. `doc/strength.md` §5.2b.
 
 **A test that only asks for a legal move cannot see a dead table entry.** The first version of
 the black reply check asked that the reply be legal and that more than one distinct reply come
