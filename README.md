@@ -140,6 +140,7 @@ cc -Isrc -lcurses -funsigned-char src/globals.c src/engine.c src/eval.c src/sear
 | [doc/strength.md](doc/strength.md) | **How strong it is and how that was established.** The measurement, the methodology, and an honest account of what the numbers are worth. |
 | [doc/measuring.md](doc/measuring.md) | **The instruments.** What to run, which question each answers, and the workflow for changing the engine without breaking it. |
 | [doc/rework-log.md](doc/rework-log.md) | **The working journal**, published unsanitised. Its value is the measurements that demolished the plan around them. |
+| [doc/next-search.md](doc/next-search.md) | **What to try next, and how to know it worked.** The search has classical techniques missing that cost almost nothing; this is the candidate list with a gate and an off-ramp on each, written so that "measured, rejected, recorded" is a successful afternoon. |
 | [doc/readme-2014.txt](doc/readme-2014.txt) | The original readme, kept verbatim as a historical document. Its description of the AI describes the *old* engine, which is the point. |
 
 Contributors and agents should also read [AGENTS.md](AGENTS.md) — the constraints that are
