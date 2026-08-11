@@ -5,7 +5,12 @@
 /cc65-Chess*.*
 /chess.po
 /scratch/
-/sargon
+# the Sargon II harness is tracked; its disk image is not.  Sargon II is a
+# commercial 1978 program and the image is nobody's to redistribute - sargon/README.md
+# says what the harness expects and how to check you have the right one
+/sargon/*.dsk
+/sargon/*.nib
+/sargon/*.po
 /atari.atr/
 
 # native test binaries and their debug info
