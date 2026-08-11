@@ -1172,6 +1172,94 @@ the feature existed. The check that this is true rather than merely intended is 
 ladder reproduces to the digit across the change — level 4 against Stockfish at one node,
 248–129–135 on both sides of it.
 
+## 5.2a Six games against Sargon at level 6
+
+Everything else in this document that involves Sargon II is played against its **level 1**, the
+second-weakest of seven. This is the only look so far at what happens when both programs are
+set to maximum: cc65 at Very Hard, 60,000 nodes, against Sargon level 6.
+
+**Six games is not a measurement and no rate below should be read as one.** It was run out of
+curiosity, three games with each colour, and it is written down because a handful of the things
+it found are *categorical* — existence claims that do not need a sample size — and because the
+hypothesis it produced did not survive being measured properly, which is the more useful half.
+
+```
+cc65 2 wins, 3 losses, 1 draw   (41.7%)
+6 games, 6 distinct openings, 3 with each colour
+8.4 hours, mean 84 minutes a game, about 45 seconds per Sargon move at max turbo
+```
+
+### What this establishes, sample size notwithstanding
+
+**cc65 at Very Hard beats Sargon at level 6.** Twice. That is an existence claim and six games
+settle it.
+
+**Sargon at level 6 misses forced mates.** It had mate on the board and did not play it in
+three separate games — twice in one of them, where cc65 walked into a forced mate at move 30,
+was let off, walked into another at move 38, and was let off again. A 155-ply win and a 191-ply
+draw are on the board partly because of this.
+
+The likely reason is the same defect class this project keeps finding in itself. At 45 seconds
+a move under emulation, level 6 on period hardware was hours a move — so it is the setting
+Sargon's authors could least afford to play, and therefore the least exercised path in the
+program. `AGENTS.md` states the rule as *a test that runs at one budget has not tested the
+skill levels*, and Sargon's deepest level and cc65's mate blindness at levels 1 and 2 (§5.1.5)
+are the same failure forty-eight years apart.
+
+**cc65 is outplayed positionally in the games it wins.** Over the first twenty moves its
+evaluation falls by roughly the same amount whether it goes on to win or lose — −773 and −693
+in the two wins against −683 and −780 in two of the losses. The results came from Sargon's
+errors, not from cc65 playing better. Against level 1 the engine was reaching move 13 *ahead*
+and losing it later (§5.1.7); here it is behind by move 13 in every game.
+
+### A hypothesis, and what happened when it was measured
+
+Two of the first three games turned on an early queen sortie — `10.Qb5` walking into a
+four-move trap, `10...Qc6` costing 414 centipawns — and the third, a win, never moved the queen
+at all. Counting queen moves in each game's first twenty gave an unusually clean table: **the
+three losses had four each, the draw two, the wins zero and one.**
+
+There is even a mechanism. `sc_pstQueen` in `eval.c` is a plain centralization table: d1 scores
+−5 and the middle squares +5, so **the evaluation pays the queen ten centipawns to leave home**,
+nothing anywhere penalises developing it early, and the punishment in game 1 took four
+preparatory moves — comfortably past the depth 5 to 6 that 60,000 nodes reaches.
+
+Correlation with the result is a bad statistic, though, because a losing position invites queen
+moves as much as queen moves invite a losing position. The better one is what a move of each
+kind actually costs, over every cc65 move of all six games:
+
+```
+queen   25 moves   -70.9 cp/move
+rook    24 moves  -134.4 cp/move        <- twice as expensive
+```
+
+**Which refuted it.** Except that piece type is confounded with phase — rooks hardly move
+before move 15 — and splitting on that rescues the hypothesis in a sharper form:
+
+| moves 1–15 | cp/move | moves 16–30 | cp/move |
+|---|---|---|---|
+| **queen** | **−85.5** (14 moves) | rook | −145.8 (21) |
+| rook | −55.0 (3) | knight | −99.8 (11) |
+| bishop | −35.2 (18) | queen | −52.3 (11) |
+| knight | −22.1 (23) | bishop | −48.2 (23) |
+| pawn | −20.1 (28) | pawn | −48.2 (9) |
+
+**In the opening the queen is the most expensive piece cc65 can move**, at four times the cost
+of a pawn or a knight, and by the middlegame it is unremarkable. That is a real claim with a
+mechanism and a candidate fix that costs *nothing* — the table is already 64 bytes of RODATA
+looked up at `eval.c:278`, so changing its numbers is free on every target, including the
+Atari's 716 remaining bytes.
+
+**It is still not established, and two things stop it.** Fourteen queen moves across six games
+is a small sample. And Stockfish penalising an early queen sortie is close to definitional —
+it holds opening principles the same way a textbook does, so its agreement is weaker evidence
+than it looks. The only test that would settle it is an `EVAL_TUNING` switch on the queen
+table, A/B'd at **equal time** over hundreds of games against Stockfish, and then confirmed
+against an outside opponent, because §5.1.7 is the section where a Stockfish ranking failed to
+transfer to Sargon on both of the measures tried.
+
+Recorded as the most promising untested lead in the project, not as a finding.
+
 ## 5.3 The other thing that did not happen
 
 No illegal move was played across roughly 40,000 games.

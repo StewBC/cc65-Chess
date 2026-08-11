@@ -2034,6 +2034,87 @@ better. Nothing in this phase touched that, and it is where the next real streng
 
 ---
 
+## Phase 13 - both engines at maximum, six games, and a hypothesis that nearly held
+
+Curiosity rather than a measurement: cc65 at Very Hard against Sargon II at level 6, the
+deepest of its seven settings, where everything else in this project has played level 1.  Three
+games with each colour.
+
+```
+cc65 2W 3L 1D (41.7%), 6 distinct openings
+8.4 hours, 84 minutes a game, ~45 seconds per Sargon move at max turbo
+```
+
+The wall-clock estimate going in was sixty hours.  It was eight, because Sargon's cost tracks
+the piece count and endgames are cheap - a useful correction to make out loud, since the
+estimate nearly stopped the run.
+
+**Two things six games do settle, because they are existence claims.**  cc65 at Very Hard beats
+Sargon at level 6.  And Sargon at level 6 **misses forced mates** - three games, twice in one of
+them, where cc65 walked into mate at move 30, was let off, walked into another at move 38 and
+was let off again.
+
+The reason is probably the reason this project keeps finding for its own defects.  At 45 seconds
+a move under emulation, level 6 on a 1 MHz Apple II was hours a move; it is the setting Sargon's
+authors could least afford to play and therefore the least exercised code in the program.  Same
+shape as the mate blindness of Phase 10, forty-eight years apart.
+
+**And one thing they do not settle**, which is the part worth writing down.
+
+Games 1 and 2 both turned on an early queen sortie, and game 3 - a win - never moved the queen.
+Counting queen moves in the first twenty came out suspiciously clean:
+
+```
+losses  4, 4, 4 queen moves      wins  0, 1      draw  2
+```
+
+With a mechanism to match: sc_pstQueen is a plain centralization table, d1 scores -5 and the
+middle squares +5, so **the evaluation pays the queen ten centipawns to leave home**, and the
+punishment in game 1 was a four-move plan against a search that reaches depth 5 or 6.  A
+prediction was registered before games 4 to 6 landed, and broadly held.
+
+Then it was measured properly, because correlating with the *result* is worthless - a losing
+position invites queen moves as much as the reverse.  Cost per move, every cc65 move of all six
+games:
+
+```
+queen  25 moves   -70.9 cp/move
+rook   24 moves  -134.4 cp/move      twice as expensive
+```
+
+**Refuted.**  Except piece type is confounded with phase - rooks barely move before move 15 -
+and splitting on it puts the queen back on top where it matters:
+
+```
+moves 1-15      queen -85.5,  rook -55.0,  bishop -35.2,  knight -22.1,  pawn -20.1
+moves 16-30     rook -145.8,  knight -99.8,  queen -52.3,  bishop -48.2,  pawn -48.2
+```
+
+So: in the opening the queen is the most expensive piece cc65 can move, four times a pawn or a
+knight, and by the middlegame it is ordinary.  Three different statistics over the same six
+games said "the queen", "not the queen, the rook", and "the queen, but only in the opening".
+Only the last one controls for anything.
+
+Left as the most promising untested lead in the project rather than acted on, for two reasons.
+Fourteen opening queen moves over six games is a small sample.  And Stockfish disliking an early
+queen sortie is nearly definitional - it holds opening principles the way a textbook does - so
+its agreement is weaker evidence than it looks.  The fix would be free if it works: the table is
+64 bytes already in RODATA and retuning it costs no bytes and no cycles on any target.  The test
+is an EVAL_TUNING switch, equal time, hundreds of games, and then an outside opponent, because
+Phase 12 is where a Stockfish ranking failed to transfer to Sargon on both measures tried.
+
+### Open after this
+
+*The competitive band is unmeasured.*  Everything published is Sargon level 1; this is level 6.
+Levels 2 to 5 have never been played, and sargon/README.md already carries the calibration
+policy for finding the band.  The gate is how slow each level is, which is a few moves per level
+to establish and has not been done.
+
+*Six games cannot support a rate and this one should not be quoted as one.*  41.7% is written
+here and in doc/strength.md 5.2a with that warning attached both times.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

@@ -68,8 +68,7 @@ three of them is a framebuffer the linker cannot see:
 | **atari** | `$9100` framebuffer | **716** — and 62 before the next `DLIST` page jump |
 | **apple2** | MAIN ends `$B700` | **1166**, plus 2122 in BSS at `$0800–$1FFF` |
 | atmos | RAMEND `$9900` less stack | 1971 |
-| plus4 | `$A000` bitmap | 2995 — **and the cfg does not cap it**, so an overrun would
-draw BSS on the screen rather than fail to link, exactly as the Atari used to |
+| plus4 | `$A000` bitmap | 2995 — **the cfg does not cap it**, so an overrun would draw BSS on the screen rather than fail to link, exactly as the Atari used to |
 | cx16 | MAIN | 5693 — the framebuffer is in VERA and costs nothing here |
 | c64.chr | BSS ends `$C400` | 8276 |
 | c64 | `$C000` bitmap less stack | 10978 |
@@ -155,6 +154,13 @@ reported green, which read as a useless test and was a stale one. Use `make -B` 
 that patches a source and rebuilds in a loop. Related, on macOS: `sed` does **not** expand
 `\t` in a pattern, so a tab-indented table silently never matches and the "control" edits
 nothing at all.
+
+**A per-game count is not a per-move cost, and it will correlate with the outcome for free.**
+Counting cc65's early queen moves per game against Sargon gave losses 4, 4, 4 and wins 0, 1 —
+which is what a real effect looks like and also what "a losing position invites queen moves"
+looks like. Cost per move reversed it (rooks twice as expensive), and cost per move *split by
+game phase* reversed it back, because rooks barely move before move 15. Three statistics over
+one set of six games, three different answers, and only the last controls for anything.
 
 **A test that only asks for a legal move cannot see a dead table entry.** The first version of
 the black reply check asked that the reply be legal and that more than one distinct reply come
