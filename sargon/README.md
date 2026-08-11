@@ -531,14 +531,14 @@ level   opening replies (s)      median   per Sargon move   64 games   512 games
   1     0.3  0.3  0.4  0.4         0.34       0.6 s *         40 min       5 h
   2     0.3  0.4  0.5  0.8         0.42      ~0.7 s           45 min     6.0 h
   3     1.0  1.3  1.8  2.6         1.54       1.50 s *         1.6 h      13 h
-  4     4.2  4.8  5.4              4.79      5 to 10 s      5 to 11 h    40-85 h
-  5     7.3  8.9 16.5              8.95      9 to 18 s     10 to 19 h    80-150 h
+  4     4.2  4.8  5.4              4.79       3.79 s *         4.3 h      34 h
+  5     7.3  8.9 16.5              8.95      7 to 17 s      8 to 18 h    65-145 h
   6    44.7 48.6 191.0            48.59      90.7 s *          93 h    31 days
 ```
 
 `*` measured over whole games: the 64-game level-1 screen, the 64-game level-3
-screen below, and the six-game level-6 run.  Levels 4 and 5 are given as ranges
-on purpose, and the reason is the useful part.
+screen below, the 16-game level-4 probe below that, and the six-game level-6
+run.  Level 5 is a range on purpose, and the reason is the useful part.
 
 **A one-factor model fitted two anchors and was wrong in the middle.**  With
 only levels 1 and 6 measured, one constant - the median opening reply times
@@ -551,16 +551,18 @@ this one agreed at both ends for different reasons at each end.
 What the three measured levels actually say about the probe:
 
 ```text
-level 1    probe 0.34   whole game 0.6     probe is under, but see the overhead below
-level 3    probe 1.54   whole game 1.50    probe is the answer, to 3%
-level 6    probe 48.6   whole game 90.7    probe is half the answer
+level 1    probe 0.34   whole game 0.6     1.76x - but see the overhead below
+level 3    probe 1.54   whole game 1.50    0.97x
+level 4    probe 4.79   whole game 3.79    0.79x
+level 6    probe 48.6   whole game 90.7    1.87x
 ```
 
-So **the opening is representative through level 3 and cheap at level 6**, and
-the direction genuinely flips somewhere between - the deepest level is the one
-where a whole game costs much more per move than its opening does.  Use the
-probe as-is up to level 3, expect up to double it at 5 and 6, and check the
-first few games of any long run against the estimate rather than trusting it.
+So **the opening is representative through level 4 - slightly pessimistic, if
+anything - and only half the story at level 6**, where the direction flips.
+Use the probe as-is up to level 4, expect up to double it at 5 and 6, and check
+the first few games of any long run against the estimate rather than trusting
+it.  Every estimate made here before it was measured came out **high**, twice
+by a lot, which is the safe direction but not an accurate one.
 
 The band the study needed is levels 2 to 5, and the shape of it is that **the
 wall between an afternoon and a fortnight sits between level 4 and level 6** -
@@ -638,7 +640,34 @@ level it had never been played at.  Black at 62.5% against 45.3% at level 1 is
 the reply table and the deeper search together.
 
 **73.4% is above the 35%-65% band, so level 3 is not the pairing**, and by the
-policy the next screen is level 4 at 5 to 11 hours for 64 games.
+policy the next screen is level 4.
+
+### Level-4 cost probe, 16 games (2026-08-11)
+
+Run to price level 4 rather than to score it, because the whole point of the
+cost table is that 5-to-11 hours was too wide a range to plan a screen around:
+
+```text
+3.79 s a Sargon move, 4.03 minutes a game, 1.07 hours for 16
+-> a 64-game screen at level 4 costs 4.3 hours
+cc65 Harder: 6W 6L 4D over 16 games, 14 distinct openings
+```
+
+**The 50.0% is not a rate and must not be quoted as one.**  `AGENTS.md` puts it
+plainly - sixteen games tells you nothing and lies confidently - and a 16-game
+score has an interval of roughly +-25 points.  What it is good for is the cost,
+and what it is worth is that level 4 is now the obvious candidate for the
+64-game screen: it is the first rung that has not immediately fallen outside
+the band, and 4.3 hours buys the answer.
+
+The 16 games are the first 16 of that screen.  Asking for 64 in the same output
+directory resumes at game 17:
+
+```sh
+python3 sargon/match.py --only match --match-games 64 \
+  --cc-skill 3 --sargon-level 4 --move-timeout 300 \
+  --output scratch/sargon-l4-cc3-20260811
+```
 
 ### The levels do not sit on one scale, and this is where that shows
 
