@@ -146,7 +146,20 @@ about.
 
 ## 4. The instruments, and what they cost
 
+The first instrument is now the cheapest one: compare the candidate and baseline UCI builds
+over all 256 positions in `book.epd` at each of the four shipped budgets.  Report total nodes,
+completed-depth sum, positions deeper and shallower, and move differences.  This screen
+predicted PVS's level split before a match or target build: worse at levels 1 and 2, 5-6% fewer
+nodes at levels 3 and 4.
+
+**A candidate needs roughly a 20% node reduction at a level it targets before continuing.**
+Twenty percent is about 0.32 doublings, or 19 Elo at the measured 60 Elo per doubling, against
+the gauntlet's roughly 18 Elo two-sigma resolution.  A single-digit saving is below the noise
+floor of the instrument that would have to approve it: stop before building targets or running
+matches, and write the result down.  `tests/nodecompare.py` is the reusable screen.
+
 ```sh
+cd tests && ./nodecompare.py --baseline ./uci-baseline --candidate ./uci-tuning
 cd tests && make -B test                    # 35 s, must be green, never carry a red suite forward
 ./chesstest match sanity                    # 16 s, config against itself
 ./chesstest match <name>                    # 16 s, 512 games, A vs B self-play
@@ -190,13 +203,15 @@ In this order. Stop at the first one it fails.
 
 | # | Gate | Bar |
 |---|---|---|
-| 1 | All seven targets build and play | `make` clean; **check the Atari's map**, `DATA` end against `DLIST` start, not the free-space number — there are ~62 bytes before the display list jumps a page and costs 256 at once |
+| 0 | Whole-book node/depth screen, all four levels | roughly **20% fewer nodes at a level the technique targets**; single-digit savings stop here as undetectable |
+| 1 | All seven targets build and play | a target that does not build or play is a hard failure; **record** whether Atari's `DLIST` crosses a page, but price that only after the technique earns it |
 | 2 | Test suite | green, and `match sanity` still level |
 | 3 | Switch-off equivalence | reproduces §7 exactly |
 | 4 | Self-play screen | a sign and a live switch; **not** a result, and not a reason to land anything |
 | 5 | Stockfish gauntlet, all four levels | **pooled ≥ +2σ** to land; **any single level worse than −1σ** stops for a per-level decision |
 | 6 | On-target node cost | measured and reported always; **over 10% dearer per node stops for a human decision** |
 | 7 | Sargon L4, 64 games | no categorical regression — conversion, fifty-move draws, distinct games, a colour collapsing |
+| 8 | Atari page price | if `DLIST` crossed, bring the 256-byte portfolio decision back only now, after the strength evidence exists |
 
 Gate 5's arithmetic: the twelve pairings pooled gave a standard error of about 0.0066 in score
 last time, so 2σ is roughly a 0.013 score difference, about 18 Elo. Compute it from the W-L-D
@@ -217,13 +232,17 @@ it is the dose or the mechanism, then stop. One dose test, then move on.
 **Stop and report to Stefan, do not proceed, if:**
 
 - any target stops building or playing and the fix is not obvious within one attempt;
-- the Atari crosses its `DLIST` page boundary — that is 256 bytes gone and a portfolio-level
-  decision, not a search decision;
 - a change costs more than 10% per node on target;
 - gate 3 fails and the cause is not found quickly, because everything downstream is then
   meaningless;
 - the Sargon rig produces a categorical regression that the desk instruments missed — that is
   the interesting case and it deserves a human.
+
+An Atari `DLIST` page crossing is still a portfolio decision, but it is not a stop until the
+last gate.  The cliff is a step rather than a slope: essentially any remaining candidate can
+consume the 62 bytes in front of it, and once one pays the 256-byte step the next roughly 250
+bytes fit without another jump.  Measure whether the portfolio has something worth buying
+before asking it to pay.
 
 **Success for the whole exercise** is any of: one technique landed with the evidence written
 down; or all three measured and rejected with the numbers recorded. The second is a real result

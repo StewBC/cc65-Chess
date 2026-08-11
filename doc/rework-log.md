@@ -2115,6 +2115,66 @@ here and in doc/strength.md 5.2a with that warning attached both times.
 
 ---
 
+## Phase 14 - principal variation search worked, too little to measure or pay for
+
+The first item from `doc/next-search.md` was principal variation search: search the first legal
+move at a node with the full alpha-beta window, give later moves a one-point window, and repeat
+the search in full only when the probe says the move can improve alpha.  It had both switches
+the work note requires: `geSearchPVS` in the tuning build and `-DSEARCH_PVS=0` in a shipping
+build.
+
+The control was exact before measuring the candidate.  With PVS disabled, `uci-tuning` matched
+the pre-change shipping binary on all 256 positions in `book.epd` at all four skill levels:
+2,048 `info` and `bestmove` records identical, including move, score, completed depth and node
+count.  The pre-change Stockfish ladder also reproduced §4.1 to the digit.
+
+Root PVS was not assumed.  Two temporary shipping builds, one applying PVS at the root and one
+only below it, were compared over the same 256 positions at every shipped budget:
+
+```text
+                 root nodes vs internal-only    depth effect of root PVS
+level 1             -4.50%                      9 deeper, 4 shallower
+level 2             +0.90%                      identical depths and moves
+level 3             -7.95%                     24 deeper, 1 shallower
+level 4             -2.73%                     60 deeper, 3 shallower
+```
+
+So the root form was the candidate.  Against the full-window baseline its whole-book shape was
+the warning the work note anticipated: level 1 used 2.77% more nodes and completed five fewer
+plies in aggregate, while levels 3 and 4 used 5.89% and 5.30% fewer nodes and completed 11 and
+60 more plies.  A technique designed for deep searches was helping the deep levels and not the
+400-node one.
+
+The self-play screens that finished were the two levels the node screen had already predicted
+would lose:
+
+```text
+PVS level 1 vs full windows    165-237-110
+PVS level 2 vs full windows    169-233-110
+```
+
+That corroborates the mechanism at levels 1 and 2; it does **not** say PVS lost where it was
+supposed to work.  Levels 3 and 4 were deliberately interrupted and never measured by match.
+Using self-play to reject at the weak levels is sound here because an independent node screen
+predicted the direction.  It would still not be evidence enough to land the technique.
+
+The honest reason to close it is scale.  A 5-6% node saving is about 0.08 doublings, or roughly
+5 Elo at the measured 60 Elo per doubling.  The twelve-pairing gauntlet resolves about 18 Elo
+at two sigma.  PVS's intended effect is below the noise floor of the instrument that would have
+to approve it, so an expensive match cannot turn this into evidence.
+
+It also exposed a portfolio price, not a build defect.  All seven targets compiled and linked,
+but on the Atari `DLIST` moved to `$7D00`, BSS ended at `$8F33`, and 460 bytes remained below
+the `$9100` framebuffer rather than 716.  The first 62 bytes of growth trigger a 256-byte page
+step; once paid, roughly the next 250 bytes are free.  Treating that as a per-technique hard
+failure would reject essentially every remaining search candidate for the same reason and miss
+the fact that the first one pays for those behind it.
+
+PVS was reverted because a roughly 5 Elo effect is too small to resolve and too small to spend
+an Atari page on.  Its low-level loss and deep-level gain are both real parts of that result.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.
