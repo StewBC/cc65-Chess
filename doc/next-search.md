@@ -126,6 +126,14 @@ decision. §8 and the questions in the handoff.
 This is the lever with a *measured* exchange rate, and it is the one the portfolio's failure
 points at.
 
+**Phase 19 handed this section its first target for free.** Maintaining the 16-bit position hash
+costs about 9% a node on a real C64, and widening that one field to 32 bits cost a further
+15.3%. Hash maintenance is therefore the largest single item yet identified in the 6502 hot
+path — and it exists only to serve repetition detection, which is load-bearing (§5.1 of
+`doc/strength.md`) but may not need a full incremental hash to do its job. Roughly 9% of node
+time sits behind that question, and unlike everything in §3 it is a *cost* reduction rather than
+a pruning guess, so §2's exchange-rate objection does not apply to it. Start here.
+
 At a fixed budget, cheaper nodes buy **time, not strength** — the same 400 nodes, sooner. The
 strength comes from the second step: spend the time saving on a **larger budget**, at 60 Elo per
 doubling, which is the rate that was measured by granting nodes and therefore the rate that
