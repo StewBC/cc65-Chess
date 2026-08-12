@@ -2520,6 +2520,50 @@ This saving is banked as faster fixed-budget search only.  No node budget change
 
 ---
 
+## Phase 23 - restore search totals instead of calculating them twice
+
+B4 prices the other half of the running-state work.  Make still computes the piece hash,
+middlegame score, endgame score and phase once.  Search records their old values before making
+a move; unmake restores the board, king, en-passant, castling, halfmove and history top, skips
+the four inverse delta calls, and search copies the old totals back.
+
+The state is separate from the 128-entry user undo ring: one 8-byte record at each of the twelve
+reachable move-making plies, 96 bytes.  Ordinary undo, redo, board legality and UI callers keep
+the original delta-based `eng_Unmake`.  A search-only mode selects restore behavior once around
+the search rather than adding an argument to every hot call.
+
+The fuzzer runs every chosen random move through both slow and fast unmake from the same parent.
+It compares the undo record, all board bytes, kings, EP, castling, halfmove and the full ring
+digest; it then restores the four saved totals exactly as search does.  Promotions, en passant
+and castling are deliberately preferred.  The ordinary suite stayed green, and B4 off/on
+returned identical move, score, completed depth and node records for all 1,024 whole-book
+searches.
+
+Paired windowed c64m result on top of B3, same retained middlegame replay:
+
+| build | first pass | second pass | nodes / digest |
+|---|---:|---:|---|
+| B3, delta-based unmake | 42,282 | 42,283 | 14,400 / identical |
+| B3+B4, restored totals | 38,557 | 38,556 | 14,400 / identical |
+
+B4 removes **8.8%** of the remaining C64 time.  From the exact compact history-on control at
+46,558 jiffies, B3+B4 together remove **17.2%** at the same fixed budget.
+
+Memory layout chose between two correct implementations.  Four parallel per-ply arrays ran at
+38,235 jiffies, another 0.8 percentage points, but their repeated cc65 indexing code moved the
+Atari display list to `$7E00` and left 107 bytes below the framebuffer.  One array of 8-byte
+records runs at 38,557 and keeps `DLIST` at `$7D00`: DATA ends `$7CF7`, BSS ends `$8F94`, and
+363 bytes remain below `$9100`.  Apple II MAIN ends `$B3A7`, leaving 856 bytes; BSS ends `$1816`,
+leaving 2,025.  The 256-byte Atari page is worth more than 0.8 percentage points of an already
+faster move.
+
+The final `chess.po` also booted in windowed a2m-v2, advanced through the menus, searched at the
+default skill and played White's `e2-e4`; the rendered board and move log both updated.
+
+No budget changed.  This is banked fixed-budget time for Phase D.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

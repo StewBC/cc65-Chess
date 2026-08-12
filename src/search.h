@@ -24,6 +24,9 @@
 #ifndef SEARCH_QUIESCE_HISTORY
 #define SEARCH_QUIESCE_HISTORY	0
 #endif
+#ifndef SEARCH_RESTORE_UNMAKE
+#define SEARCH_RESTORE_UNMAKE	1
+#endif
 
 /*-----------------------------------------------------------------------*/
 // Scoring a repeated position as a draw, switchable the same way and for the

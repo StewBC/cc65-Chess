@@ -61,6 +61,45 @@ static unsigned int	si_nodes;
 static unsigned int	si_budget;
 static char			sc_abort;
 
+#if SEARCH_RESTORE_UNMAKE
+// Four 16-bit values for each reachable move-making ply: 96 bytes, kept out
+// of the user undo ring.  A ply's slot is reused only after its child returns.
+typedef struct tag_searchState
+{
+	unsigned int m_hash;
+	int m_eval;
+	int m_end;
+	int m_phase;
+} t_searchState;
+
+static t_searchState st_state[SEARCH_MAX_PLY];
+
+/*-----------------------------------------------------------------------*/
+static void saveState(char ply)
+{
+	t_searchState *state = &st_state[ply];
+
+	state->m_hash = geHashKey;
+	state->m_eval = geEvalScore;
+	state->m_end = geEvalEnd;
+	state->m_phase = gePhase;
+}
+
+/*-----------------------------------------------------------------------*/
+static void restoreState(char ply)
+{
+	t_searchState *state = &st_state[ply];
+
+	geHashKey = state->m_hash;
+	geEvalScore = state->m_eval;
+	geEvalEnd = state->m_end;
+	gePhase = state->m_phase;
+}
+#else
+#define saveState(ply)
+#define restoreState(ply)
+#endif
+
 #ifdef SEARCH_PROFILE
 // Test-only selector and scratch list for the doubling profiler.  Keeping all
 // rows in one binary makes the baseline and candidate pay the same dispatch
@@ -353,6 +392,7 @@ static int quiesce(char side, int alpha, int beta, char ply)
 			eng_ProfileBoardPair(&moves[i]);
 #endif
 
+		saveState(ply);
 		eng_Make(&moves[i], &undo);
 
 #ifdef SEARCH_PROFILE
@@ -363,12 +403,14 @@ static int quiesce(char side, int alpha, int beta, char ply)
 		if(eng_IsAttacked(geKing[side], 1 - side))
 		{
 			eng_Unmake(&moves[i], &undo);
+			restoreState(ply);
 			continue;
 		}
 		++legal;
 
 		score = -quiesce(1 - side, -beta, -alpha, ply + 1);
 		eng_Unmake(&moves[i], &undo);
+		restoreState(ply);
 
 		if(sc_abort)
 			break;
@@ -482,6 +524,7 @@ static int negamax(char side, char depth, int alpha, int beta, char ply)
 			eng_ProfileBoardPair(&moves[i]);
 #endif
 
+		saveState(ply);
 		eng_Make(&moves[i], &undo);
 
 #ifdef SEARCH_PROFILE
@@ -492,12 +535,14 @@ static int negamax(char side, char depth, int alpha, int beta, char ply)
 		if(eng_IsAttacked(geKing[side], 1 - side))
 		{
 			eng_Unmake(&moves[i], &undo);
+			restoreState(ply);
 			continue;
 		}
 		++legal;
 
 		score = -negamax(1 - side, depth - 1, -beta, -alpha, ply + 1);
 		eng_Unmake(&moves[i], &undo);
+		restoreState(ply);
 
 		if(sc_abort)
 		{
@@ -634,6 +679,7 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 			eng_ProfileBoardPair(&moves[i]);
 #endif
 
+		saveState(0);
 		eng_Make(&moves[i], &undo);
 
 #ifdef SEARCH_PROFILE
@@ -644,6 +690,7 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 		if(eng_IsAttacked(geKing[side], 1 - side))
 		{
 			eng_Unmake(&moves[i], &undo);
+			restoreState(0);
 			continue;
 		}
 
@@ -663,6 +710,7 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 
 		score = -negamax(1 - side, depth - 1, -EVAL_INFINITY, -alpha, 1);
 		eng_Unmake(&moves[i], &undo);
+		restoreState(0);
 
 		if(sc_abort)
 			break;
@@ -697,6 +745,9 @@ void search_Best(char side, char maxDepth, unsigned int nodeBudget, t_searchResu
 	si_budget = nodeBudget;
 	si_arenaTop = 0;
 	sc_abort = 0;
+#if SEARCH_RESTORE_UNMAKE
+	eng_RestoreEnable(1);
+#endif
 
 	// the running evaluation is maintained by make/unmake, but the position we
 	// are handed may have been put together some other way - a new game, an
@@ -771,6 +822,9 @@ void search_Best(char side, char maxDepth, unsigned int nodeBudget, t_searchResu
 	// middle of an endgame
 	if(sc_randMoves < SEARCH_RANDOM_MOVES)
 		++sc_randMoves;
+#if SEARCH_RESTORE_UNMAKE
+	eng_RestoreEnable(0);
+#endif
 }
 
 #ifdef EVAL_TUNING
@@ -800,9 +854,11 @@ char search_TestQuiesceState(char side, unsigned int budget, char exhaustArena)
 	si_budget = budget;
 	si_arenaTop = exhaustArena ? SEARCH_ARENA - 4 : 0;
 	sc_abort = 0;
+	eng_RestoreEnable(1);
 	eng_HistoryEnable(0);
 	(void)quiesce(side, -EVAL_INFINITY, EVAL_INFINITY, 0);
 	eng_HistoryEnable(1);
+	eng_RestoreEnable(0);
 	si_arenaTop = 0;
 
 	for(sq = 0; sq < 128; ++sq)

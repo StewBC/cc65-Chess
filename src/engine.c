@@ -50,6 +50,7 @@ static unsigned int	su_hashRing[HASH_RING];
 static char			sc_hashTop;			// next slot to write, wraps
 static char			sc_hashValid;		// entries that can be trusted
 static char			sc_historyEnabled = 1;
+static char			sc_restoreEnabled;
 
 #ifdef SEARCH_PROFILE
 // The sink stops cc65 deleting a deliberately discarded duplicate result.
@@ -754,6 +755,7 @@ void eng_HashReset(void)
 	su_hashRing[sc_hashTop++] = positionKey();
 	sc_hashValid = 1;
 	sc_historyEnabled = 1;
+	sc_restoreEnabled = 0;
 }
 
 /*-----------------------------------------------------------------------*/
@@ -824,6 +826,12 @@ void eng_HistoryEnable(char enabled)
 }
 
 /*-----------------------------------------------------------------------*/
+void eng_RestoreEnable(char enabled)
+{
+	sc_restoreEnabled = enabled;
+}
+
+/*-----------------------------------------------------------------------*/
 void eng_Make(const t_engMove *move, t_engUndo *undo)
 {
 	char from = move->m_from, to = move->m_to, flags = move->m_flags;
@@ -882,6 +890,7 @@ void eng_Make(const t_engMove *move, t_engUndo *undo)
 	}
 	else if(ROOK == (piece & PIECE_DATA))
 		revokeRights(from);
+
 
 
 #ifdef SEARCH_PROFILE
@@ -972,7 +981,9 @@ void eng_Unmake(const t_engMove *move, const t_engUndo *undo)
 
 
 #ifdef SEARCH_PROFILE
-	if(!sc_profileBoardOnly)
+	if(!sc_profileBoardOnly && !sc_restoreEnabled)
+#else
+	if(!sc_restoreEnabled)
 #endif
 	{
 #ifdef SEARCH_PROFILE
@@ -992,10 +1003,11 @@ void eng_Unmake(const t_engMove *move, const t_engUndo *undo)
 	if(sc_historyEnabled)
 	{
 #ifdef SEARCH_PROFILE
-		if(PROFILE_HASH_DELTA == geSearchProfile)
+		if(!sc_restoreEnabled && PROFILE_HASH_DELTA == geSearchProfile)
 			su_profileSink = hashDelta(move, moved, undo->m_captured);
 #endif
-		geHashKey ^= hashDelta(move, moved, undo->m_captured);
+		if(!sc_restoreEnabled)
+			geHashKey ^= hashDelta(move, moved, undo->m_captured);
 		--sc_hashTop;
 		if(sc_hashValid)
 			--sc_hashValid;

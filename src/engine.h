@@ -178,4 +178,9 @@ void eng_Unmake(const t_engMove *move, const t_engUndo *undo);
 // at the boundary is much cheaper on cc65 than another make/unmake argument.
 void eng_HistoryEnable(char enabled);
 
+// Search can restore its four running totals from per-ply state instead of
+// recomputing their deltas on unmake.  The board and history top are still
+// unwound here; ordinary callers leave this disabled.
+void eng_RestoreEnable(char enabled);
+
 #endif //_ENGINE_H_

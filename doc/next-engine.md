@@ -244,6 +244,16 @@ still restoring board, king, en passant, castling and halfmove state normally.
 The fuzzer already recounts evaluation, phase and hash. Extend it to compare the fast and slow
 unmake paths over the same moves, including promotion, en passant and both castles.
 
+**Phase 23 B4 result: kept.**  Search stores the old piece hash, middlegame total, endgame total
+and phase in one 8-byte state per reachable ply, 96 bytes total.  Unmake still restores board,
+king, EP, castling, halfmove and history top normally, then search restores the four totals.
+The fuzzer compares fast and slow unmake on every chosen move, with special moves preferred;
+all 1,024 whole-book records are identical.  On top of B3 the fixed C64 replay fell from 42,282
+to **38,557 jiffies, 8.8%**.  Together B3+B4 are 17.2% below the exact 46,558-jiffy control.
+Four parallel state arrays were 0.8 percentage points faster but cost a second Atari display-list
+page; the compact struct keeps `DLIST` at `$7D00`.  Atari now has 363 bytes below the framebuffer;
+Apple II has 856 bytes in MAIN and 2,025 in BSS.
+
 ### B5. Do not call a delta helper whose answer is known to be zero
 
 `eval_PhaseDelta` is nonzero only for a non-pawn capture or promotion. `eval_EndDelta` can be

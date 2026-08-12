@@ -225,6 +225,46 @@ static int probeLegal(const t_engMove *move, char side, int game, int ply)
 }
 
 /*-----------------------------------------------------------------------*/
+// Compare the search restore path with the ordinary delta-based unmake on the
+// same move.  Running the slow pair first leaves the same stale ring write the
+// fast pair should leave, so the full digest is comparable too.
+static int checkFastUnmake(const t_engMove *move, int game, int ply)
+{
+	t_engUndo slow, fast;
+	unsigned int history;
+	unsigned int hash = geHashKey;
+	int score = geEvalScore, end = geEvalEnd, phase = gePhase;
+	char ep = geEP, castle = geCastle, halfmove = geHalfmove;
+	char kingBlack = geKing[SIDE_BLACK], kingWhite = geKing[SIDE_WHITE];
+
+	memcpy(sc_probeBoard, geBoard, 128);
+	eng_Make(move, &slow);
+	eng_Unmake(move, &slow);
+	history = eng_HistoryStateDigest();
+
+	eng_RestoreEnable(1);
+	eng_Make(move, &fast);
+	eng_Unmake(move, &fast);
+	geHashKey = hash;
+	geEvalScore = score;
+	geEvalEnd = end;
+	gePhase = phase;
+	eng_RestoreEnable(0);
+
+	if(memcmp(&slow, &fast, sizeof(slow)) ||
+	   memcmp(sc_probeBoard, geBoard, 128) ||
+	   history != eng_HistoryStateDigest() ||
+	   ep != geEP || castle != geCastle || halfmove != geHalfmove ||
+	   kingBlack != geKing[SIDE_BLACK] || kingWhite != geKing[SIDE_WHITE])
+	{
+		printf("    game %d ply %d: fast and slow unmake disagree\n",
+		       game, ply);
+		return 1;
+	}
+	return 0;
+}
+
+/*-----------------------------------------------------------------------*/
 int test_RunGameFuzz(int seed, int games, int verbose)
 {
 	int game, failures = 0, specials = 0;
@@ -284,6 +324,11 @@ int test_RunGameFuzz(int seed, int games, int verbose)
 
 			if(0xFF == chosen)
 				break;
+			if(checkFastUnmake(&moves[chosen], game, ply))
+			{
+				++failures;
+				goto nextGame;
+			}
 
 			memcpy(sc_snapshots[plies], geBoard, 128);
 			st_played[plies] = moves[chosen];
