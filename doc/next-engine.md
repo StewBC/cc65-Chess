@@ -290,6 +290,15 @@ Prefer a separate assembly module to inline assembly inside C:
 Perfectly removing the whole current hash tax is only about eight Elo after reinvestment. Keep
 assembly only for a measured target win, not because the generated listing looks offensive.
 
+**Phase 25 B6 result: rejected at the required profile screen.**  B3 removes history from
+quiescence and B4 no longer recomputes the key on search unmake, so the old 8.49% Phase 20 row
+is no longer the price of the remaining operation.  On the retained fixed C64 replay, doubling
+`hashDelta` changed 38,557 baseline jiffies to 38,724, with the same 14,400 nodes and result
+digest.  Even deleting the operation entirely could therefore save only **0.43%**.  B4 also
+leaves eight bytes before Atari's next `DLIST` page.  A common assembly module cannot justify
+that ceiling or the page risk, so no assembly implementation was started and the C reference
+remains the shipping path.
+
 ### B7. A different 16-bit repetition signature is allowed as a new experiment
 
 Zobrist randomness may not require 1,536 bytes and a generic piece-square lookup when the only
@@ -299,6 +308,25 @@ independent byte accumulators, could be faster and smaller.
 It must first be evaluated offline over millions of real and fuzzed positions for distribution
 and false matches. A collision returns a draw score in a possibly won position, so a clever
 checksum with visible structure is not an acceptable substitute for evidence.
+
+**Phase 25 B7 result: rejected before changing the collision policy.**  The companion C64
+screen doubled all remaining history construction, including `positionKey` and the ring write:
+38,556 baseline jiffies became 38,584, again at identical nodes and digest.  That row is
+**0.07%**.  Together the entire remaining piece-key and history path is only about **0.51%** of
+the replay before any replacement lookup, rotation or accumulator is added.  A smaller
+signature could recover much of the 1,536-byte Zobrist table, but the current Atari build has
+363 bytes of real headroom and no accepted Phase B feature needs that table space.  That size
+opportunity alone is not a reason to replace a measured random signature with a collision-risk
+experiment.  No candidate crossed the performance prerequisite, so the million-position
+collision campaign was deliberately not opened.
+
+**Phase B is complete.**  B3 and B4 are the two survivors and together reduce the exact fixed
+C64 replay from 46,558 to 38,557 jiffies, **17.2%**, without changing any of the 1,024
+whole-book records.  B1, B2, B5, B6 and B7 are closed on their recorded measurements.  The
+forced native suite and all seven `optsize` target builds are green.  Final tight-target maps
+put Atari `DLIST` at `$7D00` with 363 bytes below the framebuffer and leave Apple II 856 bytes
+in MAIN plus 2,025 in BSS.  The shipping state is on
+`codex/next-engine-phase-b-exact-state`; Phase C has not been started.
 
 ---
 

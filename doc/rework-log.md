@@ -2592,6 +2592,47 @@ a 256-byte Atari page.  B5 was reverted completely.
 
 ---
 
+## Phase 25 - the remaining hash path is below the assembly threshold
+
+B6 had been ordered after the earlier exact-state changes specifically so assembly would be
+written only for work still present in the resulting hot path.  B3 and B4 changed that path
+more decisively than the old profile implied: quiescence no longer maintains a key, and search
+unmake restores its old key rather than calculating the inverse delta.
+
+The retained profiler was therefore run again on the B4 shipping tree, one row at a time.  Both
+runs used the six fixed middlegame positions, opposite pass order, 14,400 nodes and the same
+result digest:
+
+| doubled component | baseline | doubled | remaining share |
+|---|---:|---:|---:|
+| `hashDelta` | 38,557 | 38,724 | **0.43%** |
+| history construction | 38,556 | 38,584 | **0.07%** |
+
+The second row includes `positionKey` and the ring write.  Thus a replacement that made every
+remaining key and history operation free could remove only about **0.51%** of this replay.  A
+real ca65 lookup or alternate accumulator cannot make them free, and B4 has only eight bytes of
+padding before another 256-byte Atari display-list jump.  B6 was closed without writing an
+assembly module.
+
+B7 can make a separate size argument: a square table plus rotations or two byte accumulators
+might replace the 1,536-byte Zobrist table.  It would also replace a signature whose collision
+behavior is intentionally random with one that needs a million-position distribution and
+false-match campaign before it is safe.  The shipping B4 tree has 363 bytes below Atari's real
+framebuffer ceiling, and no accepted Phase B change is waiting on the table space.  With a
+combined speed ceiling of half a percent, that correctness campaign has no current
+prerequisite result to justify it.  B7 was not prototyped and the existing signature stays.
+
+Phase B ends with B3 and B4.  Together they reduce the exact fixed C64 replay from 46,558 to
+38,557 jiffies, **17.2%**, and preserve all 1,024 whole-book results.  B1, B2, B5, B6 and B7
+are rejected on their recorded screens.  A final forced native suite passed, including two
+fuzz sets totalling 300 games, depth-five perft, tactics, every shipped skill budget and the
+512-game sanity match.  All seven targets then rebuilt from scratch at `optsize`.  The final Atari map
+keeps `DLIST` at `$7D00`, DATA ending `$7CF7`, and 363 bytes below `$9100`; Apple II leaves 856
+bytes in MAIN and 2,025 in BSS.  The handoff branch is
+`codex/next-engine-phase-b-exact-state`; no Phase C branch has been created.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.
