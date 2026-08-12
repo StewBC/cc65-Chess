@@ -2978,6 +2978,35 @@ Branch: `codex/next-engine-phase-e3-queen-minors`. `scratch/e3/`.
 
 ---
 
+## Phase 37 - Atari undo ring in upper RAM
+
+`$AF00–$B41F` was the 1,312-byte hole between the GR.8 framebuffer and the
+2K software stack. The 128-entry undo ring is 1,024 bytes, contiguous, cold
+during search and never zeroed, so it is the first thing that belongs there.
+
+`chessAtari.cfg` grows a `UNDO` memory region over the whole hole and an
+optional `UNDOBSS` segment. `undo.c` names only the array into that segment
+under `__ATARI__`; the three pointers stay in ordinary BSS. Other targets
+keep the ring where it was. Chess does not change.
+
+Maps after the move: `BSS` `$7F4A–$8B94` (was `$8F94`), `UNDOBSS`
+`$AF00–$B2FF`, `DATA` still `$7CFB`, `DLIST` still `$7D00`. Framebuffer
+headroom 363 → 1,387. Four bytes of `DLIST` pad. 288 bytes left at
+`$B300–$B41F` as the stack pad.
+
+AltirraBridgeServer, 800XL, XEX: load `$1000–$7F49` misses the screen and
+the hole; DLIST LMS `$9100` from title through a 216-move AI game; `c_sp`
+`$BC17` at boot, `$BA08` at the deepest search peek (1,801 bytes above the
+ring); first two plies wrote e2–e4 at `$AF00` and e7–e5 at `$AF08`; undo
+and redo restored both; fool's mate delivered and taken back; `B` still
+draws the four numbers a square. The ring wrapped during the AI game.
+Stefan then booted the MyPicoDOS ATR and played it end to end: flawless.
+
+All seven `optsize` targets link. Native suite green, including the undo/
+redo fuzzer. Branch: `atari/undo-upper-ram`.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

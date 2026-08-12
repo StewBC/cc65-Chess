@@ -34,7 +34,16 @@ typedef struct tag_UndoEntry
 #define STATE_WHITE			SET_BIT(7)
 
 /*-----------------------------------------------------------------------*/
+#ifdef __ATARI__
+/* 1,024 bytes in the hole between the GR.8 screen and the 2K stack.
+ * cold during search and never needs to be zeroed.  chessAtari.cfg
+ * owns the region; this just names the array into that segment. */
+#pragma bss-name (push, "UNDOBSS")
+#endif
 static t_UndoEntry	stu_undoStack[UNDO_STACK_SIZE];
+#ifdef __ATARI__
+#pragma bss-name (pop)
+#endif
 static char			sc_undoTop, sc_undoBottom, sc_undoPtr;
 
 /*-----------------------------------------------------------------------*/

@@ -52,7 +52,7 @@ Since the endgame tables it is also the only setting that fits:
 
 | | optsize | optspeed |
 |---|---|---|
-| atari | 716 free below the framebuffer | **does not link — 562 bytes over** |
+| atari | 1387 free below the framebuffer | **does not link — 562 bytes over** |
 | apple2 | 1166 free in MAIN, 2122 in BSS | links with **12 bytes** spare |
 
 **The Atari's headroom does not shrink smoothly, and the number above hides a cliff.** `DLIST`
@@ -62,7 +62,7 @@ happened three times: the opening table crossed it, check evasions crossed it ag
 black reply table crossed it a third time, which is why the Atari lost 256 bytes each time
 while the Apple II lost the 302, 132 and 253 the code actually costs.
 
-**There are 62 bytes of padding left.** Check `DATA`'s end against `DLIST`'s start in an
+**There are 4 bytes of padding left.** Check `DATA`'s end against `DLIST`'s start in an
 `ld65 -m` map rather than reading the free-space number on its own; the two tell different
 stories and only one of them predicts what the next change will cost. The full picture, all
 seven targets, measured rather than remembered — free space to the *real* ceiling, which on
@@ -70,7 +70,7 @@ three of them is a framebuffer the linker cannot see:
 
 | target | ceiling | free |
 |---|---|---|
-| **atari** | `$9100` framebuffer | **716** — and 62 before the next `DLIST` page jump |
+| **atari** | `$9100` framebuffer | **1387** — and 4 before the next `DLIST` page jump |
 | **apple2** | MAIN ends `$B700` | **1166**, plus 2122 in BSS at `$0800–$1FFF` |
 | atmos | RAMEND `$9900` less stack | 1971 |
 | plus4 | `$A000` bitmap | 2995 — **the cfg does not cap it**, so an overrun would draw BSS on the screen rather than fail to link, exactly as the Atari used to |
@@ -85,9 +85,11 @@ the numbers above are from a clean build and will drift with the next change.
 everywhere, which the Atari cannot take - so treat `optsize` as fixed, and check anything
 added to the shipped build against the two numbers above.
 
-There is RAM left to claim if it comes to that: 1312 bytes on the Atari at `$AF00-$B41F`
-between the screen and the stack, and a start address that has only been tested down to
-`$1000` (`$0800` crashes on load — MyPicoDOS is still there while it works).
+The 1,024-byte persistent undo ring now lives at `$AF00–$B2FF` on Atari only, in the hole
+between the GR.8 screen and the 2K software stack. That is why the framebuffer headroom
+above is a kilobyte larger than BSS growth would suggest. 288 bytes remain as a pad at
+`$B300–$B41F`. The start address has only been tested down to `$1000` (`$0800` crashes on
+load — MyPicoDOS is still there while it works).
 
 Both tight targets got there the same way. The Apple II starts at `$4000` because HGR page 1
 is at `$2000-$3FFF`, and `src/apple2/chessA2.cfg` puts BSS in the stranded `$0800-$1FFF`

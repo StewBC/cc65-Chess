@@ -32,6 +32,7 @@ The short version of this note is:
 | D combine / buy nodes | **done** — L1/L2 bank time; L3 18k; L4 65k | L3 ladder up; L4 noise |
 | E chess | E1/E4/E5/E3 rejected; E6 instrument; E2 null | no strength terms landed |
 | F ordering screens | not started | — |
+| §10 Atari undo RAM | **kept** — ring at `$AF00–$B2FF` | Atari +1,024 BSS below `$9100` |
 
 Shipping search is Phase B plus the Phase D budgets. Candidates retained default-off:
 `EVAL_PAWNSTRUCT_ON`, `EVAL_KBN_ON`, `EVAL_DEV_ON`, `SEARCH_CHECK_EXT`, plus the Phase C speed switches.
@@ -61,8 +62,9 @@ These are measurements, not estimates.
 - Granted search depth is worth about **60 Elo per doubling**. A perfect removal of a 9%
   tax is therefore only about eight Elo after the budget is raised to spend it. Exact small
   savings have to accumulate before the board visibly changes.
-- The Atari has about **716 bytes** to its framebuffer and only **62 bytes** before the next
-  `DLIST` page jump. Apple II has about 1,166 bytes in MAIN and 2,122 in its low BSS segment.
+- The Atari has about **1,387 bytes** to its framebuffer and only **4 bytes** before the next
+  `DLIST` page jump. The extra kilobyte is the undo ring sitting at `$AF00–$B2FF`, not a
+  smaller program. Apple II has about 1,166 bytes in MAIN and 2,122 in its low BSS segment.
   The other current figures are in `AGENTS.md`; measure maps again before buying anything.
 
 One phrase needs care. Hash maintenance is the largest newly identified removable tax. It is
@@ -746,8 +748,27 @@ because exhaustion silently loses strength in sharp positions. Instrument the fu
 fuzzer, tactics and gauntlet; only a large margin can justify shrinking it. A 384-entry arena
 would free 512 bytes, but a peak below 384 is not by itself proof that the unseen tail is safe.
 
-Do not reclaim the visualizer, shorten undo history or use Atari's upper RAM without bringing
-the explicit product trade to Stefan.
+Do not reclaim the visualizer or shorten undo history without bringing the explicit product
+trade to Stefan.
+
+### Atari upper RAM — undo ring relocated (2026-08-12)
+
+`$AF00–$B41F` was 1,312 unused bytes between the GR.8 screen and the 2K stack. The 1,024-byte
+persistent undo ring is now a `UNDOBSS` segment there (`#pragma bss-name` in `undo.c`, region
+owned by `chessAtari.cfg`). Pointers stay in ordinary BSS. Other targets are unchanged.
+
+Verified under AltirraBridgeServer, 800XL, XEX, and then on the MyPicoDOS ATR
+(Stefan, complete play, flawless):
+
+- load image `$1000–$7F49` — no write into the screen or the hole
+- DLIST LMS `$9100` from title through menus, two-player, fool's mate and a 216-move AI game
+- `c_sp` `$BC17` at boot, deepest `$BA08` during search — 1,801 bytes above the ring
+- first two plies wrote `$AF00` = e2–e4 and `$AF08` = e7–e5; `U` / `R` restored both
+- fool's mate delivered and taken back; `B` still draws the four numbers a square
+- AI vs AI Very Easy played through a wrap of the 128-entry ring into a 5-piece ending
+
+Framebuffer headroom is 363 → **1,387**. `DATA` still ends `$7CFB`, `DLIST` `$7D00`, 4 bytes
+of page pad. 288 bytes remain unclaimed at `$B300–$B41F` as the stack pad. Chess is identical.
 
 ---
 
@@ -834,7 +855,8 @@ plausible feature whose gates were skipped.
 1. ~~**Stefan:** Phase D for B3+B4~~ — L1/L2 banked time; L3 18k (ladder up); L4 65k (noise).
 2. ~~**E2** locked-set value tuning~~ — existing numbers already at the constrained minimum (Phase 35).
 3. ~~**E3** opening interaction~~ — rejected; 16 short of +2σ, 48 worse (Phase 36).
-4. **§10** undo-ring pack / arena high-water — only if E2/E3 or a slim KBN/ca65 needs the bytes.
+4. **§10** undo-ring *pack* / arena high-water — only if a slim KBN/ca65 needs another 256–512.
+   The Atari upper-RAM claim is done: undo ring at `$AF00–$B2FF`, 1,387 free below `$9100`.
 5. **F1–F5** as cheap whole-book screens.
 6. Reopen a full TT only through §9.
 7. Reopen E1/E4 only with a free or near-free mechanism (true incremental that fits; ca65 KBN
