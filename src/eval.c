@@ -24,7 +24,6 @@
  *	above it.
  */
 
-#include <string.h>
 #include "types.h"
 #include "engine.h"
 #include "eval.h"
@@ -214,103 +213,65 @@ int geEvalEnd;
 int gePhase;
 
 #if EVAL_PAWNSTRUCT_ON
-// Per-file pawn counts and the white-positive structure total derived from
-// them.  Doubled and isolated only: a file with n>1 costs (n-1)*DOUBLED, and
-// a non-empty file with both neighbours empty costs n*ISOLATED.  Passed pawns
-// need ranks and enemy structure and stay a second candidate
-char gePawnFiles[2][8];
+// Doubled / isolated from a pawn-only board scan at eval time.
+//
+// Phase 4's full-board evaluation made every node 1.35x dearer.  Material and
+// PST are incremental now, so this walk only counts pawns.  An incremental
+// make/unmake form was measured first and cost ~750 CODE bytes - past Atari's
+// framebuffer.  On the 6502 ports the walk is hand-coded (pawnstruct.s); the
+// C below is the host / term reference and must match those doses.
+//
+// Penalties are powers of two (doubled -8, isolated -16).  Passed pawns stay
+// a second candidate
 int gePawnStruct;
 
+#ifdef __CC65__
+int pawnStructScore(void);		/* pawnstruct.s */
+#else
 /*-----------------------------------------------------------------------*/
-static int pawnStructFromFiles(void)
+static int pawnStructScore(void)
 {
-	char side, f;
-	int score = 0;
+	char counts[16];
+	char sq, i;
+	int score;
 
-	for(side = 0; side < 2; ++side)
+	for(i = 0; i < 16; ++i)
+		counts[i] = 0;
+
+	for(sq = 0; sq < 0x78; ++sq)
 	{
-		// white-positive: white's defects are negative, black's are positive
-		int sign = (side == SIDE_WHITE) ? 1 : -1;
+		char piece = geBoard[sq];
 
-		for(f = 0; f < 8; ++f)
-		{
-			char n = gePawnFiles[side][f];
-			char left, right;
+		if(ENG_OFFBOARD(sq) || PAWN != (piece & PIECE_DATA))
+			continue;
+		++counts[((piece & PIECE_WHITE) ? 8 : 0) + (sq & 7)];
+	}
 
-			if(n > 1)
-				score += sign * (int)(n - 1) * EVAL_PAWN_DOUBLED;
-			if(n)
-			{
-				left = f ? gePawnFiles[side][f - 1] : 0;
-				right = (f < 7) ? gePawnFiles[side][f + 1] : 0;
-				if(!left && !right)
-					score += sign * (int)n * EVAL_PAWN_ISOLATED;
-			}
-		}
+	score = 0;
+	for(i = 0; i < 16; ++i)
+	{
+		char n = counts[i];
+		char f = i & 7;
+		int term;
+
+		if(!n)
+			continue;
+
+		term = 0;
+		if(n > 1)
+			term -= (int)(n - 1) << 3;
+		if((!f || !counts[(i & 8) + f - 1]) &&
+		   (f == 7 || !counts[(i & 8) + f + 1]))
+			term -= (int)n << 4;
+
+		if(i < 8)
+			score -= term;
+		else
+			score += term;
 	}
 	return score;
 }
-
-/*-----------------------------------------------------------------------*/
-static void pawnFilesFromBoard(void)
-{
-	char sq;
-
-	memset(gePawnFiles, 0, sizeof(gePawnFiles));
-	for(sq = 0; sq < 0x78; ++sq)
-	{
-		char piece, kind, side;
-
-		if(ENG_OFFBOARD(sq))
-			continue;
-		piece = geBoard[sq];
-		kind = piece & PIECE_DATA;
-		if(PAWN != kind)
-			continue;
-		side = (piece & PIECE_WHITE) ? SIDE_WHITE : SIDE_BLACK;
-		++gePawnFiles[side][ENG_FILE(sq)];
-	}
-	gePawnStruct = pawnStructFromFiles();
-}
-
-/*-----------------------------------------------------------------------*/
-// dir +1 after make, -1 after unmake.  Uses only the move and the two piece
-// bytes - never the board - so make and unmake stay exact mirrors even when
-// the search restores totals from its ply stack rather than re-subtracting
-void eval_PawnApply(const t_engMove *move, char piece, char captured,
-                    signed char dir)
-{
-	char kind = piece & PIECE_DATA;
-	char capKind = captured & PIECE_DATA;
-	char side, fromF, toF;
-
-	if(PAWN != kind && PAWN != capKind)
-		return;
-
-	side = (piece & PIECE_WHITE) ? SIDE_WHITE : SIDE_BLACK;
-	fromF = ENG_FILE(move->m_from);
-	toF = ENG_FILE(move->m_to);
-
-	if(PAWN == kind)
-	{
-		gePawnFiles[side][fromF] = (char)(gePawnFiles[side][fromF] - dir);
-		// a promotion leaves the file as a non-pawn, so only non-promotions
-		// put a pawn on the destination
-		if(!(move->m_flags & ENG_MF_PROMO))
-			gePawnFiles[side][toF] = (char)(gePawnFiles[side][toF] + dir);
-	}
-
-	if(PAWN == capKind)
-	{
-		// normal capture and en passant both put the victim on the destination
-		// *file* - the EP pawn sits beside the target, same file as m_to
-		char enemy = (char)(1 - side);
-
-		gePawnFiles[enemy][toF] = (char)(gePawnFiles[enemy][toF] - dir);
-	}
-
-	gePawnStruct = pawnStructFromFiles();
-}
+#endif
 #endif
 
 /*-----------------------------------------------------------------------*/
@@ -475,11 +436,6 @@ void eval_Refresh(void)
 		gePhase += gcPieceValue[kind];
 	}
 
-#if EVAL_PAWNSTRUCT_ON
-	// and the pawn-file counts, for the same reason - FENs and new games never
-	// went through eng_Make
-	pawnFilesFromBoard();
-#endif
 }
 
 /*-----------------------------------------------------------------------*/
@@ -595,12 +551,14 @@ int eval_Position(char side)
 	int score = geEvalScore;
 
 #if EVAL_PAWNSTRUCT_ON
-	// Doubled and isolated sit outside geEvalScore on purpose: they are a
-	// property of whole files, not of a piece on a square, and keeping them
-	// separate means B4's ply restore does not grow.  The file counts are
-	// maintained on every make/unmake; this is only the read
+	// Doubled and isolated sit outside geEvalScore: not a property of a piece
+	// on a square.  Scanned from the board here - see the note above the
+	// helper for why this is not incremental
 	if(EVAL_HAS(EVAL_PAWNSTRUCT))
+	{
+		gePawnStruct = pawnStructScore();
 		score += gePawnStruct;
+	}
 #endif
 
 	// Blend in the endgame tables by how much material is left: nothing in the

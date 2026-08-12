@@ -148,18 +148,9 @@ extern int geEvalScore;
 
 #if EVAL_PAWNSTRUCT_ON
 /*-----------------------------------------------------------------------*/
-// Pawns per file per side (SIDE_BLACK=0, SIDE_WHITE=1).  Maintained by
-// eng_Make / eng_Unmake and rebuilt by eval_Refresh.  The aggregate score
-// derived from them is white-positive and added in eval_Position, not folded
-// into geEvalScore - so B4's restore path does not need another word of state
-extern char gePawnFiles[2][8];
+// Last structure score computed by eval_Position.  Exposed for tests; not a
+// running total - it is rebuilt from the board on every evaluation
 extern int gePawnStruct;
-
-// Apply or reverse one move against the file counts and the aggregate score.
-// "dir" is +1 after make and -1 after unmake; "piece" is the mover as it
-// stood before the move, matching eval_MoveDelta
-void eval_PawnApply(const t_engMove *move, char piece, char captured,
-                    signed char dir);
 #endif
 
 /*-----------------------------------------------------------------------*/
@@ -199,9 +190,9 @@ void eval_Refresh(void);
 // term added here has to obey that - it must be derivable from the move alone
 int eval_MoveDelta(const t_engMove *move, char piece, char captured);
 
-// Hundredths of a pawn for the doubled/isolated term.  Exposed so tests can
-// name the doses they expect rather than hard-coding the numbers twice
-#define EVAL_PAWN_DOUBLED	(-10)
-#define EVAL_PAWN_ISOLATED	(-20)
+// Hundredths of a pawn for the doubled/isolated term.  Powers of two so the
+// 6502 scores with shifts; exposed so tests can name the doses they expect
+#define EVAL_PAWN_DOUBLED	(-8)
+#define EVAL_PAWN_ISOLATED	(-16)
 
 #endif //_EVAL_H_

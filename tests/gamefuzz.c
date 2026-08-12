@@ -141,12 +141,6 @@ static int checkEvalScore(int game, int ply, const char *tag)
 static int checkPhase(int game, int ply, const char *tag)
 {
 	int phase = gePhase, endBonus = geEvalEnd;
-#if EVAL_PAWNSTRUCT_ON
-	int pawnStruct = gePawnStruct;
-	char files[2][8];
-
-	memcpy(files, gePawnFiles, sizeof(files));
-#endif
 
 	eval_Refresh();
 	if(phase != gePhase)
@@ -161,14 +155,6 @@ static int checkPhase(int game, int ply, const char *tag)
 		       game, tag, ply, endBonus, geEvalEnd);
 		return 1;
 	}
-#if EVAL_PAWNSTRUCT_ON
-	if(pawnStruct != gePawnStruct || memcmp(files, gePawnFiles, sizeof(files)))
-	{
-		printf("    game %d %s ply %d: pawn structure drifted, running %d full %d\n",
-		       game, tag, ply, pawnStruct, gePawnStruct);
-		return 1;
-	}
-#endif
 	return 0;
 }
 
@@ -216,12 +202,6 @@ static int probeLegal(const t_engMove *move, char side, int game, int ply)
 	char ep = geEP, castle = geCastle, halfmove = geHalfmove;
 	char kingBlack = geKing[SIDE_BLACK], kingWhite = geKing[SIDE_WHITE];
 	char legal;
-#if EVAL_PAWNSTRUCT_ON
-	int pawnStruct = gePawnStruct;
-	char files[2][8];
-
-	memcpy(files, gePawnFiles, sizeof(files));
-#endif
 
 	memcpy(sc_probeBoard, geBoard, 128);
 	eng_HistoryEnable(0);
@@ -238,11 +218,7 @@ static int probeLegal(const t_engMove *move, char side, int game, int ply)
 	   hash != geHashKey || history != eng_HistoryStateDigest() ||
 	   score != geEvalScore || end != geEvalEnd || phase != gePhase ||
 	   ep != geEP || castle != geCastle || halfmove != geHalfmove ||
-	   kingBlack != geKing[SIDE_BLACK] || kingWhite != geKing[SIDE_WHITE]
-#if EVAL_PAWNSTRUCT_ON
-	   || pawnStruct != gePawnStruct || memcmp(files, gePawnFiles, sizeof(files))
-#endif
-	   )
+	   kingBlack != geKing[SIDE_BLACK] || kingWhite != geKing[SIDE_WHITE])
 	{
 		printf("    game %d probe ply %d: no-history make/unmake changed state\n",
 		       game, ply);
@@ -264,12 +240,6 @@ static int checkFastUnmake(const t_engMove *move, int game, int ply)
 	int score = geEvalScore, end = geEvalEnd, phase = gePhase;
 	char ep = geEP, castle = geCastle, halfmove = geHalfmove;
 	char kingBlack = geKing[SIDE_BLACK], kingWhite = geKing[SIDE_WHITE];
-#if EVAL_PAWNSTRUCT_ON
-	int pawnStruct = gePawnStruct;
-	char files[2][8];
-
-	memcpy(files, gePawnFiles, sizeof(files));
-#endif
 
 	memcpy(sc_probeBoard, geBoard, 128);
 	eng_Make(move, &slow);
@@ -289,11 +259,7 @@ static int checkFastUnmake(const t_engMove *move, int game, int ply)
 	   memcmp(sc_probeBoard, geBoard, 128) ||
 	   history != eng_HistoryStateDigest() ||
 	   ep != geEP || castle != geCastle || halfmove != geHalfmove ||
-	   kingBlack != geKing[SIDE_BLACK] || kingWhite != geKing[SIDE_WHITE]
-#if EVAL_PAWNSTRUCT_ON
-	   || pawnStruct != gePawnStruct || memcmp(files, gePawnFiles, sizeof(files))
-#endif
-	   )
+	   kingBlack != geKing[SIDE_BLACK] || kingWhite != geKing[SIDE_WHITE])
 	{
 		printf("    game %d ply %d: fast and slow unmake disagree\n",
 		       game, ply);
