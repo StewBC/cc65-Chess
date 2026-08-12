@@ -2633,6 +2633,42 @@ bytes in MAIN and 2,025 in BSS.  The handoff branch is
 
 ---
 
+## Phase 26 - fuse scoring with first selection (C1)
+
+C1 tries to remove the first `pickBest` scan by remembering the best score during `scoreMoves`
+and leaving that move at index 0 for internal negamax and quiescence lists.
+
+The root cannot share that path.  Random opening perturbation and previous-iteration priority
+rewrite scores after the scoring pass.  Placing a first move before those rewrites changes the
+later selection-sort order among equal scores: one book position at level 3 completed a deeper
+iteration and changed its best move.  Root therefore keeps plain scoring and a full first
+`pickBest`; only internal lists fuse.
+
+With that split, switch-off equivalence holds: all 1,024 whole-book records are identical at
+every shipped budget, and a native test compares the full fused selection order against classic
+score-then-pickBest on full and capture lists, including a planted killer.
+
+Two implementations were timed on the retained six-position C64 middlegame, windowed c64m,
+identical 14,400 nodes and digest:
+
+| form | first pass | second pass | vs control |
+|---|---:|---:|---:|
+| control (`SEARCH_SCORE_FIRST=0`) | 38,557 | 38,556 | — |
+| size-conscious `placeFirst` flag | 38,589 | 38,590 | **+0.08%** (slower) |
+| duplicated `scoreMovesSelectFirst` | 38,418 | 38,418 | **−0.36%** |
+
+The flag form costs tracking and a runtime place check on every scored move and loses more than
+the skipped first scan returns.  The duplicated body wins a third of a percent but grows Atari
+search CODE by enough to push `DLIST` from `$7D00` to `$7E00` (210 bytes of CODE growth in the
+flag form alone; the duplicate overflows far worse).  After B4 only eight bytes of padding remain
+before that page.  Same verdict as B5: a sub-percent exact win is not worth a 256-byte Atari
+page.
+
+`SEARCH_SCORE_FIRST` retains the candidate, default off.  Shipping maps again match Phase B:
+Atari DATA ends `$7CF7`, `DLIST` at `$7D00`, BSS ends `$8F94`.  C1 is rejected.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

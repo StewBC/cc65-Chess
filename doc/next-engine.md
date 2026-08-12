@@ -344,6 +344,19 @@ Root random perturbation and previous-iteration priority happen after scoring an
 existing path. The internal negamax and quiescence lists are the simple first target. Require
 the ordered move sequence itself—not only the final move—to match baseline on a native test.
 
+**Phase 26 C1 result: rejected.**  The fused internal path is exact when root keeps plain
+scoring: placing the best before root randomisation or previous-iteration priority rewrites
+scores changes later tie order among equals and is not a pure speed change.  With root left
+alone, all 1,024 whole-book records match and a native selection-order test agrees for full and
+capture lists.
+
+The size-conscious single-function form (`placeFirst` flag, one score loop) grows Atari CODE by
+210 bytes, moves `DLIST` from `$7D00` to `$7E00`, and on the fixed C64 middlegame is slightly
+*slower*: 38,557 -> **38,589** jiffies at the same 14,400 nodes.  A duplicated
+`scoreMovesSelectFirst` body avoids the flag tax and measured 38,557 -> 38,418 (**0.36%**) but
+overflows Atari by hundreds of bytes.  Neither form justifies the display-list page.  The
+candidate remains behind `SEARCH_SCORE_FIRST`, default off; shipping is unchanged.
+
 ### C2. Test legality on demand, not by building a pin set
 
 The pin set was correctly rejected: it computed eight rays at every generating node to avoid

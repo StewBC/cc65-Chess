@@ -27,6 +27,14 @@
 #ifndef SEARCH_RESTORE_UNMAKE
 #define SEARCH_RESTORE_UNMAKE	1
 #endif
+// C1 candidate: score and place the best move in one pass for internal lists.
+// Measured slower in its size-conscious form and too large for Atari's display-
+// list page in the faster form; kept default off for reproduction only.
+// Root must not place first - randomisation and previous-iteration priority
+// rewrite scores afterwards and would change later tie order among equals.
+#ifndef SEARCH_SCORE_FIRST
+#define SEARCH_SCORE_FIRST	0
+#endif
 
 /*-----------------------------------------------------------------------*/
 // Scoring a repeated position as a draw, switchable the same way and for the
@@ -148,6 +156,10 @@ char search_Outcome(char side);
 // Test-only entry to exercise quiescence return paths and prove its no-history
 // subtree restores the parent position key and ring exactly.
 char search_TestQuiesceState(char side, unsigned int budget, char exhaustArena);
+
+// Full selection-order equivalence: fused score+first-place matches classic
+// score-then-pickBest for every index, including a planted killer.
+char search_TestOrderSequence(char side, char capturesOnly);
 #endif
 
 #endif //_SEARCH_H_

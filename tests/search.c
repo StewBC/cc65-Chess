@@ -177,6 +177,48 @@ int test_RunSearchTactics(int verbose)
 // at all, which produced a page of failures that meant nothing.  These come out
 // of random games, each has exactly one mating move, and each was verified by
 // playing it and checking the opponent is in check with no legal reply
+/*-----------------------------------------------------------------------*/
+// C1 gate: the fused score+first-place path must try moves in exactly the
+// same order as classic score-then-pickBest, not merely return the same root.
+int test_RunSearchOrder(int verbose)
+{
+	static const char *sc_fens[] =
+	{
+		"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+		"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+		"8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+		"r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+		"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+		"r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3",
+		"2r3k1/pp3ppp/2n1b3/3qp3/8/2P1PN2/PP1Q1PPP/R3KB1R w KQ - 0 12",
+	};
+	int i, failures = 0;
+
+	printf("move selection order (fused first == classic)\n");
+
+	for(i = 0; i < (int)(sizeof(sc_fens)/sizeof(sc_fens[0])); ++i)
+	{
+		char side = test_EngineSetFEN(sc_fens[i]);
+
+		if(!search_TestOrderSequence(side, 0))
+		{
+			++failures;
+			printf("    full list order failed: %s\n", sc_fens[i]);
+		}
+		if(!search_TestOrderSequence(side, 1))
+		{
+			++failures;
+			printf("    capture list order failed: %s\n", sc_fens[i]);
+		}
+		else if(verbose)
+			printf("    ok %s\n", sc_fens[i]);
+	}
+
+	printf("  -> %d failing\n", failures);
+	return failures;
+}
+
+/*-----------------------------------------------------------------------*/
 int test_RunSearchMateInOne(int verbose)
 {
 	static const struct { const char *fen; const char *mate; } sc_mates[] =

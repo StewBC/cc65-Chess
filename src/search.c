@@ -240,10 +240,24 @@ static char isCapture(const t_engMove *move)
 
 /*-----------------------------------------------------------------------*/
 // Scores are only ever compared with each other, so the exact numbers do not
-// matter - the ordering does.  Everything fits in the move's char score field
-static void scoreMoves(t_engMove *moves, char count, char ply)
+// matter - the ordering does.  Everything fits in the move's char score field.
+//
+// placeFirst is for internal lists only: track the first highest score (strict
+// >, matching pickBest) and swap it to index 0 so the first pickBest scan can
+// be skipped.  The root must pass 0 - randomisation and previous-iteration
+// priority still rewrite scores afterwards, and placing first here would change
+// later tie order among equals.
+static void scoreMoves(t_engMove *moves, char count, char ply
+#if SEARCH_SCORE_FIRST
+	, char placeFirst
+#endif
+	)
 {
 	char i;
+#if SEARCH_SCORE_FIRST
+	char best = 0;
+	t_engMove swap;
+#endif
 
 	for(i = 0; i < count; ++i)
 	{
@@ -270,7 +284,21 @@ static void scoreMoves(t_engMove *moves, char count, char ply)
 			moves[i].m_score = 100;
 		else
 			moves[i].m_score = 0;
+
+#if SEARCH_SCORE_FIRST
+		if(placeFirst && moves[i].m_score > moves[best].m_score)
+			best = i;
+#endif
 	}
+
+#if SEARCH_SCORE_FIRST
+	if(placeFirst && count && best != 0)
+	{
+		swap = moves[0];
+		moves[0] = moves[best];
+		moves[best] = swap;
+	}
+#endif
 }
 
 /*-----------------------------------------------------------------------*/
@@ -374,16 +402,28 @@ static int quiesce(char side, int alpha, int beta, char ply)
 	                : eng_GenCaptures(side, moves, arenaRoom());
 	si_arenaTop += count;
 
+#if SEARCH_SCORE_FIRST
+	scoreMoves(moves, count, ply, 1);
+#else
 	scoreMoves(moves, count, ply);
+#endif
 
 #ifdef SEARCH_PROFILE
 	if(PROFILE_SCORE == geSearchProfile)
+#if SEARCH_SCORE_FIRST
+		scoreMoves(moves, count, ply, 1);
+#else
 		scoreMoves(moves, count, ply);
+#endif
 #endif
 
 	for(i = 0; i < count; ++i)
 	{
-		pickBest(moves, count, i);
+#if SEARCH_SCORE_FIRST
+		// element 0 is already the best after scoreMoves(..., 1)
+		if(i)
+#endif
+			pickBest(moves, count, i);
 
 #ifdef SEARCH_PROFILE
 		if(PROFILE_SELECT == geSearchProfile)
@@ -506,16 +546,27 @@ static int negamax(char side, char depth, int alpha, int beta, char ply)
 	count = eng_GenMoves(side, moves, arenaRoom());
 	si_arenaTop += count;
 
+#if SEARCH_SCORE_FIRST
+	scoreMoves(moves, count, ply, 1);
+#else
 	scoreMoves(moves, count, ply);
+#endif
 
 #ifdef SEARCH_PROFILE
 	if(PROFILE_SCORE == geSearchProfile)
+#if SEARCH_SCORE_FIRST
+		scoreMoves(moves, count, ply, 1);
+#else
 		scoreMoves(moves, count, ply);
+#endif
 #endif
 
 	for(i = 0; i < count; ++i)
 	{
-		pickBest(moves, count, i);
+#if SEARCH_SCORE_FIRST
+		if(i)
+#endif
+			pickBest(moves, count, i);
 
 #ifdef SEARCH_PROFILE
 		if(PROFILE_SELECT == geSearchProfile)
@@ -629,11 +680,22 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 	count = eng_GenMoves(side, moves, arenaRoom());
 	si_arenaTop += count;
 
+	// Root must use plain scoring: randomisation and the previous iteration's
+	// move still adjust scores after this, so placing the best now would change
+	// later tie order among equals.
+#if SEARCH_SCORE_FIRST
+	scoreMoves(moves, count, 0, 0);
+#else
 	scoreMoves(moves, count, 0);
+#endif
 
 #ifdef SEARCH_PROFILE
 	if(PROFILE_SCORE == geSearchProfile)
+#if SEARCH_SCORE_FIRST
+		scoreMoves(moves, count, 0, 0);
+#else
 		scoreMoves(moves, count, 0);
+#endif
 #endif
 
 	// Break ties randomly for the first few moves of a game.  Alpha-beta
@@ -828,6 +890,100 @@ void search_Best(char side, char maxDepth, unsigned int nodeBudget, t_searchResu
 }
 
 #ifdef EVAL_TUNING
+/*-----------------------------------------------------------------------*/
+// Classic scoring without first placement - the baseline pickBest starts from.
+static void scoreMovesClassic(t_engMove *moves, char count, char ply)
+{
+	char i;
+
+	for(i = 0; i < count; ++i)
+	{
+		char promote = moves[i].m_flags & ENG_MF_PROMO;
+		char victim = geBoard[moves[i].m_to] & PIECE_DATA;
+
+		if(promote)
+			moves[i].m_score = (QUEEN == promote) ? 200 : 120;
+		else if(NONE != victim)
+		{
+			char attacker = geBoard[moves[i].m_from] & PIECE_DATA;
+			moves[i].m_score = 150 + (sc_mvvRank[victim] << 3) - sc_mvvRank[attacker];
+		}
+		else if(moves[i].m_flags & ENG_MF_ENPASSANT)
+			moves[i].m_score = 150 + (1 << 3) - 1;
+		else if(ply < SEARCH_MAX_PLY &&
+		        ((moves[i].m_from == st_killers[ply][0].m_from &&
+		          moves[i].m_to == st_killers[ply][0].m_to) ||
+		         (moves[i].m_from == st_killers[ply][1].m_from &&
+		          moves[i].m_to == st_killers[ply][1].m_to)))
+			moves[i].m_score = 100;
+		else
+			moves[i].m_score = 0;
+	}
+}
+
+/*-----------------------------------------------------------------------*/
+// Prove the ordered try sequence is identical, not only the eventual best move.
+// Selection is a full pass so every index is comparable; search usually stops
+// early after a cutoff, but the sequence up to that point is the same algorithm.
+char search_TestOrderSequence(char side, char capturesOnly)
+{
+	t_engMove classic[ENG_MAX_MOVES];
+	t_engMove fused[ENG_MAX_MOVES];
+	char count, i, ply = 1;
+
+	count = capturesOnly
+		? eng_GenCaptures(side, classic, ENG_MAX_MOVES)
+		: eng_GenMoves(side, classic, ENG_MAX_MOVES);
+	if(count < 2)
+		return 1;
+
+	// Plant a quiet move as a killer so the 100-score branch is exercised when
+	// full generation is used; captures-only lists rarely have quiets.
+	if(!capturesOnly)
+	{
+		for(i = 0; i < count; ++i)
+		{
+			if(NONE == (geBoard[classic[i].m_to] & PIECE_DATA) &&
+			   0 == (classic[i].m_flags & (ENG_MF_ENPASSANT | ENG_MF_PROMO)))
+			{
+				st_killers[ply][0] = classic[i];
+				st_killers[ply][1].m_from = st_killers[ply][1].m_to = ENG_NO_SQUARE;
+				break;
+			}
+		}
+	}
+
+	for(i = 0; i < count; ++i)
+		fused[i] = classic[i];
+
+	scoreMovesClassic(classic, count, ply);
+	for(i = 0; i < count; ++i)
+		pickBest(classic, count, i);
+
+#if SEARCH_SCORE_FIRST
+	scoreMoves(fused, count, ply, 1);
+#else
+	scoreMoves(fused, count, ply);
+#endif
+	for(i = 0; i < count; ++i)
+	{
+#if SEARCH_SCORE_FIRST
+		if(i)
+#endif
+			pickBest(fused, count, i);
+	}
+
+	for(i = 0; i < count; ++i)
+	{
+		if(classic[i].m_from != fused[i].m_from ||
+		   classic[i].m_to != fused[i].m_to ||
+		   classic[i].m_flags != fused[i].m_flags ||
+		   classic[i].m_score != fused[i].m_score)
+			return 0;
+	}
+	return 1;
+}
+
 /*-----------------------------------------------------------------------*/
 char search_TestQuiesceState(char side, unsigned int budget, char exhaustArena)
 {
