@@ -135,15 +135,19 @@ static void walk(char side, int depth, int ply)
 
 	count = eng_GenMoves(side, moves, ENG_MAX_MOVES);
 
-	for(i = 0; i < count; ++i)
 	{
-		eng_Make(&moves[i], &undo);
-		if(!eng_IsAttacked(geKing[side], 1 - side))
-			walk(1 - side, depth - 1, ply + 1);
-		eng_Unmake(&moves[i], &undo);
+		char wasInCheck = eng_InCheck(side);
 
-		if(si_failures)
-			return;
+		for(i = 0; i < count; ++i)
+		{
+			eng_Make(&moves[i], &undo);
+			if(!eng_LeavesInCheck(side, &moves[i], wasInCheck))
+				walk(1 - side, depth - 1, ply + 1);
+			eng_Unmake(&moves[i], &undo);
+
+			if(si_failures)
+				return;
+		}
 	}
 }
 

@@ -343,6 +343,9 @@ static int quiesce(char side, int alpha, int beta, char ply)
 	t_engMove *moves;
 	t_engUndo undo;
 	char count, i, inCheck, legal = 0;
+#if ENGINE_FAST_LEGAL
+	char wasInCheck;
+#endif
 	int stand, score;
 	unsigned int arenaSave;
 
@@ -369,7 +372,12 @@ static int quiesce(char side, int alpha, int beta, char ply)
 	// search that stood pat, so mate in one was invisible at depth 1 - and
 	// level 1 rarely finishes depth 2 on 400 nodes.  Measured over 60 mate-in-
 	// one positions from real games it found 27; with this, 60
+#if ENGINE_FAST_LEGAL
+	wasInCheck = eng_InCheck(side);
+	inCheck = SEARCH_CHECK_EVASION && wasInCheck;
+#else
 	inCheck = SEARCH_CHECK_EVASION && eng_InCheck(side);
+#endif
 
 	if(!inCheck)
 	{
@@ -435,12 +443,19 @@ static int quiesce(char side, int alpha, int beta, char ply)
 		saveState(ply);
 		eng_Make(&moves[i], &undo);
 
+#if ENGINE_FAST_LEGAL
+#ifdef SEARCH_PROFILE
+		if(PROFILE_LEGALITY == geSearchProfile)
+			(void)eng_LeavesInCheck(side, &moves[i], wasInCheck);
+#endif
+		if(eng_LeavesInCheck(side, &moves[i], wasInCheck))
+#else
 #ifdef SEARCH_PROFILE
 		if(PROFILE_LEGALITY == geSearchProfile)
 			(void)eng_IsAttacked(geKing[side], 1 - side);
 #endif
-
 		if(eng_IsAttacked(geKing[side], 1 - side))
+#endif
 		{
 			eng_Unmake(&moves[i], &undo);
 			restoreState(ply);
@@ -578,12 +593,19 @@ static int negamax(char side, char depth, int alpha, int beta, char ply)
 		saveState(ply);
 		eng_Make(&moves[i], &undo);
 
+#if ENGINE_FAST_LEGAL
+#ifdef SEARCH_PROFILE
+		if(PROFILE_LEGALITY == geSearchProfile)
+			(void)eng_LeavesInCheck(side, &moves[i], inCheck);
+#endif
+		if(eng_LeavesInCheck(side, &moves[i], inCheck))
+#else
 #ifdef SEARCH_PROFILE
 		if(PROFILE_LEGALITY == geSearchProfile)
 			(void)eng_IsAttacked(geKing[side], 1 - side);
 #endif
-
 		if(eng_IsAttacked(geKing[side], 1 - side))
+#endif
 		{
 			eng_Unmake(&moves[i], &undo);
 			restoreState(ply);
@@ -642,6 +664,26 @@ char search_Outcome(char side)
 	count = eng_GenMoves(side, moves, arenaRoom());
 	si_arenaTop += count;
 
+#if ENGINE_FAST_LEGAL
+	{
+		char wasInCheck = eng_InCheck(side);
+
+		for(i = 0; i < count; ++i)
+		{
+			char legal;
+
+			eng_Make(&moves[i], &undo);
+			legal = !eng_LeavesInCheck(side, &moves[i], wasInCheck);
+			eng_Unmake(&moves[i], &undo);
+
+			if(legal)
+			{
+				si_arenaTop = arenaSave;
+				return OUTCOME_OK;
+			}
+		}
+	}
+#else
 	for(i = 0; i < count; ++i)
 	{
 		char legal;
@@ -656,6 +698,7 @@ char search_Outcome(char side)
 			return OUTCOME_OK;
 		}
 	}
+#endif
 
 	si_arenaTop = arenaSave;
 	return eng_InCheck(side) ? OUTCOME_CHECKMATE : OUTCOME_STALEMATE;
@@ -667,6 +710,9 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 	t_engMove *moves;
 	t_engUndo undo;
 	char count, i, legal = 0;
+#if ENGINE_FAST_LEGAL
+	char wasInCheck;
+#endif
 	int alpha = -EVAL_INFINITY, score;
 	unsigned int arenaSave = si_arenaTop;
 
@@ -730,6 +776,9 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 				break;
 			}
 
+#if ENGINE_FAST_LEGAL
+	wasInCheck = eng_InCheck(side);
+#endif
 	for(i = 0; i < count; ++i)
 	{
 		pickBest(moves, count, i);
@@ -744,12 +793,19 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 		saveState(0);
 		eng_Make(&moves[i], &undo);
 
+#if ENGINE_FAST_LEGAL
+#ifdef SEARCH_PROFILE
+		if(PROFILE_LEGALITY == geSearchProfile)
+			(void)eng_LeavesInCheck(side, &moves[i], wasInCheck);
+#endif
+		if(eng_LeavesInCheck(side, &moves[i], wasInCheck))
+#else
 #ifdef SEARCH_PROFILE
 		if(PROFILE_LEGALITY == geSearchProfile)
 			(void)eng_IsAttacked(geKing[side], 1 - side);
 #endif
-
 		if(eng_IsAttacked(geKing[side], 1 - side))
+#endif
 		{
 			eng_Unmake(&moves[i], &undo);
 			restoreState(0);

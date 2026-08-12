@@ -378,6 +378,20 @@ would-be attacker, double check and a move that interposes while already in chec
 This is exact but high correctness risk. Stop if the speed is single-digit noise or the first
 implementation cannot be made obviously correct.
 
+**Phase 27 C2 result: rejected for size.**  `eng_LeavesInCheck` is exact: all 1,024 whole-book
+records match the full `eng_IsAttacked` path, depth-five perft is unchanged, and constructed
+cases cover horizontal en passant discovery, orthogonal and diagonal pins, aligned-but-free
+pieces, capturing the pinner, interpositions and double check.  The native suite forces
+`ENGINE_FAST_LEGAL=1` so those gates stay live.
+
+Two forms were sized on Atari `optsize`.  A dedicated vacated-ray scan grew engine CODE by
+about 694 bytes and overflowed MAIN by 661.  The size-conscious form only early-outs when the
+origin is unaligned and still full-tests aligned moves: engine CODE +293 bytes, still
+**149 bytes over** the Atari MAIN ceiling.  On the fixed C64 middlegame that slim form is
+38,557 -> **37,665** jiffies (**2.3%**) at the same 14,400 nodes — the same percentage B5
+had, and the same verdict: not worth an Atari page or a hard overflow.  `ENGINE_FAST_LEGAL`
+defaults off; shipping maps again match Phase B (`DLIST` `$7D00`, DATA ends `$7CF7`).
+
 ### C3. Give quiescence a dedicated capture/promotion generator
 
 The shared generator tests `sc_capturesOnly` through pawn, stepper and slider loops and calls a

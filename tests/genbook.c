@@ -49,12 +49,16 @@ int main(int argc, char **argv)
 			{
 				char pick = rand() % n;
 
-				eng_Make(&moves[pick], &undo);
-				if(eng_IsAttacked(geKing[side], 1 - side) ||
-				   NONE != (undo.m_captured & PIECE_DATA))
-					eng_Unmake(&moves[pick], &undo);
-				else
-					done = 1;
+				{
+					char wasInCheck = eng_InCheck(side);
+
+					eng_Make(&moves[pick], &undo);
+					if(eng_LeavesInCheck(side, &moves[pick], wasInCheck) ||
+					   NONE != (undo.m_captured & PIECE_DATA))
+						eng_Unmake(&moves[pick], &undo);
+					else
+						done = 1;
+				}
 			}
 			if(!done)
 				break;

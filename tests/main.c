@@ -56,6 +56,8 @@ int main(int argc, char **argv)
 		printf("== cc65 Chess test suite ==\n\n");
 		failures += test_RunCastle(verbose);
 		printf("\n");
+		failures += test_RunLegality(verbose);
+		printf("\n");
 		failures += test_RunRepetition(verbose);
 		printf("\n");
 		failures += test_RunOpening(verbose);

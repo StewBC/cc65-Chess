@@ -205,9 +205,13 @@ static int probeLegal(const t_engMove *move, char side, int game, int ply)
 
 	memcpy(sc_probeBoard, geBoard, 128);
 	eng_HistoryEnable(0);
-	eng_Make(move, &undo);
-	legal = !eng_IsAttacked(geKing[side], 1 - side);
-	eng_Unmake(move, &undo);
+	{
+		char wasInCheck = eng_InCheck(side);
+
+		eng_Make(move, &undo);
+		legal = !eng_LeavesInCheck(side, move, wasInCheck);
+		eng_Unmake(move, &undo);
+	}
 	eng_HistoryEnable(1);
 
 	if(memcmp(sc_probeBoard, geBoard, 128) ||

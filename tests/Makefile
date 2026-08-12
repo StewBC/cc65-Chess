@@ -14,7 +14,8 @@ SRCDIR := ../src
 
 # -funsigned-char matches cc65, where char is unsigned by default.  A lot of
 # this code leans on that, so building without it will produce nonsense
-CFLAGS := -I$(SRCDIR) -funsigned-char -O2 -g -Wall -DEVAL_TUNING -Wno-char-subscripts
+# ENGINE_FAST_LEGAL=1 so the suite exercises the C2 candidate; shipping defaults off.
+CFLAGS := -I$(SRCDIR) -funsigned-char -O2 -g -Wall -DEVAL_TUNING -DENGINE_FAST_LEGAL=1 -Wno-char-subscripts
 
 # main.c is deliberately absent - the tests supply their own
 ENGINE := \
@@ -39,6 +40,7 @@ HARNESS := \
 	match.c \
 	gamefuzz.c \
 	castle.c \
+	legality.c \
 	repetition.c \
 	opening.c \
 	selfplay.c

@@ -35,6 +35,7 @@ int test_RunQuiescenceGen(int verbose);
 int test_RunBudgetSurvey(int verbose);
 int test_RunGameFuzz(int seed, int games, int verbose);
 int test_RunCastle(int verbose);
+int test_RunLegality(int verbose);
 int test_RunRepetition(int verbose);
 int test_RunOpening(int verbose);
 int test_RunSelfPlay(int games, int maxPlies, int verbose);

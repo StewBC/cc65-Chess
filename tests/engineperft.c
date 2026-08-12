@@ -144,14 +144,18 @@ static long enginePerft(char side, int depth, int ply)
 
 	count = eng_GenMoves(side, moves, ENG_MAX_MOVES);
 
-	for(i = 0; i < count; ++i)
 	{
-		eng_Make(&moves[i], &undo);
+		char wasInCheck = eng_InCheck(side);
 
-		if(!eng_IsAttacked(geKing[side], 1 - side))
-			nodes += (depth == 1) ? 1 : enginePerft(1 - side, depth - 1, ply + 1);
+		for(i = 0; i < count; ++i)
+		{
+			eng_Make(&moves[i], &undo);
 
-		eng_Unmake(&moves[i], &undo);
+			if(!eng_LeavesInCheck(side, &moves[i], wasInCheck))
+				nodes += (depth == 1) ? 1 : enginePerft(1 - side, depth - 1, ply + 1);
+
+			eng_Unmake(&moves[i], &undo);
+		}
 	}
 
 	return nodes;
@@ -170,22 +174,26 @@ void test_EnginePerftDivide(const char *fen, int depth)
 	long total = 0;
 
 	printf("divide, depth %d\n", depth);
-	for(i = 0; i < count; ++i)
 	{
-		eng_Make(&moves[i], &undo);
-		if(!eng_IsAttacked(geKing[side], 1 - side))
-		{
-			long n = (depth <= 1) ? 1 : enginePerft(1 - side, depth - 1, 0);
-			char from[3], to[3];
-			char promo = moves[i].m_flags & ENG_MF_PROMO;
+		char wasInCheck = eng_InCheck(side);
 
-			test_TileName(ENG_TO_TILE(moves[i].m_from), from);
-			test_TileName(ENG_TO_TILE(moves[i].m_to), to);
-			printf("  %s%s%c %ld\n", from, to,
-			       promo ? ".rnbqkp"[promo] : ' ', n);
-			total += n;
+		for(i = 0; i < count; ++i)
+		{
+			eng_Make(&moves[i], &undo);
+			if(!eng_LeavesInCheck(side, &moves[i], wasInCheck))
+			{
+				long n = (depth <= 1) ? 1 : enginePerft(1 - side, depth - 1, 0);
+				char from[3], to[3];
+				char promo = moves[i].m_flags & ENG_MF_PROMO;
+
+				test_TileName(ENG_TO_TILE(moves[i].m_from), from);
+				test_TileName(ENG_TO_TILE(moves[i].m_to), to);
+				printf("  %s%s%c %ld\n", from, to,
+				       promo ? ".rnbqkp"[promo] : ' ', n);
+				total += n;
+			}
+			eng_Unmake(&moves[i], &undo);
 		}
-		eng_Unmake(&moves[i], &undo);
 	}
 	printf("  total %ld\n", total);
 }

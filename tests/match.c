@@ -105,9 +105,10 @@ static void buildPositions(int plies, char allowCaptures)
 			for(tries = 0; tries < count * 2 && !done; ++tries)
 			{
 				char pick = rand() % count;
+				char wasInCheck = eng_InCheck(side);
 
 				eng_Make(&moves[pick], &undo);
-				if(eng_IsAttacked(geKing[side], 1 - side) ||
+				if(eng_LeavesInCheck(side, &moves[pick], wasInCheck) ||
 				   (!allowCaptures && NONE != (undo.m_captured & PIECE_DATA)))
 					eng_Unmake(&moves[pick], &undo);
 				else

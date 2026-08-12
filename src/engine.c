@@ -391,6 +391,47 @@ char eng_InCheck(char side)
 	return eng_IsAttacked(geKing[side], 1 - side);
 }
 
+#if ENGINE_FAST_LEGAL
+/*-----------------------------------------------------------------------*/
+// After make: is side's king attacked?  When the side was not in check, only
+// king moves, en passant and moves from a square aligned with the king can
+// leave the king in check.  Unaligned origins return legal without a walk.
+// Aligned origins still use the full attack test - a dedicated vacated-ray
+// scan is exact but cost hundreds of bytes of cc65 code the Atari cannot fund.
+char eng_LeavesInCheck(char side, const t_engMove *move, char wasInCheck)
+{
+	char other = 1 - side;
+	char king, piece, kr, kf, fr, ff;
+
+	piece = geBoard[move->m_to] & PIECE_DATA;
+
+	// King moves (including castling), en passant and any evasion while
+	// already checked can introduce attacks that are not pure discoveries.
+	if(wasInCheck ||
+	   KING == piece ||
+	   (move->m_flags & ENG_MF_ENPASSANT))
+		return eng_IsAttacked(geKing[side], other);
+
+	king = geKing[side];
+	kr = ENG_ROW(king);
+	kf = ENG_FILE(king);
+	fr = ENG_ROW(move->m_from);
+	ff = ENG_FILE(move->m_from);
+
+	// Not on the king's rank, file or diagonal: cannot discover a check.
+	if(kr != fr && kf != ff)
+	{
+		char adr = (fr > kr) ? (fr - kr) : (kr - fr);
+		char adf = (ff > kf) ? (ff - kf) : (kf - ff);
+
+		if(adr != adf)
+			return 0;
+	}
+
+	return eng_IsAttacked(geKing[side], other);
+}
+#endif
+
 /*-----------------------------------------------------------------------*/
 static char addMove(t_engMove *moves, char count, char from, char to, char flags)
 {
@@ -642,11 +683,18 @@ char eng_GenLegalMoves(char side, t_engMove *moves)
 	t_engUndo undo;
 	char count = eng_GenMoves(side, moves, ENG_MAX_MOVES);
 	char i = 0, out = 0;
+#if ENGINE_FAST_LEGAL
+	char wasInCheck = eng_InCheck(side);
+#endif
 
 	while(i < count)
 	{
 		eng_Make(&moves[i], &undo);
+#if ENGINE_FAST_LEGAL
+		if(!eng_LeavesInCheck(side, &moves[i], wasInCheck))
+#else
 		if(!eng_IsAttacked(geKing[side], 1 - side))
+#endif
 			moves[out++] = moves[i];
 		eng_Unmake(&moves[i], &undo);
 		++i;

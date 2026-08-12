@@ -111,6 +111,28 @@ void board_LegalMovesFrom(char tile)
 	side = (piece & PIECE_WHITE) >> 7;
 	count = eng_GenMovesFrom(from, side, moves, MAX_PIECE_MOVES + 4);
 
+#if ENGINE_FAST_LEGAL
+	{
+		char wasInCheck = eng_InCheck(side);
+
+		for(i = 0; i < count; ++i)
+		{
+			char to;
+
+			eng_Make(&moves[i], &undo);
+			to = eng_LeavesInCheck(side, &moves[i], wasInCheck)
+				? NULL_TILE : ENG_TO_TILE(moves[i].m_to);
+			eng_Unmake(&moves[i], &undo);
+
+			if(NULL_TILE == to)
+				continue;
+
+			if(!board_findInList(gMoveTiles, gNumMoveTiles, to) &&
+			   gNumMoveTiles < MAX_PIECE_MOVES)
+				gMoveTiles[gNumMoveTiles++] = to;
+		}
+	}
+#else
 	for(i = 0; i < count; ++i)
 	{
 		char to;
@@ -127,6 +149,7 @@ void board_LegalMovesFrom(char tile)
 		   gNumMoveTiles < MAX_PIECE_MOVES)
 			gMoveTiles[gNumMoveTiles++] = to;
 	}
+#endif
 }
 
 /*-----------------------------------------------------------------------*/

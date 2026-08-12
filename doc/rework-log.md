@@ -2669,6 +2669,44 @@ Atari DATA ends `$7CF7`, `DLIST` at `$7D00`, BSS ends `$8F94`.  C1 is rejected.
 
 ---
 
+## Phase 27 - on-demand legality (C2)
+
+C2 is the per-move form of the pin idea Phase 5 rejected: after a make, skip the full attack
+walk when the move cannot have discovered a check.  King moves, en passant and positions that
+were already in check still use `eng_IsAttacked`.  Unaligned origins are legal without a walk.
+Aligned origins need either a vacated-ray scan or the full walk.
+
+`eng_LeavesInCheck(side, move, wasInCheck)` is the entry.  Search, `eng_GenLegalMoves` and the
+UI legal-move list all use it when `ENGINE_FAST_LEGAL` is on.  Correctness held: depth-five
+perft, 300 fuzz games, tactics, mate-in-one at every real budget, and all 1,024 whole-book
+records are identical to the full path.  Constructed tests cover horizontal en passant
+discovery, orthogonal and diagonal pins, sliding along a pin, capturing the pinner,
+aligned-but-blocked free pieces, interpositions while checked and double check.  The native
+suite builds with `-DENGINE_FAST_LEGAL=1` so those gates cannot go stale.
+
+Speed on the retained C64 middlegame, slim form (unaligned early-out only):
+
+| build | first pass | second pass | nodes |
+|---|---:|---:|---:|
+| control (shipping) | 38,557 | — | 14,400 |
+| slim `ENGINE_FAST_LEGAL=1` | 37,665 | 37,671 | 14,400 |
+
+That is **2.3%**.  The full vacated-ray form was not re-timed after it overflowed Atari.
+
+Size killed both forms before the speed number could matter:
+
+| form | engine CODE delta | Atari |
+|---|---:|---|
+| vacated-ray scan | +694 | MAIN overflow **661** bytes |
+| unaligned early-out only | +293 | MAIN overflow **149** bytes |
+
+After B4 the Atari has 363 bytes below the framebuffer and eight bytes before the next
+`DLIST` page.  Neither C2 form fits.  The 2.3% is the same figure that rejected B5 for a page;
+here the binary does not even link.  `ENGINE_FAST_LEGAL` defaults off, call sites compile back
+to direct `eng_IsAttacked` when off, and shipping maps match Phase B again.  C2 is rejected.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

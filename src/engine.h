@@ -93,6 +93,13 @@ extern unsigned int geHashKey;
 #define ENGINE_REPETITION_RING_KEY 0
 #endif
 
+// C2 candidate: after a make, skip the full attack walk when the move cannot
+// have discovered a check.  Rejected for Atari size (overflow / display-list
+// page); retained default off for reproduction only.
+#ifndef ENGINE_FAST_LEGAL
+#define ENGINE_FAST_LEGAL	0
+#endif
+
 /*-----------------------------------------------------------------------*/
 // Rebuild geHashKey from the board and start the position history again with
 // the position as it now stands.  Anything that puts pieces down without
@@ -141,6 +148,19 @@ char eng_AttackersOf(char square, char bySide, char *list);
 
 /*-----------------------------------------------------------------------*/
 char eng_InCheck(char side);
+
+/*-----------------------------------------------------------------------*/
+// Call only after eng_Make of this move by side.  wasInCheck is eng_InCheck
+// from before the make.  Returns non-zero if side's king is left in check.
+// When ENGINE_FAST_LEGAL is on, non-discoverable quiet cases skip the full
+// attack walk; the answer must match eng_IsAttacked on the king either way.
+// When off, a macro so the shipping build pays no wrapper call.
+#if ENGINE_FAST_LEGAL
+char eng_LeavesInCheck(char side, const t_engMove *move, char wasInCheck);
+#else
+#define eng_LeavesInCheck(side, move, wasInCheck) \
+	eng_IsAttacked(geKing[side], (char)(1 - (side)))
+#endif
 
 /*-----------------------------------------------------------------------*/
 // Pseudo-legal moves for "side" - they may still leave the king in check.
