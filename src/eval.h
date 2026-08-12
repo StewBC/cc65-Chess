@@ -46,7 +46,10 @@ extern const int gcPieceValue[PAWN+1];
 #define EVAL_MATEDRIVE		SET_BIT(5)
 #define EVAL_QUEENHOME		SET_BIT(6)
 #define EVAL_QUEENOUT		SET_BIT(7)
-#define EVAL_ALL			(EVAL_MATERIAL|EVAL_PST|EVAL_PAWNSTRUCT|EVAL_ENDGAME|EVAL_MATEDRIVE)
+// EVAL_PAWNSTRUCT is deliberately **not** in EVAL_ALL: Phase E1's board-scan
+// form fitted Atari but made every host node ~1.38x dearer and lost at equal
+// time (-62 over 512).  Off means what ships
+#define EVAL_ALL			(EVAL_MATERIAL|EVAL_PST|EVAL_ENDGAME|EVAL_MATEDRIVE)
 
 // SET_BIT(6), EVAL_QUEENHOME, is deliberately **not** in EVAL_ALL, and neither
 // is SET_BIT(7).  Every other bit turns off something the shipping engine does;
@@ -133,12 +136,12 @@ extern char geEvalTerms;
 #endif
 
 /*-----------------------------------------------------------------------*/
-// Incremental pawn structure: doubled and isolated only.  Same dual-switch
-// shape as the mate drive - the tuning build can clear EVAL_PAWNSTRUCT for
-// A/B, and a shipping build with -DEVAL_PAWNSTRUCT_ON=0 is the only honest
-// way to price the node on a 6502.
+// Doubled/isolated pawn structure (Phase E1).  Default off: the board-scan
+// form that fitted Atari reintroduced Phase 4's equal-time failure.  The
+// tuning build can set EVAL_PAWNSTRUCT for A/B; a shipping build with
+// -DEVAL_PAWNSTRUCT_ON=1 is how the node is priced on a 6502.
 #ifndef EVAL_PAWNSTRUCT_ON
-#define EVAL_PAWNSTRUCT_ON	1
+#define EVAL_PAWNSTRUCT_ON	0
 #endif
 
 /*-----------------------------------------------------------------------*/

@@ -14,7 +14,7 @@
 	.import		_geBoard
 
 .ifndef EVAL_PAWNSTRUCT_ON
-	EVAL_PAWNSTRUCT_ON = 1
+	EVAL_PAWNSTRUCT_ON = 0
 .endif
 
 .if EVAL_PAWNSTRUCT_ON

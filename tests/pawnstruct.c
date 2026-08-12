@@ -77,6 +77,10 @@ int test_RunPawnStruct(int verbose)
 	(void)verbose;
 	printf("pawn structure (doubled / isolated)\n");
 
+	// not in EVAL_ALL; the suite compiles with EVAL_PAWNSTRUCT_ON=1 and
+	// turns the term on here so the purpose tests exercise it
+	geEvalTerms |= EVAL_PAWNSTRUCT;
+
 	test_EngineSetFEN(
 		"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 	failures += expectStruct("start", 0);

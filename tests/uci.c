@@ -388,7 +388,7 @@ static void cmdUci(void)
 	printf("option name Repetition type check default true\n");
 	printf("option name CheckEvasion type check default true\n");
 	printf("option name MateDrive type check default true\n");
-	printf("option name PawnStruct type check default true\n");
+	printf("option name PawnStruct type check default false\n");
 	printf("option name QueenHome type check default false\n");
 	printf("option name QueenOut type check default false\n");
 #endif

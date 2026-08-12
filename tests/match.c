@@ -442,17 +442,21 @@ int test_RunMatchEqualTime(int verbose)
 }
 
 /*-----------------------------------------------------------------------*/
-// Incremental doubled/isolated structure against its own absence.  Equal
-// nodes first; the equal-time half uses a placeholder charge until the C64
-// node price is measured (match pawn is the live-switch screen, not the
-// landing number - the Stockfish gauntlet is)
+// Doubled/isolated structure against its own absence.  Equal nodes first;
+// equal-time charged at the host nps ratio until a C64 figure replaces it
+// (board-scan form measured ~1.38x dearer a node on this host)
 int test_RunMatchPawnStruct(int verbose)
 {
-	t_Config on  = { "pawn structure", EVAL_ALL, 3, 2000, 1 };
-	t_Config off = { "no structure",   EVAL_ALL & ~EVAL_PAWNSTRUCT, 3, 2000, 1 };
+	// structure is not in EVAL_ALL; turn it on explicitly for the on side
+	t_Config on  = { "pawn structure", EVAL_ALL | EVAL_PAWNSTRUCT, 3, 2000, 1 };
+	t_Config off = { "no structure",   EVAL_ALL, 3, 2000, 1 };
+	// 2000 / 1.38 — host nps ratio; replace if a C64 figure lands
+	t_Config costed = { "structure, 1450 nodes", EVAL_ALL | EVAL_PAWNSTRUCT, 3, 1450, 1 };
 
-	printf("match: incremental pawn structure at equal nodes\n");
+	printf("match: pawn structure at equal nodes\n");
 	runMatch(&on, &off, 240, verbose);
+	printf("match: the same at equal TIME, charged the host's 38%%\n");
+	runMatch(&costed, &off, 240, verbose);
 	return 0;
 }
 

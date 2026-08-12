@@ -512,6 +512,14 @@ Required checks:
 This is the highest-priority direct strength term because it has prior evidence and a known
 removable reason for rejection.
 
+**Phase 30 E1 result: rejected for equal-time cost.**  Incremental make/unmake file counts
+were exact but cost ~750 CODE bytes and overflowed Atari.  A pawn-only board scan at eval
+time fitted (`pawnstruct.s`, Atari 82 free when on) with doses −8/−16.  Equal nodes 228-208-76
+over 512 (~+0.9σ); host nps ~1.38x dearer; equal time 182-244-86 (~−2.5σ).  Switch-off matches
+Phase C on all 1,024 whole-book searches.  `EVAL_PAWNSTRUCT_ON` defaults 0; not in `EVAL_ALL`.
+Reopen only with a free or near-free update (true incremental that fits, or a memory reclaim
+that funds it) — not another full-board walk.
+
 ### E2. Tune existing values at zero runtime cost
 
 Piece values, the existing PST cells, endgame tables, phase thresholds and blend weights can be

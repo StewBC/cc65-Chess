@@ -2754,6 +2754,46 @@ did not fit is C3 at 6.3%.  Hand-off branch: `codex/next-engine-phase-c-exact-wo
 
 ---
 
+## Phase 30 - incremental pawn structure (E1)
+
+Phase 4's doubled/isolated/passed bundle scored +2.0σ at equal nodes and +0.6σ at equal time
+after a full-board leaf evaluation made every C64 node 1.35x dearer.  E1 rebuilds doubled and
+isolated only (passed stays separate), with dual switch `EVAL_PAWNSTRUCT` / `EVAL_PAWNSTRUCT_ON`.
+
+### Size path
+
+An incremental make/unmake form with per-file counts cost ~750 CODE bytes on Atari and pushed
+`DLIST` past the framebuffer.  A board-scan form at `eval_Position` time fitted after a
+hand-coded 6502 walk in `src/pawnstruct.s` (~248 CODE, 23 BSS when on): Atari `DLIST` `$7E00`,
+**82 bytes** below `$9100`.  Host C reference agrees with the asm on constructed positions
+under c64m (start 0, white doubled −8, white isolated −16, black doubled+isolated h +40).
+Doses are powers of two (−8 doubled, −16 isolated).
+
+### Strength screens
+
+| screen | result |
+|---|---|
+| purpose tests + fuzzer + suite | green with `EVAL_PAWNSTRUCT_ON=1` forced in the native suite |
+| switch-off vs Phase C tip | all 1,024 whole-book searches identical |
+| equal nodes (512 games) | **228-208-76** (~+0.9σ) structure vs none |
+| equal time, host 38% charge (1450 vs 2000) | **182-244-86** (~−2.5σ) |
+| host nps (64 skill-3 book positions) | on 4.59M / off 6.35M → **~1.38x** dearer a node |
+| SF gauntlet absolute (ON, 512/pairing) | levels 3–4 within noise of OFF subsample |
+
+The equal-time loss is Phase 4's failure mode again: the scan buys a weak equal-node edge and
+pays more than it is worth once nodes are charged.  Incremental maintenance would remove the
+eval-time walk but does not fit Atari without a separate memory reclaim (undo pack / arena).
+
+### Shipping
+
+`EVAL_PAWNSTRUCT_ON` defaults **0**; `EVAL_PAWNSTRUCT` is not in `EVAL_ALL`.  The candidate and
+asm stay in tree for reproduction; the native suite forces the compile switch on so the gates
+cannot go stale.  Shipping maps match Phase B again (Atari `DLIST` `$7D00`, 363 free).
+
+**E1 rejected** for equal-time cost.  Branch: `codex/next-engine-phase-e1-pawn-structure`.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.
