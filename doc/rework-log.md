@@ -2337,6 +2337,42 @@ the one large candidate to the experiment that could show its saved nodes were n
 
 ---
 
+## Phase 19 - the transposition table died at the hash-width price
+
+The transposition table was the one remaining search technique not discounted by the failed
+portfolio premise. Unlike PVS, delta pruning, losing-capture skipping and null move, a TT can
+return work that actually completed rather than save work on an assumption. It therefore got
+one price before any table code or RAM-policy decision: widening the existing 16-bit repetition
+key to a usable 32-bit transposition key.
+
+The candidate retained the existing 16-bit Zobrist half and formed a second half from a
+square-permuted lookup in the same table. That avoided prejudging the separate table-memory
+decision by adding another 1,584 bytes of constants, while charging the 6502 for the second
+lookup, 32-bit XORs and a doubled repetition ring. `tests/c64search.c` was compiled twice in
+the shipping configuration with `cl65 -t c64 -Oris`, and run under VICE in NTSC warp mode.
+The compile-time-off control PRG was byte-for-byte identical to the pre-change baseline.
+
+```text
+budget   depth   nodes   16-bit jiffies   32-bit jiffies   cost
+   400       2     152              289              336   +16.3%
+  1600       3    1509             1660             2005   +20.8%
+  6000       4    5232            10460            11963   +14.4%
+ total             6893            12409            14304   +15.3%
+```
+
+The node counts match to the digit at every budget, so both halves timed identical search work.
+The candidate PRG grew by 321 bytes even without a second constants table, and the 32-bit
+history ring necessarily adds 256 bytes of BSS.
+
+This stops above the work note's 10% on-target human-decision threshold before the TT exists.
+The result is large at every measured budget and 15.3% combined, so a table would begin by
+making every node dearer on all targets, including the ones with no useful table capacity,
+before paying for a probe or store. The memory-size, per-target-chess and visualizer questions
+cannot rescue that first cost and were not opened. The pricing scaffold was reverted; the
+shipping engine remains unchanged.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.
@@ -2358,8 +2394,8 @@ Kept here so they do not get relitigated.
 - **No published figure comes from the tuning build.** `uci-tuning` exists for A/B work and
   must be shown to reproduce `uci`'s games to the digit before its differences mean anything.
 - `plat.h` and 0-63 tile numbering are frozen so that the untestable ports stay safe.
-- The opening book and the transposition table are deferred, not rejected. Revisit after
-  Phase 4.
+- The opening book was revisited and shipped in Phase 12. The transposition table was rejected
+  in Phase 19 at its prerequisite hash-width price: 15.3% on a C64 before probe or store.
 - The current engine's speed problem was largely self-inflicted by the data structure
   rather than by C: legality testing cost a full Attack DB rebuild. Once that is a
   ray-cast, accurate and fast stop being opposed, which is why `gDeepThoughts` can go.

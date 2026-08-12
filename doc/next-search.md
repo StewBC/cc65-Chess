@@ -3,11 +3,10 @@
 A work note for whoever picks this up next, human or agent. Read `AGENTS.md` first, then
 `doc/measuring.md` §3, then this.
 
-**Status: the search-technique portfolio it originally proposed was run in full and closed
-empty.** Four candidates, all measured, all reverted, shipping engine unchanged —
-`doc/rework-log.md` Phases 14 to 18. That is not a failure of the exercise; it is the exercise
-working, and it cost about a day. This revision keeps the instruments and the gates, which
-earned their place, and replaces the premise, which did not survive.
+**Status: the search-technique portfolio is closed empty.** Four pruning candidates were
+measured and reverted in `doc/rework-log.md` Phases 14 to 18. The remaining exact technique,
+the transposition table, stopped before implementation in Phase 19: widening the position hash
+cost 15.3% on a C64, above the 10% human-decision gate. The shipping engine is unchanged.
 
 ---
 
@@ -31,8 +30,8 @@ node before a cutoff — and that fact turns out to explain most of what follows
 | losing-capture skipping | 13.7% | stopped at the pre-gate |
 | **null move** | **27.0% / 21.8%** at levels 2 / 4 | cleared the node gate, then measured **+0.04σ** |
 
-**Still untried:** transposition table, history heuristic, SEE, check extensions, late move
-reductions, aspiration windows.
+**Still untried:** history heuristic, SEE, check extensions, late move reductions, aspiration
+windows. The portfolio result gives none of them a reason to move ahead of §3b.
 
 ## 2. What the portfolio established — read this before proposing anything
 
@@ -61,16 +60,27 @@ Two rules follow, and they are the durable output of the whole exercise:
    measuring". It says nothing about whether the saving becomes strength. Three candidates were
    correctly stopped by it for pennies; the fourth passed it and still measured nothing.
 2. **Nothing that prunes on an assumption should be expected to convert.** A technique whose
-   saved work is *exact* — a transposition table returning a completed search — is a different
-   proposition and has not been tested. A technique that guesses is now four-for-four.
+   saved work is *exact* — a transposition table returning a completed search — was a different
+   proposition; §3a records why its prerequisite cost stopped it before the table itself could
+   be tested. A technique that guesses is four-for-four.
 
 ## 3. What is left, in order
 
 ### 3a. Transposition table
 
-The only remaining technique this result does not already discount, because it does not prune
-on an assumption: it returns the result of a search that actually finished, so the depth it buys
-is real depth.
+**Measured and rejected at the first cost, before table code.** A 32-bit incremental key was
+priced against the unchanged 16-bit build with `tests/c64search.c` under VICE. Both builds
+visited exactly 152, 1,509 and 5,232 nodes. Their times were 289/1,660/10,460 and
+336/2,005/11,963 jiffies respectively: 16.3%, 20.8% and 14.4% slower, or **15.3% combined**.
+That clears the 10% stop in §5 by enough that the RAM design cannot rescue it. The memory and
+per-target-policy questions were therefore not opened, and no transposition table was written.
+
+The rest of this subsection records why it was the last candidate worth pricing and the costs
+that would have followed if the first one had passed.
+
+The TT was the only remaining technique the portfolio result did not already discount, because
+it does not prune on an assumption: it returns the result of a search that actually finished,
+so the depth it buys is real depth.
 
 **The half that looked already paid for is not.** A hash *is* maintained for repetition
 detection, at about 9% a node on a real C64 — but `geHashKey` is **16 bits**
@@ -283,11 +293,8 @@ their own 64 games.
 
 ## 8. Scope
 
-- **The transposition table and the visualizer split are no longer parked** — §3a is why. The TT
-  is the one remaining technique with a reason to work, and it is the one that needs RAM. The
-  question "does removing `B`/`A`/`D` on the Atari free enough to fund a chess feature for all
-  seven targets" is now worth its one-hour answer: build the Atari with that code compiled out
-  and read the map. That measurement commits to nothing.
+- **The transposition table is closed at its first cost**, so it no longer supplies a reason to
+  reopen the visualizer split or choose a per-target RAM policy. No table code was written.
 - **`gcSearchSkill` is in scope now, deliberately and with Stefan** — §3b and §3c. It was out of
   scope while search technique was live; that is over.
 - **No changes to `plat.h`, the 0–63 tile numbering, the key bindings, or the ports.**
