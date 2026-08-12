@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include "types.h"
 #include "engine.h"
+#include "search.h"
 #include "testutil.h"
 
 #define QT_MAX_PLY	6
@@ -147,6 +148,41 @@ static void walk(char side, int depth, int ply)
 }
 
 /*-----------------------------------------------------------------------*/
+static void checkSearchStateReturns(void)
+{
+	static const struct
+	{
+		const char *fen;
+		unsigned int budget;
+		char exhaustArena;
+		const char *name;
+	} cases[] =
+	{
+		{ "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+		  60000, 0, "ordinary return" },
+		{ "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+		  2, 0, "budget abort" },
+		{ "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+		  60000, 1, "arena exhaustion" },
+		{ "7k/6Q1/5K2/8/8/8/8/8 b - - 0 1",
+		  60000, 0, "mate return" },
+	};
+	int i;
+
+	for(i = 0; i < (int)(sizeof(cases)/sizeof(cases[0])); ++i)
+	{
+		char side = test_EngineSetFEN(cases[i].fen);
+
+		if(!search_TestQuiesceState(side, cases[i].budget,
+		                              cases[i].exhaustArena))
+		{
+			printf("    quiescence changed parent state on %s\n", cases[i].name);
+			++si_failures;
+		}
+	}
+}
+
+/*-----------------------------------------------------------------------*/
 int test_RunQuiescenceGen(int verbose)
 {
 	// the perft set: the standard positions, chosen because they are the ones
@@ -175,6 +211,7 @@ int test_RunQuiescenceGen(int verbose)
 		if(si_failures)
 			printf("    position %d failed\n", i);
 	}
+	checkSearchStateReturns();
 
 	if(verbose || !si_failures)
 		printf("  %ld positions, %ld capture moves against %ld full moves (%ld%%)\n",

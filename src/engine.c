@@ -49,6 +49,7 @@ unsigned int geHashKey;
 static unsigned int	su_hashRing[HASH_RING];
 static char			sc_hashTop;			// next slot to write, wraps
 static char			sc_hashValid;		// entries that can be trusted
+static char			sc_historyEnabled = 1;
 
 #ifdef SEARCH_PROFILE
 // The sink stops cc65 deleting a deliberately discarded duplicate result.
@@ -752,6 +753,7 @@ void eng_HashReset(void)
 	sc_hashValid = 0;
 	su_hashRing[sc_hashTop++] = positionKey();
 	sc_hashValid = 1;
+	sc_historyEnabled = 1;
 }
 
 /*-----------------------------------------------------------------------*/
@@ -787,6 +789,22 @@ char eng_HistoryMatchesPosition(void)
 	return sc_hashValid &&
 	       su_hashRing[(char)(sc_hashTop - 1) & HASH_MASK] == positionKey();
 }
+
+/*-----------------------------------------------------------------------*/
+unsigned int eng_HistoryStateDigest(void)
+{
+	unsigned int digest = sc_hashTop | ((unsigned int)sc_hashValid << 8);
+	char i;
+
+	// Include stale slots too.  A no-history move must not write the ring, even
+	// if it leaves top and valid unchanged and the write is not visible yet.
+	for(i = 0; i < HASH_RING; ++i)
+	{
+		digest = (digest << 1) | (digest >> 15);
+		digest ^= su_hashRing[i];
+	}
+	return digest;
+}
 #endif
 
 /*-----------------------------------------------------------------------*/
@@ -797,6 +815,12 @@ static void revokeRights(char square)
 	else if(square == sc_rookQ[SIDE_WHITE]) geCastle &= ~ENG_CASTLE_WQ;
 	else if(square == sc_rookK[SIDE_BLACK]) geCastle &= ~ENG_CASTLE_BK;
 	else if(square == sc_rookQ[SIDE_BLACK]) geCastle &= ~ENG_CASTLE_BQ;
+}
+
+/*-----------------------------------------------------------------------*/
+void eng_HistoryEnable(char enabled)
+{
+	sc_historyEnabled = enabled;
 }
 
 /*-----------------------------------------------------------------------*/
@@ -871,8 +895,6 @@ void eng_Make(const t_engMove *move, t_engUndo *undo)
 			su_profileSink = eval_PhaseDelta(move, piece, undo->m_captured);
 		if(PROFILE_EVAL_END == geSearchProfile)
 			su_profileSink = eval_EndDelta(move, piece, undo->m_captured);
-		if(PROFILE_HASH_DELTA == geSearchProfile)
-			su_profileSink = hashDelta(move, piece, undo->m_captured);
 #endif
 
 		// keep the running evaluation with the pieces.  eng_Unmake subtracts
@@ -880,11 +902,18 @@ void eng_Make(const t_engMove *move, t_engUndo *undo)
 		geEvalScore += eval_MoveDelta(move, piece, undo->m_captured);
 		gePhase += eval_PhaseDelta(move, piece, undo->m_captured);
 		geEvalEnd += eval_EndDelta(move, piece, undo->m_captured);
+	}
+
+	if(sc_historyEnabled)
+	{
+#ifdef SEARCH_PROFILE
+		if(PROFILE_HASH_DELTA == geSearchProfile)
+			su_profileSink = hashDelta(move, piece, undo->m_captured);
+#endif
 		geHashKey ^= hashDelta(move, piece, undo->m_captured);
 
-		// and record where we now are.  This runs for search moves as well as
-		// real ones, which is the point: the ring is the game's history and the
-		// current search line at the same time
+		// Search lines and played moves share the ring.  Quiescence is absent
+		// because nothing below it asks about repetition.
 #ifdef SEARCH_PROFILE
 		if(PROFILE_HISTORY == geSearchProfile)
 		{
@@ -953,15 +982,20 @@ void eng_Unmake(const t_engMove *move, const t_engUndo *undo)
 			su_profileSink = eval_PhaseDelta(move, moved, undo->m_captured);
 		if(PROFILE_EVAL_END == geSearchProfile)
 			su_profileSink = eval_EndDelta(move, moved, undo->m_captured);
-		if(PROFILE_HASH_DELTA == geSearchProfile)
-			su_profileSink = hashDelta(move, moved, undo->m_captured);
 #endif
 
 		geEvalScore -= eval_MoveDelta(move, moved, undo->m_captured);
 		gePhase -= eval_PhaseDelta(move, moved, undo->m_captured);
 		geEvalEnd -= eval_EndDelta(move, moved, undo->m_captured);
-		geHashKey ^= hashDelta(move, moved, undo->m_captured);
+	}
 
+	if(sc_historyEnabled)
+	{
+#ifdef SEARCH_PROFILE
+		if(PROFILE_HASH_DELTA == geSearchProfile)
+			su_profileSink = hashDelta(move, moved, undo->m_captured);
+#endif
+		geHashKey ^= hashDelta(move, moved, undo->m_captured);
 		--sc_hashTop;
 		if(sc_hashValid)
 			--sc_hashValid;
@@ -973,10 +1007,13 @@ void eng_Unmake(const t_engMove *move, const t_engUndo *undo)
 void eng_ProfileBoardPair(const t_engMove *move)
 {
 	t_engUndo undo;
+	char history = sc_historyEnabled;
 
 	sc_profileBoardOnly = 1;
+	eng_HistoryEnable(0);
 	eng_Make(move, &undo);
 	eng_Unmake(move, &undo);
+	eng_HistoryEnable(history);
 	sc_profileBoardOnly = 0;
 }
 #endif

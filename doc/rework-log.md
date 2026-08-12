@@ -2474,6 +2474,52 @@ entry still describes the board.  B1 is rejected as a speed change.
 
 ---
 
+## Phase 22 - history stops at the quiescence boundary
+
+B2 and B3 share an attractive operation: move the board and running evaluation without
+maintaining a position signature no caller will read.  They did not share a result.
+
+The first implementation split make into probe and commit calls.  The fuzzer compared all 128
+board bytes, middlegame and endgame totals, phase, piece hash, en-passant, castling, halfmove,
+both king trackers and a digest covering the entire history ring plus top and valid around
+every legality probe.  It stayed exact, as did all 1,024 `book.epd` searches.  But B2's fixed
+C64 result was 47,350 jiffies against 47,324 for the refactored old path: nothing.  Worse, both
+were about 1.9% slower than Phase 20's roughly 46,450 because the additional cc65 C calls cost
+more than the rejected probes' hash work.  With B3 also active, toggling B2 produced 42,244
+against 42,268 in one pair and 42,301 against 42,268 in another.  The sub-tenth-percent result
+reversed direction.  B2 is rejected and the ordinary legality path keeps the full `eng_Make`
+contract.
+
+B3 owns enough calls to pay.  Quiescence never calls `eng_IsRepetition`; the key and ring may
+therefore stay at the parent position throughout that subtree.  The compact implementation
+sets one engine history mode at the depth-zero boundary, runs ordinary recursive quiescence
+make/unmake with only hash and ring maintenance skipped, and restores the mode on return.  It
+does not infer safety from whole-book equality alone.  A test-only quiescence entry snapshots
+and compares the board, three totals, key, full ring digest, EP, castling, halfmove and kings
+after ordinary completion, budget abort, arena exhaustion and mate.
+
+The final target pair, windowed c64m, NTSC, retained six-position replay in opposite order:
+
+| build | first pass | second pass | nodes / digest |
+|---|---:|---:|---|
+| compact control, history on | 46,558 | 46,558 | 14,400 / identical |
+| B3 compact boundary mode | 42,234 | 42,235 | 14,400 / identical |
+
+That is **9.3% less C64 time at the same nodes**.  Baseline and B3 also returned identical
+move, score, depth and node records for all 256 opening positions at every shipped budget.
+
+The first split API grew common code by 259 bytes and pushed Atari's display list from `$7C00`
+to `$7D00`, spending a 256-byte page for no chess.  Passing a history flag to every make/unmake
+cut the growth to 102 bytes but still crossed the page.  Setting the mode once at the
+quiescence boundary is 46 bytes over Phase 20: Atari DATA ends `$7BEF`, leaving 16 bytes before
+the `$7C00` display list and the full 716 bytes below the framebuffer; Apple II MAIN ends
+`$B29F`, leaving 1,120 bytes, and its BSS still ends `$17B5`, leaving 2,122.  All seven targets
+build at `optsize`.
+
+This saving is banked as faster fixed-budget search only.  No node budget changes here.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

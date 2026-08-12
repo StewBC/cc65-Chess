@@ -436,7 +436,18 @@ static int negamax(char side, char depth, int alpha, int beta, char ply)
 		return 0;
 
 	if(0 == depth)
+	{
+#if SEARCH_QUIESCE_HISTORY
 		return quiesce(side, alpha, beta, ply);
+#else
+		int quietScore;
+
+		eng_HistoryEnable(0);
+		quietScore = quiesce(side, alpha, beta, ply);
+		eng_HistoryEnable(1);
+		return quietScore;
+#endif
+	}
 
 	inCheck = eng_InCheck(side);
 
@@ -761,3 +772,45 @@ void search_Best(char side, char maxDepth, unsigned int nodeBudget, t_searchResu
 	if(sc_randMoves < SEARCH_RANDOM_MOVES)
 		++sc_randMoves;
 }
+
+#ifdef EVAL_TUNING
+/*-----------------------------------------------------------------------*/
+char search_TestQuiesceState(char side, unsigned int budget, char exhaustArena)
+{
+	static char board[128];
+	unsigned int hash, history;
+	int score, end, phase;
+	char ep, castle, halfmove, kingBlack, kingWhite, sq, same = 1;
+
+	eval_Refresh();
+	hash = geHashKey;
+	history = eng_HistoryStateDigest();
+	score = geEvalScore;
+	end = geEvalEnd;
+	phase = gePhase;
+	ep = geEP;
+	castle = geCastle;
+	halfmove = geHalfmove;
+	kingBlack = geKing[SIDE_BLACK];
+	kingWhite = geKing[SIDE_WHITE];
+	for(sq = 0; sq < 128; ++sq)
+		board[sq] = geBoard[sq];
+
+	si_nodes = 0;
+	si_budget = budget;
+	si_arenaTop = exhaustArena ? SEARCH_ARENA - 4 : 0;
+	sc_abort = 0;
+	eng_HistoryEnable(0);
+	(void)quiesce(side, -EVAL_INFINITY, EVAL_INFINITY, 0);
+	eng_HistoryEnable(1);
+	si_arenaTop = 0;
+
+	for(sq = 0; sq < 128; ++sq)
+		if(board[sq] != geBoard[sq])
+			same = 0;
+	return same && hash == geHashKey && history == eng_HistoryStateDigest() &&
+	       score == geEvalScore && end == geEvalEnd && phase == gePhase &&
+	       ep == geEP && castle == geCastle && halfmove == geHalfmove &&
+	       kingBlack == geKing[SIDE_BLACK] && kingWhite == geKing[SIDE_WHITE];
+}
+#endif

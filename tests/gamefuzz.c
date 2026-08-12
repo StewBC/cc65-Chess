@@ -35,6 +35,7 @@
 
 static char sc_snapshots[MAX_PLIES][128];
 static t_engMove st_played[MAX_PLIES];
+static char sc_probeBoard[128];
 
 /*-----------------------------------------------------------------------*/
 static int compareBoard(const char *want, int ply, const char *tag, int game)
@@ -189,6 +190,41 @@ static int checkHistoryKey(int game, int ply, const char *tag)
 }
 
 /*-----------------------------------------------------------------------*/
+// A no-history move must be exactly self-reversing and must never touch the
+// hash or any ring slot.  Return -1 for a broken round trip, else whether the
+// move was legal.
+static int probeLegal(const t_engMove *move, char side, int game, int ply)
+{
+	t_engUndo undo;
+	unsigned int hash = geHashKey;
+	unsigned int history = eng_HistoryStateDigest();
+	int score = geEvalScore, end = geEvalEnd, phase = gePhase;
+	char ep = geEP, castle = geCastle, halfmove = geHalfmove;
+	char kingBlack = geKing[SIDE_BLACK], kingWhite = geKing[SIDE_WHITE];
+	char legal;
+
+	memcpy(sc_probeBoard, geBoard, 128);
+	eng_HistoryEnable(0);
+	eng_Make(move, &undo);
+	legal = !eng_IsAttacked(geKing[side], 1 - side);
+	eng_Unmake(move, &undo);
+	eng_HistoryEnable(1);
+
+	if(memcmp(sc_probeBoard, geBoard, 128) ||
+	   hash != geHashKey || history != eng_HistoryStateDigest() ||
+	   score != geEvalScore || end != geEvalEnd || phase != gePhase ||
+	   ep != geEP || castle != geCastle || halfmove != geHalfmove ||
+	   kingBlack != geKing[SIDE_BLACK] || kingWhite != geKing[SIDE_WHITE])
+	{
+		printf("    game %d probe ply %d: no-history make/unmake changed state\n",
+		       game, ply);
+		return -1;
+	}
+
+	return legal;
+}
+
+/*-----------------------------------------------------------------------*/
 int test_RunGameFuzz(int seed, int games, int verbose)
 {
 	int game, failures = 0, specials = 0;
@@ -218,21 +254,15 @@ int test_RunGameFuzz(int seed, int games, int verbose)
 				if((moves[i].m_flags & (ENG_MF_CASTLE | ENG_MF_ENPASSANT | ENG_MF_PROMO)) &&
 				   (rand() % 10) < 8)
 				{
-					t_engUndo probe;
-					eng_Make(&moves[i], &probe);
-					if(checkHistoryKey(game, ply, "probe make"))
+					int legal = probeLegal(&moves[i], side, game, ply);
+
+					if(legal < 0)
 					{
 						++failures;
 						goto nextGame;
 					}
-					if(!eng_IsAttacked(geKing[side], 1 - side))
+					if(legal)
 						chosen = i;
-					eng_Unmake(&moves[i], &probe);
-					if(checkHistoryKey(game, ply, "probe unmake"))
-					{
-						++failures;
-						goto nextGame;
-					}
 					if(0xFF != chosen)
 						++specials;
 				}
@@ -241,22 +271,15 @@ int test_RunGameFuzz(int seed, int games, int verbose)
 			for(i = 0; i < count * 2 && 0xFF == chosen; ++i)
 			{
 				char pick = rand() % count;
-				t_engUndo probe;
+				int legal = probeLegal(&moves[pick], side, game, ply);
 
-				eng_Make(&moves[pick], &probe);
-				if(checkHistoryKey(game, ply, "probe make"))
+				if(legal < 0)
 				{
 					++failures;
 					goto nextGame;
 				}
-				if(!eng_IsAttacked(geKing[side], 1 - side))
+				if(legal)
 					chosen = pick;
-				eng_Unmake(&moves[pick], &probe);
-				if(checkHistoryKey(game, ply, "probe unmake"))
-				{
-					++failures;
-					goto nextGame;
-				}
 			}
 
 			if(0xFF == chosen)

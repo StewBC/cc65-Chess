@@ -196,6 +196,13 @@ full `eng_Make` behavior for actual game moves and callers that rely on it.
 This is an API refactor with a silent-failure mode. Add a fuzzer assertion that the board,
 evaluation, phase, key, ring top and valid count are identical after every rejected probe.
 
+**Phase 22 B2 result: rejected.**  A split probe/commit API passed the state fuzzer and all
+1,024 whole-book searches, but the fixed C64 replay was 47,350 jiffies against 47,324 for the
+same refactored code using the old full probes.  Both were slower than the 46,450-jiffy Phase A
+engine because cc65's extra C calls cost more than the illegal probes saved.  Enabling B2 beside
+B3 changed its final 42,300-jiffy replay by less than 0.1% and reversed direction across pairs.
+The shipped `eng_Make` interface and ordinary legality path therefore remain unchanged.
+
 ### B3. Do not maintain history in quiescence
 
 `quiesce` never calls `eng_IsRepetition`. Check evasions mean it can now contain quiet moves,
@@ -212,6 +219,16 @@ Give quiescence a no-history make/unmake path. Prove:
 
 This is likely the largest hash experiment because quiescence owns most generating nodes. It
 must be measured rather than inferred from that sentence.
+
+**Phase 22 B3 result: kept.**  History maintenance is disabled once at the quiescence boundary
+and restored on every return, while board and all three evaluation totals continue to use the
+ordinary make/unmake path.  All 1,024 whole-book records were identical.  Explicit tests cover
+ordinary, budget-abort, arena-exhaustion and mate returns and compare the parent board, totals,
+key, entire ring digest, EP, castling, halfmove and king state.  The final fixed C64 replay fell
+from 46,558 to **42,234 jiffies, 9.3%**, with identical 14,400 nodes and result digest.
+The compact boundary-mode implementation costs 46 bytes: Atari `DATA` ends `$7BEF`, leaving 16
+bytes before `DLIST` without taking its page jump and retaining 716 bytes below the framebuffer;
+Apple II MAIN ends `$B29F`, leaving 1,120 bytes, and BSS is unchanged.
 
 ### B4. Restore running state instead of recomputing it on unmake
 

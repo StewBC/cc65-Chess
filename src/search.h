@@ -20,6 +20,11 @@
 // Deepest the quiescence search may run past the main search
 #define SEARCH_MAX_PLY		12
 
+// Exact-state switch keeps the old quiescence path for target A/B measurement.
+#ifndef SEARCH_QUIESCE_HISTORY
+#define SEARCH_QUIESCE_HISTORY	0
+#endif
+
 /*-----------------------------------------------------------------------*/
 // Scoring a repeated position as a draw, switchable the same way and for the
 // same reason as the evaluation terms: measuring a change means playing it
@@ -135,5 +140,11 @@ char search_Seeded(void);
 // OUTCOME_STALEMATE or OUTCOME_OK.  With a real search this is just "are
 // there legal moves, and am I in check" - no special-case machinery needed
 char search_Outcome(char side);
+
+#ifdef EVAL_TUNING
+// Test-only entry to exercise quiescence return paths and prove its no-history
+// subtree restores the parent position key and ring exactly.
+char search_TestQuiesceState(char side, unsigned int budget, char exhaustArena);
+#endif
 
 #endif //_SEARCH_H_

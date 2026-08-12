@@ -122,6 +122,7 @@ char eng_IsRepetition(char needed);
 #ifdef EVAL_TUNING
 // Native-test view of the invariant used by ENGINE_REPETITION_RING_KEY.
 char eng_HistoryMatchesPosition(void);
+unsigned int eng_HistoryStateDigest(void);
 #endif
 
 /*-----------------------------------------------------------------------*/
@@ -171,5 +172,10 @@ char eng_GenLegalMoves(char side, t_engMove *moves);
 /*-----------------------------------------------------------------------*/
 void eng_Make(const t_engMove *move, t_engUndo *undo);
 void eng_Unmake(const t_engMove *move, const t_engUndo *undo);
+
+// Quiescence disables position-history maintenance for its whole subtree.
+// Nothing there reads the key or repetition ring, and setting the mode once
+// at the boundary is much cheaper on cc65 than another make/unmake argument.
+void eng_HistoryEnable(char enabled);
 
 #endif //_ENGINE_H_
