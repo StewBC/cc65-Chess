@@ -72,27 +72,43 @@ The only remaining technique this result does not already discount, because it d
 on an assumption: it returns the result of a search that actually finished, so the depth it buys
 is real depth.
 
-**Why it is now the head of the list:** the expensive half is already paid for. The position
-hash is maintained for repetition detection at about 9% a node on a real C64
-(`doc/measuring.md` §3), so the marginal cost is the table, the probe and the store.
+**The half that looked already paid for is not.** A hash *is* maintained for repetition
+detection, at about 9% a node on a real C64 — but `geHashKey` is **16 bits**
+(`src/engine.h:82`, `unsigned int`, and cc65's `int` is 16 bits). That is adequate for scanning
+a short repetition ring, where a false match is rare and costs a wrongly-scored draw. **It is
+not usable as a transposition key.** There are only 65,536 distinct keys; a 60,000-node search
+collides constantly, and the index consumes most of the key, so almost nothing is left to verify
+an entry with — a 1,024-entry table leaves 6 bits, roughly one accepted false hit in 64 probes.
+A false hit returns a score and a move from an unrelated position, which is a blunder or an
+apparently illegal move, not merely a weaker search.
 
-**What it needs that nothing else here does: RAM.** That makes it the only candidate that could
-justify the `B`/`A`/`D` visualizer question — see §8 — and the Atari's ~700 bytes set the budget
-for everyone unless that question is reopened.
+**So the TT's first cost is widening the hash to 32 bits**, and that is paid in `eng_Make` and
+`eng_Unmake` on *every* target, including the ones with no room for a table. Price it with
+`tests/c64search.c` before writing any table code: if a 32-bit incremental hash costs enough on
+a 6502, the TT is dead before it starts and that is worth knowing in an afternoon. The
+repetition ring also doubles in size.
 
-**Hazards:**
+**Its second cost is RAM, and this is the question that needs Stefan.** At roughly 8 bytes an
+entry — 32-bit key, score, depth, flag, move — the Atari's ~716 free bytes hold about 64
+entries, which is useless, while the C64's ~11 KB holds a thousand or more, which is not. A
+table sized per target means **seven targets playing different chess**, and every figure in
+`doc/strength.md` is stated about "the engine". That is a portfolio decision, not a search
+decision. §8 and the questions in the handoff.
+
+**Other hazards:**
 
 - **Determinism.** Every measurement in `doc/strength.md` depends on the search being
   deterministic, and a table carries state *between* searches: the same position can return a
-  different answer depending on what was searched before it. Replaying one game is still
-  deterministic; `match sanity` and node-count equality across configurations may not be. Decide
-  what the invariant is *before* writing it, and make the table switchable so the baseline is
-  recoverable.
+  different answer depending on what was searched before it. One replayed game stays
+  deterministic; `match sanity` and cross-configuration node equality may not. Decide what the
+  invariant is *before* writing it, and keep the table switchable so the baseline is recoverable.
 - **Bound handling** with fail-hard alpha-beta. This search returns `beta` on a cutoff and
-  `alpha` otherwise, so exact/lower/upper bounds have to be stored and used deliberately, not
-  copied from a fail-soft reference implementation.
+  `alpha` otherwise, so exact/lower/upper bounds must be stored and used deliberately rather
+  than copied from a fail-soft reference implementation.
+- **Mate scores** must be stored relative to the ply or they are wrong when probed at another
+  depth.
 - **Level 1 will get nothing.** At 400 nodes there is almost nothing to transpose to. Expect a
-  level-4 technique, which is the per-level gate case again.
+  level 3–4 technique, which is the per-level gate case again.
 - **Do not judge it on node savings.** §2 is why. It goes to the gauntlet.
 
 ### 3b. Node cost, and then the budgets
