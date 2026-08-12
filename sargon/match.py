@@ -61,8 +61,8 @@ KEY_DELAY = 0.025
 CC65_SKILLS = {
 	1: ("Very Easy", 400),
 	2: ("Easy", 1200),
-	3: ("Harder", 15000),
-	4: ("Very Hard", 60000),
+	3: ("Harder", 18000),
+	4: ("Very Hard", 65000),
 }
 
 sys.path.insert(0, str(A2M_TOOLS))

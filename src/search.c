@@ -225,10 +225,10 @@ static char arenaRoom(void)
 // "very easy" level that cannot beat a bare king is broken, not easy
 const t_searchSkill gcSearchSkill[SEARCH_NUM_SKILLS] =
 {
-	{ 3,   400 },	// very easy  - measured 8.2s a move on a stock C64
-	{ 4,  1200 },	// easy       - measured 29.4s
-	{ 5, 15000 },	// harder     - a couple of minutes on bare metal
-	{ 6, 60000u },	// very hard  - emulator territory
+	{ 3,   400 },	// very easy  - bank B3+B4 speed; 400 is the conversion floor
+	{ 4,  1200 },	// easy       - bank the time; menu role is responsiveness
+	{ 5, 18000 },	// harder     - reinvest almost all of the 17.2% C64 saving
+	{ 6, 65000u },	// very hard  - reinvest what fits in 16 bits, stay off 65535
 };
 
 /*-----------------------------------------------------------------------*/
