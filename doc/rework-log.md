@@ -2827,6 +2827,24 @@ the suite floor.  That is enough to stop.
 
 ---
 
+## Phase 33 - mine failures; E2/E3 status (E6)
+
+`tests/mine_failures.py` implements the E6 gate: first durable Stockfish swing on our losses,
+mate scores dropped, tagged by mover kind.  Sample L3 vs SF 30 nodes, 64 games: 24 losses,
+queen moves lead the first-swing count (7/23).  That steers E2/E3 toward queen/development
+work rather than new king-safety.
+
+E2 (locked train/val value tuning) and E3 (queen-before-minors interaction) were **not** run
+as full campaigns in this pass: E1/E4/E5 closed empty and E6's job is to choose the next
+hypothesis, not invent one from a single sample.  Both remain open with E6 as input.
+
+**E portfolio (this pass):** E1 rejected equal-time; E4 rejected size; E5 rejected L1 mates;
+E6 instrument + sample; E2/E3 deferred with direction.  Shipping still Phase B speed (B3+B4).
+
+Branch tip: `codex/next-engine-phase-e6-mine` (stack includes E1/E4/E5).
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

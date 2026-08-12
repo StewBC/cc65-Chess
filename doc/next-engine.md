@@ -531,6 +531,10 @@ training and locked validation sets so positions from one deterministic game can
 both. Fit a constrained, symmetric and smooth candidate; freeze it; then run the ordinary
 gauntlet once. Do not tune against the landing set.
 
+**Phase 33 E2 status: not run as a full train/val campaign.**  E6's queen-move clustering is
+the next input.  Queen-home / queen-out dose tests already closed one coordinate; any new
+PST or weight change still needs locked validation and one gauntlet, not a short self-play.
+
 ### E3. Test an opening interaction, not another queen square
 
 The remaining qualitative opening residue is temporal: the evaluation cannot say "queen out
@@ -541,6 +545,9 @@ castling state.
 Maintain it incrementally from the few home squares so it is paid only when one changes. This
 is a new mechanism and needs a zero/small/large predeclared dose, the full outside gauntlet and
 Sargon confirmation. Self-play cannot decide an opening weakness shared by both sides.
+
+**Phase 33 E3 status: not implemented.**  E6 queen-move swings are a reason to try this next,
+with the dual switch and predeclared doses; size must be checked on Atari before any landing.
 
 ### E4. Fix KBN versus king as a named defect
 
@@ -586,6 +593,13 @@ without identifying an error.
 Potential later gated terms include bishop pair, castling/development interaction, rule of the
 square and KPK opposition. Pawn-shield king safety is closed at -2.6 sigma; any new king-safety
 term must measure enemy pressure rather than reintroduce that proxy.
+
+**Phase 33 E6 result: instrument shipped; sample mining recorded.**  `tests/mine_failures.py`
+walks a PGN of our losses, takes Stockfish's first durable non-mate swing after our move
+(default −150 cp, depth 12), and counts piece-kind tags.  Sample: L3 vs SF-n30, 64 games,
+24 losses, 23 swings — **queen-move 7, pawn 5, bishop 4, knight 4, rook 2, king 1** (median
+swing −203 cp).  That is a reason to prefer queen-related E2/E3 work over inventing a new
+king-safety term; it is not yet a landing candidate.  No new evaluation term added.
 
 ---
 
