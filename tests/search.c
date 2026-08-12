@@ -471,6 +471,23 @@ static const struct { const char *m_name; const char *m_fen; } stc_wins[] =
 	{ "KQvKP", "8/8/8/3k4/8/8/6p1/2Q1K3 w - - 0 1" },
 };
 
+/*-----------------------------------------------------------------------*/
+// KBN vs bare king — the named E4 defect.  Level 4 can convert some positions
+// when EVAL_KBN_ON; levels 1–3 cannot at their budgets.  Floors record that
+#if EVAL_KBN_ON
+static const struct { const char *m_name; const char *m_fen; } stc_kbn[] =
+{
+	{ "KBN a", "8/8/8/4k3/8/8/8/4KBN1 w - - 0 1" },
+	{ "KBN b", "6k1/8/8/8/8/8/8/4KBN1 w - - 0 1" },
+	{ "KBN c", "7k/5N2/8/8/8/8/8/4KB2 w - - 0 1" },
+	{ "KBN d", "7k/6N1/6K1/8/8/8/8/5B2 w - - 0 1" },
+	{ "KBN e", "k7/8/8/8/8/8/8/1NBK4 w - - 0 1" },
+	{ "KBN f", "8/8/8/8/4k3/8/8/B3K1N1 w - - 0 1" },
+	{ "KBN g", "4k3/8/8/8/8/8/8/4KBN1 w - - 0 1" },
+	{ "KBN h", "8/8/3k4/8/8/8/8/2B1K1N1 w - - 0 1" },
+};
+#endif
+
 int test_RunSearchConversion(int verbose)
 {
 	// What each level manages today.  Held to what it achieves rather than to
@@ -535,6 +552,64 @@ int test_RunSearchConversion(int verbose)
 		if(mated < sc_floor[level])
 			++failures;
 	}
+
+#if EVAL_KBN_ON
+	// Named defect: KBN vs K.  Floors are what the size-conscious form reaches
+	// on the host with the suite's forced ON — not a claim that shipping mates
+	// these (EVAL_KBN_ON defaults 0)
+	{
+		static const int sc_kbnFloor[SEARCH_NUM_SKILLS] = { 0, 0, 0, 1 };
+		int kbnCount = (int)(sizeof(stc_kbn)/sizeof(stc_kbn[0]));
+
+		printf("KBN vs bare king (E4)\n");
+		geEvalTerms |= EVAL_KBN;
+
+		for(level = 0; level < SEARCH_NUM_SKILLS; ++level)
+		{
+			int mated = 0, plies = 0;
+
+			for(i = 0; i < kbnCount; ++i)
+			{
+				char side = test_EngineSetFEN(stc_kbn[i].m_fen);
+				int ply, ok = 0;
+
+				undo_Init();
+				for(ply = 0; ply < 200; ++ply)
+				{
+					t_searchResult result;
+					char outcome = search_Outcome(side);
+
+					if(OUTCOME_CHECKMATE == outcome)
+					{
+						ok = 1;
+						++mated;
+						plies += ply;
+						break;
+					}
+					if(OUTCOME_STALEMATE == outcome || geHalfmove >= 100)
+						break;
+					search_Best(side, gcSearchSkill[level].m_depth,
+					            gcSearchSkill[level].m_nodes, &result);
+					if(!result.m_haveMove)
+						break;
+					board_ApplyMove(&result.m_move, side);
+					side = 1 - side;
+				}
+				if(verbose && !ok)
+					printf("    level %d  %s: failed\n",
+					       level + 1, stc_kbn[i].m_name);
+			}
+
+			printf("  level %d (%5u nodes) %2d of %d, mean %3d plies%s\n",
+			       level + 1, gcSearchSkill[level].m_nodes, mated, kbnCount,
+			       mated ? plies / mated : 0,
+			       mated < sc_kbnFloor[level] ? "   BELOW FLOOR" : "");
+			if(mated < sc_kbnFloor[level])
+				++failures;
+		}
+		geEvalTerms = EVAL_ALL;
+	}
+#endif
 
 	printf("  -> %d failing\n", failures);
 	return failures;

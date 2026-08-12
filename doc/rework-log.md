@@ -2794,6 +2794,24 @@ cannot go stale.  Shipping maps match Phase B again (Atari `DLIST` `$7D00`, 363 
 
 ---
 
+## Phase 31 - KBN vs bare king (E4)
+
+Named defect: king+bishop+knight vs bare king was 0/25 and mateDrive pushes to any corner.
+E4 adds `kbnDrive`: fire only when `gePhase == 650` and the winner has exactly B+N with the
+loser bare; drive the losing king to bishop-colour corners (a8/h1 light, h8/a1 dark) and
+bring the winning king close.
+
+Host result with a full-weight form: level 4 converted 8/8 KBN positions (mean ~73 plies) at
+the real 60,000-node budget; levels 1–3 converted 0/8.  Atari could not fund that form
+(~+1.2 KB eval CODE).  A size-slim form still overflowed (~+680 CODE) and only 4/8 at level 4.
+
+`EVAL_KBN_ON` defaults 0; bit not in `EVAL_ALL`.  Native suite forces ON with floors
+0/0/0/1.  Shipping maps unchanged (Atari `DLIST` `$7D00`, 363 free).
+
+**E4 rejected** for size.  Branch: `codex/next-engine-phase-e4-kbn`.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

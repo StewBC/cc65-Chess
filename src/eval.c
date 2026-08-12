@@ -544,6 +544,82 @@ static int mateDrive(char winner, char loser)
 }
 
 /*-----------------------------------------------------------------------*/
+#if EVAL_KBN_ON
+// King + bishop + knight vs bare king.  Ordinary mateDrive pushes to any
+// corner; this mate only works in a corner the bishop controls.  Returns 0
+// when the material does not match.  Size-conscious: one board scan, right
+// corners + king proximity only
+static int kbnDrive(char winner)
+{
+	static const char corners[4] = { 0x07, 0x70, 0x00, 0x77 };
+	char sq, bsq, minors, base, i, best, loser, d;
+	char af, bf, ar, br, df, dr, wk;
+
+	if(gePhase != 650)
+		return 0;
+
+	bsq = ENG_NO_SQUARE;
+	minors = 0;
+
+	for(sq = 0; sq < 0x78; ++sq)
+	{
+		char piece, kind;
+
+		if(ENG_OFFBOARD(sq))
+			continue;
+		piece = geBoard[sq];
+		kind = piece & PIECE_DATA;
+		if(NONE == kind || KING == kind)
+			continue;
+		if(((piece & PIECE_WHITE) ? SIDE_WHITE : SIDE_BLACK) != winner)
+			return 0;
+		if(BISHOP == kind)
+		{
+			bsq = sq;
+			++minors;
+		}
+		else if(KNIGHT == kind)
+			++minors;
+		else
+			return 0;
+	}
+
+	if(2 != minors || ENG_NO_SQUARE == bsq)
+		return 0;
+
+	// light bishop when (sq+row)&1 == 0 → corners[2], corners[3]
+	base = ((bsq + (bsq >> 4)) & 1) ? 0 : 2;
+	loser = geKing[1 - winner];
+	wk = geKing[winner];
+	best = 20;
+
+	for(i = 0; i < 2; ++i)
+	{
+		char c = corners[base + i];
+
+		af = loser & 7;
+		bf = c & 7;
+		ar = loser >> 4;
+		br = c >> 4;
+		df = (af > bf) ? (char)(af - bf) : (char)(bf - af);
+		dr = (ar > br) ? (char)(ar - br) : (char)(br - ar);
+		d = (char)(df + dr);
+		if(d < best)
+			best = d;
+	}
+
+	// (14-best)*32 + king proximity * 10
+	af = loser & 7;
+	bf = wk & 7;
+	ar = loser >> 4;
+	br = wk >> 4;
+	df = (af > bf) ? (char)(af - bf) : (char)(bf - af);
+	dr = (ar > br) ? (char)(ar - br) : (char)(br - ar);
+	return ((int)(14 - best) << 5) + (int)(14 - (df + dr)) * 10;
+}
+#endif
+
+/*-----------------------------------------------------------------------*/
 int eval_Position(char side)
 {
 	// the running total is white-positive; hand it back the way round the
@@ -593,9 +669,27 @@ int eval_Position(char side)
 		if(EVAL_MATEDRIVE_ON && EVAL_HAS(EVAL_MATEDRIVE) && gePhase <= DRIVE_PHASE)
 		{
 			if(score > DRIVE_GATE)
-				score += mateDrive(geKing[SIDE_WHITE], geKing[SIDE_BLACK]);
+			{
+#if EVAL_KBN_ON
+				int kbn = EVAL_HAS(EVAL_KBN) ? kbnDrive(SIDE_WHITE) : 0;
+
+				if(kbn)
+					score += kbn;
+				else
+#endif
+					score += mateDrive(geKing[SIDE_WHITE], geKing[SIDE_BLACK]);
+			}
 			else if(score < -DRIVE_GATE)
-				score -= mateDrive(geKing[SIDE_BLACK], geKing[SIDE_WHITE]);
+			{
+#if EVAL_KBN_ON
+				int kbn = EVAL_HAS(EVAL_KBN) ? kbnDrive(SIDE_BLACK) : 0;
+
+				if(kbn)
+					score -= kbn;
+				else
+#endif
+					score -= mateDrive(geKing[SIDE_BLACK], geKing[SIDE_WHITE]);
+			}
 		}
 	}
 

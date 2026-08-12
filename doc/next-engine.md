@@ -552,6 +552,13 @@ Judge it first on conversion before the fifty-move rule at all four real budgets
 a fixed outside defender. As with mate drive, global Elo may be insensitive to a rare ending;
 an outside regression is still disqualifying.
 
+**Phase 31 E4 result: rejected for Atari size (and incomplete lower levels).**  A
+colour-aware corner drive gated on `gePhase == 650` converts **level 4** positions when given
+~25k+ nodes (host), but the C form that works is ~700–1200 CODE bytes over Atari's budget.
+A size-slim form (corners + king only) still overflows and only reaches ~4/8 at level 4.
+Levels 1–3 stay 0/8 at their real budgets either way.  `EVAL_KBN_ON` defaults 0; not in
+`EVAL_ALL`.  Reopen with a ca65 kernel under ~300 bytes or a memory reclaim that funds the C.
+
 ### E5. Try one bounded check extension
 
 Sargon extends checks even at its weakest setting; this engine has check evasions in

@@ -46,9 +46,9 @@ extern const int gcPieceValue[PAWN+1];
 #define EVAL_MATEDRIVE		SET_BIT(5)
 #define EVAL_QUEENHOME		SET_BIT(6)
 #define EVAL_QUEENOUT		SET_BIT(7)
-// EVAL_PAWNSTRUCT is deliberately **not** in EVAL_ALL: Phase E1's board-scan
-// form fitted Atari but made every host node ~1.38x dearer and lost at equal
-// time (-62 over 512).  Off means what ships
+#define EVAL_KBN			SET_BIT(8)
+// EVAL_PAWNSTRUCT and EVAL_KBN are not in EVAL_ALL: both are measured candidates
+// that default off (E1 equal-time cost; E4 Atari size / weak lower levels)
 #define EVAL_ALL			(EVAL_MATERIAL|EVAL_PST|EVAL_ENDGAME|EVAL_MATEDRIVE)
 
 // SET_BIT(6), EVAL_QUEENHOME, is deliberately **not** in EVAL_ALL, and neither
@@ -133,6 +133,14 @@ extern char geEvalTerms;
 // working for A/B match play; this only removes the term from a shipping build
 #ifndef EVAL_MATEDRIVE_ON
 #define EVAL_MATEDRIVE_ON	1
+#endif
+
+/*-----------------------------------------------------------------------*/
+// KBN versus bare king (Phase E4).  Default off: a form that converts at
+// level 4's budget does not fit Atari, and levels 1–3 stay at 0/8.  Native
+// suite forces ON for the purpose gates
+#ifndef EVAL_KBN_ON
+#define EVAL_KBN_ON	0
 #endif
 
 /*-----------------------------------------------------------------------*/
