@@ -53,7 +53,7 @@ Since the endgame tables it is also the only setting that fits:
 | | optsize | optspeed |
 |---|---|---|
 | atari | 1387 free below the framebuffer | **does not link — 562 bytes over** |
-| apple2 | 1166 free in MAIN, 2122 in BSS | links with **12 bytes** spare |
+| apple2 | 852 free in MAIN, 2025 in BSS | links with **12 bytes** spare |
 
 **The Atari's headroom does not shrink smoothly, and the number above hides a cliff.** `DLIST`
 is page-aligned inside `MAIN`, so code growth is absorbed by the padding in front of it until
@@ -70,13 +70,13 @@ three of them is a framebuffer the linker cannot see:
 
 | target | ceiling | free |
 |---|---|---|
+| **apple2** | MAIN ends `$B700` | **852**, plus 2025 in BSS at `$0800–$1FFF` |
 | **atari** | `$9100` framebuffer | **1387** — and 4 before the next `DLIST` page jump |
-| **apple2** | MAIN ends `$B700` | **1166**, plus 2122 in BSS at `$0800–$1FFF` |
-| atmos | RAMEND `$9900` less stack | 1971 |
-| plus4 | `$A000` bitmap | 2995 — **the cfg does not cap it**, so an overrun would draw BSS on the screen rather than fail to link, exactly as the Atari used to |
-| cx16 | MAIN | 5693 — the framebuffer is in VERA and costs nothing here |
-| c64.chr | BSS ends `$C400` | 8276 |
-| c64 | `$C000` bitmap less stack | 10978 |
+| atmos | RAMEND `$9900` less stack | 2072 |
+| plus4 | `$A000` bitmap | 2584 — **the cfg does not cap it**, so an overrun would draw BSS on the screen rather than fail to link, exactly as the Atari used to |
+| cx16 | HIMEM `$9F00` less stack | 3242 — the framebuffer is in VERA and costs nothing here |
+| c64.chr | BSS ends `$C400` | 8179 |
+| c64 | `$C000` bitmap less stack | 10567 |
 
 Regenerate these with `cl65 -t <target> -C <cfg> --mapfile ...` against `obj/<target>/*.o`;
 the numbers above are from a clean build and will drift with the next change.

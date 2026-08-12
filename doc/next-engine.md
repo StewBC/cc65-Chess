@@ -62,10 +62,11 @@ These are measurements, not estimates.
 - Granted search depth is worth about **60 Elo per doubling**. A perfect removal of a 9%
   tax is therefore only about eight Elo after the budget is raised to spend it. Exact small
   savings have to accumulate before the board visibly changes.
-- The Atari has about **1,387 bytes** to its framebuffer and only **4 bytes** before the next
-  `DLIST` page jump. The extra kilobyte is the undo ring sitting at `$AF00–$B2FF`, not a
-  smaller program. Apple II has about 1,166 bytes in MAIN and 2,122 in its low BSS segment.
-  The other current figures are in `AGENTS.md`; measure maps again before buying anything.
+- The Apple II is the tight target for code: about **852 bytes** in MAIN and 2,025 in its
+  low BSS. The Atari has about **1,387 bytes** to its framebuffer — the extra kilobyte is
+  the undo ring at `$AF00–$B2FF`, not a smaller program — but only **4 bytes** before the
+  next `DLIST` page jump. The other current figures are in `AGENTS.md`; measure maps again
+  before buying anything.
 
 One phrase needs care. Hash maintenance is the largest newly identified removable tax. It is
 not larger than the old generation row. The current component profile has never separated
