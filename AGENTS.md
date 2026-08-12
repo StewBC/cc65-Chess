@@ -6,6 +6,11 @@ terminal build used for development. C, compiled with cc65.
 `doc/engine.md` explains how the engine works and is the right thing to read first. This
 file is the short list of constraints that are easy to violate by accident.
 
+`doc/next-engine.md` is the current forward work note. It starts with exact 6502 speed work,
+then spends any saving on larger budgets, and keeps the direct strength candidates that still
+have a measured or observed reason to work. Read its prerequisites before starting one of its
+items; in particular, it does not reopen the rejected search portfolio by changing its name.
+
 ## Hard constraints
 
 **`plat.h` and the 0–63 tile numbering are frozen.** The 0x88 board representation stays
