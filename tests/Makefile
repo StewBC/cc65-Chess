@@ -14,8 +14,10 @@ SRCDIR := ../src
 
 # -funsigned-char matches cc65, where char is unsigned by default.  A lot of
 # this code leans on that, so building without it will produce nonsense
-# ENGINE_FAST_LEGAL=1 so the suite exercises the C2 candidate; shipping defaults off.
-CFLAGS := -I$(SRCDIR) -funsigned-char -O2 -g -Wall -DEVAL_TUNING -DENGINE_FAST_LEGAL=1 -Wno-char-subscripts
+# Force rejected speed candidates on so their gates cannot go stale; shipping
+# defaults them off.  DEDICATED_CAPTURES is exact against the filtered full list.
+CFLAGS := -I$(SRCDIR) -funsigned-char -O2 -g -Wall -DEVAL_TUNING \
+	-DENGINE_FAST_LEGAL=1 -DENGINE_DEDICATED_CAPTURES=1 -Wno-char-subscripts
 
 # main.c is deliberately absent - the tests supply their own
 ENGINE := \

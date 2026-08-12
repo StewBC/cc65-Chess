@@ -100,6 +100,12 @@ extern unsigned int geHashKey;
 #define ENGINE_FAST_LEGAL	0
 #endif
 
+// C3 candidate: dedicated capture/promotion generator without sc_capturesOnly
+// branches.  Exact but too large for Atari (~1 KB CODE); default off.
+#ifndef ENGINE_DEDICATED_CAPTURES
+#define ENGINE_DEDICATED_CAPTURES	0
+#endif
+
 /*-----------------------------------------------------------------------*/
 // Rebuild geHashKey from the board and start the position history again with
 // the position as it now stands.  Anything that puts pieces down without

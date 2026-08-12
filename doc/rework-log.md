@@ -2707,6 +2707,34 @@ to direct `eng_IsAttacked` when off, and shipping maps match Phase B again.  C2 
 
 ---
 
+## Phase 28 - dedicated capture generator (C3)
+
+Capture generation is the largest Phase 20 row (29%).  C3 replaces the shared
+`sc_capturesOnly` walk with a dedicated write-pointer generator: no quiet empties are
+written, promotion pushes are kept, castling is omitted, and the board/piece order matches
+`eng_GenMoves` so the quiescence subsequence test still holds.
+
+Correctness: the existing `qgen` walk over the perft trees stayed green, and all 1,024
+whole-book records matched the shared-path control.  The native suite forces
+`-DENGINE_DEDICATED_CAPTURES=1`.
+
+C64 fixed middlegame, windowed c64m:
+
+| build | first pass | second pass | nodes |
+|---|---:|---:|---:|
+| shared `sc_capturesOnly` | 38,557 | 38,556 | 14,400 |
+| dedicated write-pointer | 36,145 | 36,149 | 14,400 |
+
+**6.3%** — the largest Phase C speed result so far.
+
+Atari size killed it before any ca65 follow-up: engine CODE 6,252 -> 7,340 (+1,088), MAIN
+overflow **921 bytes**.  The tight target has 363 bytes below the framebuffer after B4.  A
+common assembly slider kernel cannot recover a kilobyte of duplicated C control structure.
+`ENGINE_DEDICATED_CAPTURES` defaults off.  C3 is rejected; reopen only if §10 or another
+change frees on the order of a kilobyte on Atari.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

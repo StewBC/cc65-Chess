@@ -403,6 +403,16 @@ quiescence tests enforce this because tie order changes chess. First write clear
 generation remains hot, price a common ca65 slider/stepper kernel with the C implementation as
 reference.
 
+**Phase 28 C3 result: rejected for size.**  A clear-C dedicated capture generator (write
+pointer, no `sc_capturesOnly` branches, no quiet emits) matches the filtered full generator on
+the existing quiescence walk and keeps all 1,024 whole-book records.  On the fixed C64
+middlegame it is a real win: 38,557 -> **36,145** jiffies (**6.3%**) at the same 14,400 nodes.
+It also grows Atari engine CODE by about **1,088 bytes** and overflows MAIN by 921 — far past
+the 363-byte framebuffer headroom and the eight-byte `DLIST` pad.  No ca65 kernel was started:
+the C form is already too large, and assembly would not shrink the duplicated pawn/stepper/
+slider walk enough to link.  `ENGINE_DEDICATED_CAPTURES` defaults off; the native suite forces
+it on so the order gate stays live.
+
 ### C4. Consider zero page only after all target maps are read
 
 Hot scalars and generator pointers may benefit from zero-page placement. Availability and

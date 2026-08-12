@@ -665,16 +665,145 @@ char eng_GenMoves(char side, t_engMove *moves, char maxMoves)
 	return genBoard(side, moves, maxMoves);
 }
 
+#if ENGINE_DEDICATED_CAPTURES
+/*-----------------------------------------------------------------------*/
+// Write-pointer capture generator.  Same board order and same per-piece move
+// order as genBoard with sc_capturesOnly, but without a branch on every empty
+// square.  Order is load-bearing: quiescence ties break by list position.
+static t_engMove *sc_capOut;
+static t_engMove *sc_capEnd;
+
+static void capEmit(char from, char to, char flags)
+{
+	if(sc_capOut >= sc_capEnd)
+		return;
+	sc_capOut->m_from = from;
+	sc_capOut->m_to = to;
+	sc_capOut->m_flags = flags;
+	sc_capOut->m_score = 0;
+	++sc_capOut;
+}
+
+static void capEmitPawn(char from, char to, char flags, char side)
+{
+	if(ENG_ROW(to) == PROMOTE_ROW(side))
+	{
+		capEmit(from, to, flags | QUEEN);
+		capEmit(from, to, flags | ROOK);
+		capEmit(from, to, flags | BISHOP);
+		capEmit(from, to, flags | KNIGHT);
+	}
+	else
+		capEmit(from, to, flags);
+}
+
+static void capGenPawn(char from, char side)
+{
+	signed char push = PUSH(side);
+	char to = from + push;
+	char i;
+
+	// quiet promotion pushes only - ordinary advances are omitted
+	if(!ENG_OFFBOARD(to) && IS_EMPTY(to) && ENG_ROW(to) == PROMOTE_ROW(side))
+		capEmitPawn(from, to, 0, side);
+
+	for(i = 0; i < 2; ++i)
+	{
+		to = from + push + (i ? 1 : -1);
+		if(ENG_OFFBOARD(to))
+			continue;
+		if(!IS_EMPTY(to))
+		{
+			if(COLOR_OF(geBoard[to]) != side)
+				capEmitPawn(from, to, 0, side);
+		}
+		else if(to == geEP)
+			capEmit(from, to, ENG_MF_ENPASSANT);
+	}
+}
+
+static void capGenStepper(char from, char side, const signed char *steps)
+{
+	char i, to;
+
+	for(i = 0; i < 8; ++i)
+	{
+		to = from + steps[i];
+		if(ENG_OFFBOARD(to) || IS_EMPTY(to))
+			continue;
+		if(COLOR_OF(geBoard[to]) != side)
+			capEmit(from, to, 0);
+	}
+}
+
+static void capGenSlider(char from, char side, const signed char *steps, char numSteps)
+{
+	char i, to;
+
+	for(i = 0; i < numSteps; ++i)
+	{
+		for(to = from + steps[i]; !ENG_OFFBOARD(to); to += steps[i])
+		{
+			if(IS_EMPTY(to))
+				continue;
+			if(COLOR_OF(geBoard[to]) != side)
+				capEmit(from, to, 0);
+			break;
+		}
+	}
+}
+
+static void capGenFrom(char sq, char side)
+{
+	char piece = geBoard[sq] & PIECE_DATA;
+
+	switch(piece)
+	{
+		case PAWN:   capGenPawn(sq, side); break;
+		case KNIGHT: capGenStepper(sq, side, sc_knight); break;
+		case ROOK:   capGenSlider(sq, side, sc_orthogonal, 4); break;
+		case BISHOP: capGenSlider(sq, side, sc_diagonal, 4); break;
+		case QUEEN:
+			capGenSlider(sq, side, sc_orthogonal, 4);
+			capGenSlider(sq, side, sc_diagonal, 4);
+		break;
+		case KING:   capGenStepper(sq, side, sc_king); break;
+	}
+}
+#endif
+
 /*-----------------------------------------------------------------------*/
 char eng_GenCaptures(char side, t_engMove *moves, char maxMoves)
 {
-	char count;
+#if ENGINE_DEDICATED_CAPTURES
+	char sq;
 
-	sc_capturesOnly = 1;
-	count = genBoard(side, moves, maxMoves);
-	sc_capturesOnly = 0;
+	sc_capOut = moves;
+	sc_capEnd = moves + maxMoves;
 
-	return count;
+	for(sq = 0; sq < 0x78; ++sq)
+	{
+		char piece;
+
+		if(ENG_OFFBOARD(sq))
+			continue;
+		piece = geBoard[sq];
+		if(NONE == (piece & PIECE_DATA) || COLOR_OF(piece) != side)
+			continue;
+		capGenFrom(sq, side);
+	}
+
+	return (char)(sc_capOut - moves);
+#else
+	{
+		char count;
+
+		sc_capturesOnly = 1;
+		count = genBoard(side, moves, maxMoves);
+		sc_capturesOnly = 0;
+		return count;
+	}
+#endif
 }
 
 /*-----------------------------------------------------------------------*/
