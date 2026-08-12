@@ -1197,9 +1197,11 @@ than quietly fixing, because a per-move cost is exactly the quantity a match
 design multiplies by, and this one was out by two in the cheap direction.
 
 Every Sargon level has since been timed - six minutes for all seven, in
-`sargon/README.md` - and the two numbers that matter here are that level 3
-costs 2.8 seconds a move against level 6's 91, and that a 64-game screen
-therefore costs 3 hours at level 3, 9 at level 4 and 93 at level 6.
+`sargon/README.md` - and the screens then measured the costs that matter:
+1.6 hours for 64 games at level 3, 4.3 hours at level 4, and roughly 93 hours
+projected at level 6.  The completed level-4 screen is the competitive pairing:
+cc65 Harder scored 22W-27L-15D, 46.1%, with 28 distinct openings and no
+fifty-move draws.
 
 ### What this establishes, sample size notwithstanding
 

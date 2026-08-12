@@ -642,32 +642,40 @@ the reply table and the deeper search together.
 **73.4% is above the 35%-65% band, so level 3 is not the pairing**, and by the
 policy the next screen is level 4.
 
-### Level-4 cost probe, 16 games (2026-08-11)
+### Completed level-4 screen (2026-08-11)
 
-Run to price level 4 rather than to score it, because the whole point of the
-cost table is that 5-to-11 hours was too wide a range to plan a screen around:
+The sixteen-game cost probe was resumed in the same output directory to the
+full 64 games, with cc65 **Harder** against Sargon **level 4**:
 
 ```text
-3.79 s a Sargon move, 4.03 minutes a game, 1.07 hours for 16
--> a 64-game screen at level 4 costs 4.3 hours
-cc65 Harder: 6W 6L 4D over 16 games, 14 distinct openings
+cc65 Harder:  22 wins, 27 losses, 15 draws
+score:        29.5 / 64 = 46.1%
+openings:     28 distinct six-ply prefixes, most-repeated game 6x
+plies:        121 mean
+cost:         4.27 hours, 4.00 minutes a game
 ```
 
-**The 50.0% is not a rate and must not be quoted as one.**  `AGENTS.md` puts it
-plainly - sixteen games tells you nothing and lies confidently - and a 16-game
-score has an interval of roughly +-25 points.  What it is good for is the cost,
-and what it is worth is that level 4 is now the obvious candidate for the
-64-game screen: it is the first rung that has not immediately fallen outside
-the band, and 4.3 hours buys the answer.
+By colour, and terminations:
 
-The 16 games are the first 16 of that screen.  Asking for 64 in the same output
-directory resumes at game 17:
+```text
+White: 17W 12L  3D = 57.8%   17 distinct in 32, worst repeat 5x
+Black:  5W 15L 12D = 34.4%   11 distinct in 32, worst repeat 6x
 
-```sh
-python3 sargon/match.py --only match --match-games 64 \
-  --cc-skill 3 --sargon-level 4 --move-timeout 300 \
-  --output scratch/sargon-l4-cc3-20260811
+checkmate 49, threefold 15, fifty-move 0, stalemate 0
 ```
+
+**Level 4 is the calibrated pairing.**  The aggregate 46.1% is inside the
+35%-65% competitive band, and 28 distinct openings is marginally better than
+level 3's 27.  More important for future candidate checks, zero fifty-move
+draws says the endgame work still holds at this new level.
+
+The colour split is also part of the baseline, not something to average away.
+Black is half a point below the nominal band and draws twelve games; a future
+candidate must not turn that existing weakness into a categorical collapse.
+Comparisons remain unpaired because Sargon is not reproducible, so the score's
+honest interval is still roughly +-12 points.  What this screen buys is an
+outside opponent at the right aggregate strength and baseline categories to
+compare: colour, distinct games, fifty-move draws and termination causes.
 
 ### The levels do not sit on one scale, and this is where that shows
 
@@ -691,13 +699,13 @@ at a time, and the cost table is what says which rungs can be afforded.
 
 ### What that means for a match
 
-A 64-game screen costs 40 minutes at level 1, **1.6 hours at level 3**, 5 to 11
-at level 4 and 93 at level 6.  A 512-game measured match costs 13 hours at
-level 3 and four to six days at level 5.
+A 64-game screen costs 40 minutes at level 1, **1.6 hours at level 3**, **4.3
+hours at level 4** and 93 at level 6.  A 512-game measured match costs 13 hours
+at level 3 and four to six days at level 5.
 
 **Read the calibration policy's "advance to a 512-game measured match" as
 retired above level 3 rather than inherited.**  At 64 games this rig now yields
-27 distinct games; at 512 it would yield perhaps 120, for a fortnight, at the
+28 distinct games; at 512 it would yield perhaps 120, for a fortnight, at the
 levels that are actually competitive.  The statistics come from Stockfish and
 the confirmation comes from Sargon; `doc/strength.md` §5.1.7 is where a
 Stockfish ranking failed to transfer here on both of the measures tried, and

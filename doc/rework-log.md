@@ -2306,6 +2306,37 @@ buy two Atari pages.
 
 ---
 
+## Phase 18 - the search portfolio closed empty, with its outside baseline finished
+
+The Sargon level-4 baseline ran beside the desk experiments from its existing sixteen-game
+cost probe to the full 64.  It used a frozen pre-experiment UCI binary, the same output
+directory and one uninterrupted Apple II bridge, so later rebuilds could not enter it:
+
+```text
+cc65 Harder vs Sargon level 4   22W 27L 15D = 46.1%
+White                          17W 12L  3D = 57.8%
+Black                           5W 15L 12D = 34.4%
+28 distinct six-ply openings, worst repeat 6x
+49 checkmates, 15 threefolds, 0 fifty-move draws, 0 stalemates
+121 mean plies, 4.27 hours
+```
+
+That makes level 4 the calibrated outside pairing: the aggregate is inside the 35%-65% band
+where a match can move in either direction, and the run has enough variety to read categories
+rather than one repeated game.  Black's 34.4% is an existing edge-of-band weakness and twelve
+of its games are draws; future confirmations must compare that colour separately rather than
+hiding a collapse in the aggregate.  Zero fifty-move draws is the other baseline that matters,
+because it says the endgame work still holds against the stronger setting.
+
+The portfolio itself lands no code.  PVS saved 5-6% where it worked, below the instrument's
+resolution; delta pruning topped out at 3%; the cheap losing-capture test at 14%; and null move
+cleared the node bar at 27% and 22% only to measure 0.04 sigma in the gauntlet.  Every result
+was reverted, and the shipping engine finishes this phase unchanged.  The reusable result is
+the mandatory whole-book pre-gate, which stopped three too-small candidates cheaply and sent
+the one large candidate to the experiment that could show its saved nodes were neutral.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

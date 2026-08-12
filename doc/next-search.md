@@ -268,13 +268,13 @@ mean score over the twelve pairings: 0.3699
 ```text
 chesstest match sanity : 196-196-120, conversion 81% of 422
 Sargon L3, cc65 Harder : 42W 12L 10D = 73.4%, 27 distinct in 64, 1 fifty-move draw
-Sargon L4, cc65 Harder : 6W 6L 4D over 16 games - a cost probe, NOT a rate
+Sargon L4, cc65 Harder : 22W 27L 15D = 46.1%, 28 distinct in 64, 0 fifty-move draws
 ```
 
-**First task, and it can run while desk work proceeds:** the L4 baseline screen is only 16 games
-deep. Finish it to 64 — the harness resumes at game 17, about 3.2 hours — so that later
-confirmations have something to be compared against. Sargon is not reproducible, so all such
-comparisons are unpaired and both sides need their own 64 games.
+The L4 baseline is complete and inside the 35%-65% competitive band.  Its colour split is
+17W-12L-3D as White and 5W-15L-12D as Black; that existing weak Black side is part of the
+categorical baseline rather than a reason to average the colours together.  Sargon is not
+reproducible, so all candidate comparisons are unpaired and both sides need their own 64 games.
 
 ## 8. Explicitly out of scope
 
