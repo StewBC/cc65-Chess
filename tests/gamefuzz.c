@@ -177,6 +177,18 @@ static int checkHashKey(int game, int ply, const char *tag)
 }
 
 /*-----------------------------------------------------------------------*/
+static int checkHistoryKey(int game, int ply, const char *tag)
+{
+	if(!eng_HistoryMatchesPosition())
+	{
+		printf("    game %d %s ply %d: newest history key is not current\n",
+		       game, tag, ply);
+		return 1;
+	}
+	return 0;
+}
+
+/*-----------------------------------------------------------------------*/
 int test_RunGameFuzz(int seed, int games, int verbose)
 {
 	int game, failures = 0, specials = 0;
@@ -208,9 +220,19 @@ int test_RunGameFuzz(int seed, int games, int verbose)
 				{
 					t_engUndo probe;
 					eng_Make(&moves[i], &probe);
+					if(checkHistoryKey(game, ply, "probe make"))
+					{
+						++failures;
+						goto nextGame;
+					}
 					if(!eng_IsAttacked(geKing[side], 1 - side))
 						chosen = i;
 					eng_Unmake(&moves[i], &probe);
+					if(checkHistoryKey(game, ply, "probe unmake"))
+					{
+						++failures;
+						goto nextGame;
+					}
 					if(0xFF != chosen)
 						++specials;
 				}
@@ -222,9 +244,19 @@ int test_RunGameFuzz(int seed, int games, int verbose)
 				t_engUndo probe;
 
 				eng_Make(&moves[pick], &probe);
+				if(checkHistoryKey(game, ply, "probe make"))
+				{
+					++failures;
+					goto nextGame;
+				}
 				if(!eng_IsAttacked(geKing[side], 1 - side))
 					chosen = pick;
 				eng_Unmake(&moves[pick], &probe);
+				if(checkHistoryKey(game, ply, "probe unmake"))
+				{
+					++failures;
+					goto nextGame;
+				}
 			}
 
 			if(0xFF == chosen)
@@ -240,6 +272,7 @@ int test_RunGameFuzz(int seed, int games, int verbose)
 			   checkDisplayMirror(game, ply) ||
 			   checkEvalScore(game, ply, "move") ||
 			   checkHashKey(game, ply, "move") ||
+			   checkHistoryKey(game, ply, "move") ||
 			   checkPhase(game, ply, "move"))
 			{
 				++failures;
@@ -258,6 +291,7 @@ int test_RunGameFuzz(int seed, int games, int verbose)
 			if(compareBoard(sc_snapshots[k], k, "undo", game) ||
 			   checkEvalScore(game, k, "undo") ||
 			   checkHashKey(game, k, "undo") ||
+			   checkHistoryKey(game, k, "undo") ||
 			   checkPhase(game, k, "undo"))
 			{
 				++failures;
@@ -270,6 +304,7 @@ int test_RunGameFuzz(int seed, int games, int verbose)
 			undo_Redo();
 			if(checkEvalScore(game, k, "redo") ||
 			   checkHashKey(game, k, "redo") ||
+			   checkHistoryKey(game, k, "redo") ||
 			   checkPhase(game, k, "redo") ||
 			   (k + 1 < plies && compareBoard(sc_snapshots[k+1], k, "redo", game)))
 			{

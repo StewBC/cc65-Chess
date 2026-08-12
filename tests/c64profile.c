@@ -42,6 +42,15 @@ static const char sc_game[] =
 #define LAST_SEARCH	22
 #define PROFILE_ROUNDS	2
 
+// Candidate work can rebuild only the affected row instead of paying for the
+// full matrix.  The default remains every component.
+#ifndef PROFILE_FIRST_COMPONENT
+#define PROFILE_FIRST_COMPONENT	1
+#endif
+#ifndef PROFILE_LAST_COMPONENT
+#define PROFILE_LAST_COMPONENT	PROFILE_COMPONENTS
+#endif
+
 static t_engMove st_moves[80];
 static unsigned long sl_jiffies;
 static unsigned long sl_nodes;
@@ -194,12 +203,13 @@ int main(void)
 	       (unsigned)PROFILE_ROUNDS);
 
 	for(round = 0; round < PROFILE_ROUNDS; ++round)
-		for(component = 1; component <= PROFILE_COMPONENTS; ++component)
+		for(component = PROFILE_FIRST_COMPONENT;
+		    component <= PROFILE_LAST_COMPONENT; ++component)
 		{
 			char ok;
 
 			putchar('.');
-			if(PROFILE_COMPONENTS == component)
+			if(PROFILE_LAST_COMPONENT == component)
 				putchar('\n');
 
 			// Alternate the order so emulator warm-up or host load cannot all
@@ -223,7 +233,8 @@ int main(void)
 			}
 		}
 
-	for(component = 1; component <= PROFILE_COMPONENTS; ++component)
+	for(component = PROFILE_FIRST_COMPONENT;
+	    component <= PROFILE_LAST_COMPONENT; ++component)
 	{
 		char same;
 

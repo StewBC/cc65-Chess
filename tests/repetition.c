@@ -149,6 +149,42 @@ static void loadedPositionHasNoHistory(void)
 }
 
 /*-----------------------------------------------------------------------*/
+// The repetition fast path reads the newest ring entry as the current key.
+// Exercise every way that current entry can change or be exposed: reset, a
+// loaded position, an actual move, a search-style make/unmake, undo and redo.
+static void currentEntryTracksPosition(void)
+{
+	static t_engMove moves[ENG_MAX_MOVES];
+	t_engUndo probe;
+	char count;
+
+	eng_SetStartPosition();
+	undo_Init();
+	check("new game ring key is current", eng_HistoryMatchesPosition(), 1);
+
+	play("e2", "e4");
+	check("actual move ring key is current", eng_HistoryMatchesPosition(), 1);
+
+	undo_Undo();
+	check("undo exposes the previous current key", eng_HistoryMatchesPosition(), 1);
+	undo_Redo();
+	check("redo restores the current key", eng_HistoryMatchesPosition(), 1);
+
+	count = eng_GenMoves(SIDE_BLACK, moves, ENG_MAX_MOVES);
+	check("search probe has a move", count != 0, 1);
+	if(count)
+	{
+		eng_Make(&moves[0], &probe);
+		check("search make ring key is current", eng_HistoryMatchesPosition(), 1);
+		eng_Unmake(&moves[0], &probe);
+		check("search unmake restores current key", eng_HistoryMatchesPosition(), 1);
+	}
+
+	test_EngineSetFEN("4k3/8/8/8/8/8/8/4K3 w - - 0 1");
+	check("FEN ring key is current", eng_HistoryMatchesPosition(), 1);
+}
+
+/*-----------------------------------------------------------------------*/
 int test_RunRepetition(int verbose)
 {
 	si_failures = 0;
@@ -159,6 +195,7 @@ int test_RunRepetition(int verbose)
 	rightsShuffle();
 	captureCutsHistory();
 	loadedPositionHasNoHistory();
+	currentEntryTracksPosition();
 
 	printf("  -> %d failing\n", si_failures);
 	(void)verbose;

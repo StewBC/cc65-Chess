@@ -757,7 +757,11 @@ void eng_HashReset(void)
 /*-----------------------------------------------------------------------*/
 char eng_IsRepetition(char needed)
 {
+#if ENGINE_REPETITION_RING_KEY
+	unsigned int key = su_hashRing[(char)(sc_hashTop - 1) & HASH_MASK];
+#else
 	unsigned int key = positionKey();
+#endif
 	char limit = sc_hashValid - 1;			// the newest entry is this position
 	char back, seen = 0;
 
@@ -775,6 +779,15 @@ char eng_IsRepetition(char needed)
 
 	return 0;
 }
+
+#ifdef EVAL_TUNING
+/*-----------------------------------------------------------------------*/
+char eng_HistoryMatchesPosition(void)
+{
+	return sc_hashValid &&
+	       su_hashRing[(char)(sc_hashTop - 1) & HASH_MASK] == positionKey();
+}
+#endif
 
 /*-----------------------------------------------------------------------*/
 // Losing a right when a rook leaves, or is taken on, its home square

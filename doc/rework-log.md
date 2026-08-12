@@ -2444,6 +2444,36 @@ deltas together, not because the ring write is expensive on its own.
 
 ---
 
+## Phase 21 - B1, the current ring key is true and not worth reading
+
+The first exact-state screen asked `eng_IsRepetition` to read the newest history entry instead
+of reconstructing the current signature from `geHashKey`, castling rights and the en-passant
+file.  It is exact under the current history contract.  A tuning-only assertion now checks the
+newest entry after a new game, FEN load, actual move, search make/unmake, undo and redo; the game
+fuzzer checks it after every probe, move, undo and redo.  Repetition tests and the full suite
+stayed green.  Baseline and candidate also returned identical move, score, depth and node
+records for all 256 `book.epd` positions at all four shipped budgets: 1,024 searches.
+
+The target price is below the threshold for shipping:
+
+| C64 form | baseline jiffies | doubled repetition jiffies | added cost |
+|---|---:|---:|---:|
+| reconstruct with `positionKey()` | 46,446 | 46,515 | 69 |
+| read newest ring entry | 46,437 | 46,492 | 55 |
+
+Both c64m runs used the retained profiler's six fixed middlegame positions, two rounds in
+opposite order, with the same 14,400 nodes and result digest.  The shortcut removes about 14
+jiffies from more than 46,000: **0.03%**, while the baselines themselves differ by nine.  The
+component saving is measurable; the program saving is not usefully separated from run and
+layout noise.
+
+`ENGINE_REPETITION_RING_KEY` retains the candidate for reproduction and defaults off.  Its
+compile-time branch costs the shipping build nothing.  The invariant test stays because B2 and
+B3 change when history is pushed, and a green repetition suite alone cannot prove the newest
+entry still describes the board.  B1 is rejected as a speed change.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

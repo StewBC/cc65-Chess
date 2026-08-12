@@ -86,6 +86,13 @@ extern char	geKing[2];			// where each king is, indexed by side
 // which costs two lookups and saves keeping them incremental
 extern unsigned int geHashKey;
 
+// Rejected B1 speed candidate retained for target A/B reproduction.  Both
+// forms use the same 16-bit signature and collision policy; the ring form is
+// real but saved only about 0.03% of a fixed C64 middlegame replay.
+#ifndef ENGINE_REPETITION_RING_KEY
+#define ENGINE_REPETITION_RING_KEY 0
+#endif
+
 /*-----------------------------------------------------------------------*/
 // Rebuild geHashKey from the board and start the position history again with
 // the position as it now stands.  Anything that puts pieces down without
@@ -111,6 +118,11 @@ unsigned int eng_HashOfBoard(void);
 // a pawn move makes every position before it unreachable, and only at every
 // second entry, since the others have the other side to move
 char eng_IsRepetition(char needed);
+
+#ifdef EVAL_TUNING
+// Native-test view of the invariant used by ENGINE_REPETITION_RING_KEY.
+char eng_HistoryMatchesPosition(void);
+#endif
 
 /*-----------------------------------------------------------------------*/
 void eng_Clear(void);

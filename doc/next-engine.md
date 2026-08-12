@@ -176,6 +176,14 @@ Proof obligations:
 
 This is small enough that a no-result is expected and acceptable.
 
+**Phase 21 B1 result: rejected.**  The invariant holds across reset, FEN, actual and search
+moves, undo and redo, and all 1,024 whole-book searches were identical.  On the fixed C64
+middlegame, doubling the old reconstruction path cost 69 jiffies and doubling the newest-ring
+path cost 55, against 46,000-jiffy baselines.  The shortcut therefore saves about 14 jiffies,
+or **0.03%** of the replay, while the baseline pair itself differed by nine.  The candidate and
+its invariant check remain behind `ENGINE_REPETITION_RING_KEY` for reproduction, default off;
+the shipping path is unchanged.
+
 ### B2. Do not maintain history for a temporary legality probe
 
 The search makes a pseudo-legal move, updates the hash and ring, asks whether its king is
