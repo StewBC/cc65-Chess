@@ -2205,6 +2205,36 @@ reverted and the next quiescence economy remains a separate experiment.
 
 ---
 
+## Phase 16 - the cheap losing-capture test topped out below fourteen percent
+
+The second quiescence economy skipped only the captures that were cheap to call obviously bad:
+a more valuable attacker taking a defended, cheaper victim.  It did no SEE, never ran while in
+check, and left promotions and equal trades alone.  The extra `eng_IsAttacked` was deliberately
+priced later; the pre-gate asks first whether enough nodes disappear for its cycle cost to
+matter.
+
+Switch-off again matched all 1,024 baseline searches exactly.  The conservative form measured:
+
+```text
+level   baseline nodes   candidate   saving   depth b/c   deeper  shallower
+  1          63,224        55,151    12.77%    486/504      18        0
+  2         290,234       300,715    -3.61%    516/517       1        0
+  3       2,659,235     2,413,098     9.26%    985/1010     25        0
+  4      13,889,536    13,879,086     0.08%   1101/1127     28        2
+```
+
+That is closer than delta pruning and still below the roughly 20% detectability bar.  The one
+permitted dose test also skipped defended equal-value captures.  It barely moved the ceiling:
+13.72% at level 1 and 9.84% at level 3, with level 2 still negative and level 4 at 1.36%.
+Turning the mechanism up bought about one percentage point, so the conservative test was not
+hiding a large saving.
+
+Stopped at the pre-gate and reverted, without target builds or matches.  Full SEE might classify
+captures better, but it cannot make this cheap test remove enough additional nodes to justify
+its much larger 6502 cost; it remains outside the proposal rather than becoming the next dose.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.
