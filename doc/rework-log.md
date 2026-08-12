@@ -2175,6 +2175,36 @@ an Atari page on.  Its low-level loss and deep-level gain are both real parts of
 
 ---
 
+## Phase 15 - delta pruning was smaller than PVS
+
+The first quiescence economy got the corrected gate from Phase 14: measure the whole book at
+all four shipped budgets before building a target or playing a match.  The implementation was
+conservative.  It ran only outside check and above the evaluation's 3200 endgame boundary, and
+skipped a move only when stand pat plus the captured material, any immediate promotion gain and
+a one-pawn margin still could not reach alpha.
+
+The switch-off control matched the pre-change shipping binary exactly over all 1,024 searches.
+With delta pruning enabled:
+
+```text
+level   baseline nodes   delta nodes   saving   depth b/c   deeper  shallower
+  1          63,224        62,229       1.57%    486/491       5        0
+  2         290,234       294,071      -1.32%    516/516       0        0
+  3       2,659,235     2,575,266       3.16%    985/996      11        0
+  4      13,889,536    13,983,910      -0.68%   1101/1107      6        0
+```
+
+The extra completed depths show that the switch was live; the scale closes it.  Its best cell
+is 3.16%, far below the roughly 20% needed to resolve an effect in the Stockfish gauntlet, and
+the level it was expected to help most gained only 1.57%.  The small node increases at levels 2
+and 4 are the budget effect: a cheaper completed iteration can make the next, abandoned one
+consume more of the fixed allowance.
+
+Stopped at the pre-gate, before target builds, self-play or external matches.  Delta pruning was
+reverted and the next quiescence economy remains a separate experiment.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.
