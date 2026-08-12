@@ -23,7 +23,7 @@ runners.
 | 1 — Very Easy | 400 | 11 seconds a move | **~1240** |
 | 2 — Easy | 1,200 | 40 seconds | **~1430** |
 | 3 — Harder | 18,000 | ~11 minutes | **~1720** |
-| 4 — Very Hard | 65,000 | ~40 minutes | **~1950** |
+| 4 — Very Hard | 65,000 | ~48 minutes | **~1950** |
 
 The first two times are measured on an emulated C64 over real games; the last two are computed
 from the same node rate and are upper bounds, because levels 3 and 4 often finish an iteration

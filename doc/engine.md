@@ -951,7 +951,7 @@ The four skill levels are `(depth cap, node budget)` pairs in `gcSearchSkill`:
 | 1 Very Easy | 3 | 400 | 11.0 s mean, 17.0 s worst (20-ply C64 game) |
 | 2 Easy | 4 | 1200 | 39.7 s mean, 57.7 s worst |
 | 3 Harder | 5 | 18000 | ~11 min (upper bound; often finishes a depth early) |
-| 4 Very Hard | 6 | 65000 | ~40 min, emulator territory |
+| 4 Very Hard | 6 | 65000 | ~48 min middlegame, emulator territory |
 
 **Which of the two numbers is the weakener is not obvious, and both answers were tried.**
 

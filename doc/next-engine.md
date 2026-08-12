@@ -509,16 +509,16 @@ must retain a tactical safety floor, run mate-in-one at its actual budget, and u
 18,000 is not cosmetic. Depth caps unchanged. Mate-in-one unchanged (10/12/12/12). Convert
 13/13 at L3 mean 22 plies (was 23) and L4 mean 21 (was 19).
 
-Harder ladder, 512 games, same rungs as Appendix A:
+Harder ladder, 512 games, **same-day** 15,000-node control (not the historical Appendix A):
 
-| vs SF | 15,000 | 18,000 |
+| vs SF | 15,000 today | 18,000 |
 |---|---|---|
-| 1 node | +20 | **+44** |
-| 30 | +6 | **+33** |
-| 100 | −67 | −51 |
-| 300 | −215 | −205 |
+| 1 node | +19 | **+44** |
+| 30 | +12 | **+33** |
+| 100 | −74 | −51 |
+| 300 | −217 | −205 |
 
-Very Hard is noise around the old row (+150 / +142 / +16 / −120 vs +156 / +136 / +19 / −115).
+About +20 Elo at the near-50% rungs. Very Hard 65,000 vs same-day 60,000 is noise (−10 / −3 / 0 / −8).
 Sargon L4 64-game confirmation is recorded in `doc/rework-log.md` Phase 34.
 
 ---

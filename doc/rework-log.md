@@ -2868,25 +2868,37 @@ C64 `c64skill.c`, 20-ply self-chosen game, NTSC jiffies / 60:
 
 That is the published 13s / 46s after B3+B4, banked rather than spent.
 
+`c64phased.c` — same B3+B4 engine, old vs new L3/L4 budgets, jiffies:
+
+| pos | L3 15k | L3 18k | L4 60k | L4 65k |
+|---|---|---|---|---|
+| opening | 5292n / 9532t / d4 | 18000n / 25036t / d4 | 43872n / 48077t / d5 | identical |
+| middlegame | 11353n / 20893t / d3 | identical | 60000n / 158796t / d3 | 65000n / 172780t / d3 |
+| KRK | 15000n / 14637t / d4 | 16298n / 15834t / **d5** | 31515n / 42209t / d6 | identical |
+
+Middlegame L4 at 65k is 48.0 min vs 44.1 min at 60k (same engine). Opening L3 spent the extra
+3,000 nodes at the same depth. The extra ply shows up in the ending, which is where it was
+meant to.
+
 Mate-in-one at the real budgets: 10 / 12 / 12 / 12, floors held. Convert: L3 13/13 mean 22
 plies (was 23), L4 13/13 mean 21 (was 19).
 
-Stockfish ladder, 512 games, L3 and L4 only (L1/L2 same nodes). fastchess alpha 1.8.2,
-Stockfish 18, `book.epd`:
+Stockfish ladder, 512 games, L3 and L4, **same-day** `/tmp/uci-d-baseline` (15k/60k) against
+`tests/uci` (18k/65k). fastchess alpha 1.8.2, Stockfish 18, `book.epd`. A re-run of L1/L2
+did not reproduce Appendix A to the digit (tool drift); those rows were left alone.
 
-| level | SF nodes | W-L-D | score | Elo | was |
-|---|---:|---|---:|---:|---:|
-| 3 | 1 | 215-150-147 | 0.563 | +44 | +20 |
-| 3 | 30 | 207-158-147 | 0.548 | +33 | +6 |
-| 3 | 100 | 158-232-122 | 0.428 | −51 | −67 |
-| 3 | 300 | 80-351-81 | 0.235 | −205 | −215 |
-| 4 | 1 | 292-84-136 | 0.703 | +150 | +156 |
-| 4 | 30 | 291-93-128 | 0.693 | +142 | +136 |
-| 4 | 100 | 211-187-114 | 0.523 | +16 | +19 |
-| 4 | 300 | 124-294-94 | 0.334 | −120 | −115 |
+| level | SF | 15k/60k today | 18k/65k | delta |
+|---|---:|---:|---:|---:|
+| 3 | 1 | +19 | **+44** | +25 |
+| 3 | 30 | +12 | **+33** | +21 |
+| 3 | 100 | −74 | −51 | +23 |
+| 3 | 300 | −217 | −205 | +12 |
+| 4 | 1 | +160 | +150 | −10 |
+| 4 | 30 | +145 | +142 | −3 |
+| 4 | 100 | +16 | +16 | 0 |
+| 4 | 300 | −112 | −120 | −8 |
 
-Harder is a real granted-node gain, larger than the 16 Elo formula at the 50% rungs. Very
-Hard is noise, as 8% more nodes at cap 6 suggested.
+Harder is a real granted-node gain, a bit above the 16 Elo formula. Very Hard is noise.
 
 Sargon II L4, 64 games, cc65 skill 3, windowed a2m-v2, `--own-book` default on — see the
 summary written when that run finished (`scratch/sargon-l4-phase-d-20260812`).

@@ -27,7 +27,7 @@ Measured over roughly 40,000 games against Stockfish, using two independent matc
 | 1 — Very Easy | 400 nodes | 11 seconds | ~1240 |
 | 2 — Easy | 1,200 nodes | 40 seconds | ~1430 |
 | 3 — Harder | 18,000 nodes | ~11 minutes | ~1720 |
-| 4 — Very Hard | 65,000 nodes | ~40 minutes | ~1950 |
+| 4 — Very Hard | 65,000 nodes | ~48 minutes | ~1950 |
 
 Ratings are on Stockfish's own scale, ±150 — and that uncertainty is honest rather than
 statistical. At its strongest setting the engine scores 71% against Stockfish restricted to a
