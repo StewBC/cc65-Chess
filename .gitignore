@@ -18,6 +18,7 @@
 /tests/uci
 /tests/uci-tuning
 /tests/genbook
+/tests/collectpos
 *.dSYM/
 
 # cc65 benchmark builds, and compiler leftovers

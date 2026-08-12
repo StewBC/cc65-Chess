@@ -30,7 +30,7 @@ The short version of this note is:
 | B exact state | **B3+B4 kept** (−17.2% C64 fixed middlegame) | yes |
 | C exact work | C1–C3 rejected; C4/C5 deferred | no survivors |
 | D combine / buy nodes | **done** — L1/L2 bank time; L3 18k; L4 65k | L3 ladder up; L4 noise |
-| E chess | E1/E4/E5 rejected; E6 instrument; E2/E3 open | no strength terms landed |
+| E chess | E1/E4/E5 rejected; E6 instrument; E2 null; E3 open | no strength terms landed |
 | F ordering screens | not started | — |
 
 Shipping search is Phase B plus the Phase D budgets. Candidates retained default-off:
@@ -573,9 +573,12 @@ training and locked validation sets so positions from one deterministic game can
 both. Fit a constrained, symmetric and smooth candidate; freeze it; then run the ordinary
 gauntlet once. Do not tune against the landing set.
 
-**Phase 33 E2 status: not run as a full train/val campaign.**  E6's queen-move clustering is
-the next input.  Queen-home / queen-out dose tests already closed one coordinate; any new
-PST or weight change still needs locked validation and one gauntlet, not a short self-play.
+**Phase 35 E2 result: existing numbers already sit at the constrained minimum.**  Positions
+the shipping engine actually reached, self-play from `book.epd`, even openings train / odd
+locked val, pawn = 100, one scale per existing table, no singleton d1.  45,878 / 44,740
+positions.  The fit moved bishop 330 → 327; the freeze is bishop 325 and every scale 1.00.
+Val mse 0.127940 → 0.127896.  Near-shipping; a null is done, no gauntlet of a no-op.
+E6's queen-move count was not an input.
 
 ### E3. Test an opening interaction, not another queen square
 
@@ -759,6 +762,7 @@ They are listed so "leave no idea behind" does not become "forget why it failed.
 | pin set | about 7% estimated net, high correctness risk; Phase 5 rejection |
 | pawn-shield king safety | -2.6 sigma; closed |
 | queen d1 PST change | -1.09 sigma; stronger reverse dose +0.40 sigma; mechanism inert |
+| E2 constrained value fit | existing N/B/R/Q + PST scales already at the train/val minimum; bishop −5 is noise |
 | incremental doubled/isolated (E1) | board-scan fits Atari when on; equal nodes +0.9σ; equal time −2.5σ at host 1.38×; rejected |
 | KBN colour corner drive (E4) | L4 can convert when on; L1–3 0/8; Atari overflow; rejected |
 | one-ply check extension (E5) | L1 mate-in-one 11/12→10/12; Atari page; rejected |
@@ -817,12 +821,13 @@ plausible feature whose gates were skipped.
 6. ~~E5 check extension~~ — rejected L1 mate floor (Phase 32).
 7. ~~E6 mine failures~~ — instrument + sample (Phase 33); queen-move swings lead.
 8. ~~Phase D budgets~~ — 400 / 1,200 / 18,000 / 65,000 (Phase 34).
+9. ~~**E2** value tuning~~ — existing family already at the constrained minimum (Phase 35).
 
 ### Still open, in cheap order
 
 1. ~~**Stefan:** Phase D for B3+B4~~ — L1/L2 banked time; L3 18k (ladder up); L4 65k (noise).
-2. **E2** locked-set value tuning of the existing constant family (not another d1 dose).
-3. **E3** opening interaction (queen before minors), dual switch, predeclared doses, Atari last.
+2. ~~**E2** locked-set value tuning~~ — existing numbers already at the constrained minimum (Phase 35).
+3. **E3** opening interaction (queen before minors), dual switch, predeclared doses, Atari first.
 4. **§10** undo-ring pack / arena high-water — only if E2/E3 or a slim KBN/ca65 needs the bytes.
 5. **F1–F5** as cheap whole-book screens.
 6. Reopen a full TT only through §9.

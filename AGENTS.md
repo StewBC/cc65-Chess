@@ -8,7 +8,7 @@ file is the short list of constraints that are easy to violate by accident.
 
 `doc/next-engine.md` is the current forward work note. Phases A–D and the E chess portfolio
 through E6 are measured there (B3+B4 are the only speed survivors; D spent them as L1/L2
-wall time and L3 18,000 / L4 65,000 nodes; E1/E4/E5 rejected; E2/E3 open). It does not
+wall time and L3 18,000 / L4 65,000 nodes; E1/E4/E5 rejected; E2 null; E3 open). It does not
 reopen the rejected search portfolio by changing its name.
 
 ## Hard constraints

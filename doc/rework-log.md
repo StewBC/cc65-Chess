@@ -2917,6 +2917,36 @@ confirmation, not a new rating.
 
 ---
 
+## Phase 35 - tune existing values (E2)
+
+One constrained fit of the numbers that already ship. Pawn stays 100. Each
+PST and endgame table may scale, but no cell is free and d1 is not a
+coordinate. Train and locked val are disjoint `book.epd` openings (even /
+odd). E6's queen-move count was not an input.
+
+`tests/collectpos` plays the shipping search (no `EVAL_TUNING`) from those
+openings at the real Easy / Harder budgets plus Very Easy, and dumps every
+root the engine reaches. `tests/tune_eval.py` reconstructs `eval_Position`
+from the same tables; it matched all 256 book positions and the KRK / KQK
+blend-and-drive cases before any fit.
+
+45,878 train / 44,740 val positions. K = 0.60 on train, then frozen. One
+Adam run from the shipping point, L2 prior λ = 0.02.
+
+| | N | B | R | Q | scales | train mse | val mse |
+|---|---:|---:|---:|---:|---|---:|---:|
+| shipping | 320 | 330 | 500 | 900 | 1.00 | 0.129059 | 0.127940 |
+| continuous | 321.4 | 326.9 | 499.8 | 901.3 | 0.99–1.01 | 0.128988 | 0.127925 |
+| freeze | 320 | 325 | 500 | 900 | 1.00 | 0.128995 | 0.127896 |
+
+The freeze is inside the near-shipping band. Val moved 0.000044. A null is
+done; no gauntlet of a no-op. Shipping tables unchanged.
+
+Branch: `codex/next-engine-phase-e2-values`. `scratch/e2/`,
+`scratch/next-engine-phase-e2-handoff.md`.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

@@ -79,6 +79,11 @@ uci-tuning: $(ENGINE) uci.c testutil.c engineperft.c platStub.c $(HEADERS)
 genbook: $(ENGINE) genbook.c testutil.c platStub.c $(HEADERS)
 	$(CC) $(UCIFLAGS) -o $@ $(ENGINE) genbook.c testutil.c platStub.c
 
+# Positions the shipping eval actually reaches, from book.epd.  No EVAL_TUNING:
+# this is the engine the fit is allowed to see, not the one with extra terms.
+collectpos: $(ENGINE) collectpos.c testutil.c engineperft.c platStub.c $(HEADERS)
+	$(CC) $(UCIFLAGS) -o $@ $(ENGINE) collectpos.c testutil.c engineperft.c platStub.c
+
 # book.epd - 256 openings, four plies deep - is checked in rather than built,
 # and is deliberately NOT a dependency of anything.  It is the set every
 # published figure in doc/strength.md was measured against, so it has to stay
@@ -94,7 +99,7 @@ gauntlet: uci genbook
 
 # note book.epd is not removed here: make clean must not delete a tracked file
 clean:
-	rm -f chesstest uci uci-tuning genbook
+	rm -f chesstest uci uci-tuning genbook collectpos
 	rm -rf chesstest.dSYM uci.dSYM uci-tuning.dSYM genbook.dSYM
 
 .PHONY: test clean gauntlet book
