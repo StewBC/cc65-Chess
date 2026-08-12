@@ -2900,10 +2900,20 @@ did not reproduce Appendix A to the digit (tool drift); those rows were left alo
 
 Harder is a real granted-node gain, a bit above the 16 Elo formula. Very Hard is noise.
 
-Sargon II L4, 64 games, cc65 skill 3, windowed a2m-v2, `--own-book` default on — see the
-summary written when that run finished (`scratch/sargon-l4-phase-d-20260812`).
+Sargon II L4, 64 games, cc65 skill 3 at 18,000 nodes, windowed a2m-v2, OwnBook on:
 
-Branch: `codex/next-engine-phase-d-budgets`.
+**22W-13L-29D = 57.0%**, 33 distinct six-ply openings, 0 fifty-move draws.
+Terminations: 35 checkmate, 22 threefold, 7 insufficient material. Mean 115 plies,
+max 245 (two long White conversions that finished). Colour: White 11-9-12, Black
+11-4-17. One parse timeout (`G5F5` missing hyphen) retried cleanly.
+
+Against the previous 15,000-node pairing (22-27-15, 46.1%, 28 openings, Black
+5-15-12): same win count, fourteen fewer losses, more draws, more openings, and
+the weak Black side is gone. No categorical regression. Score's honest interval
+at 64 games is ±12 points; 57% vs 46% sits on that edge and is read as
+confirmation, not a new rating.
+
+`scratch/sargon-l4-phase-d-20260812`. Branch: `codex/next-engine-phase-d-budgets`.
 
 ---
 

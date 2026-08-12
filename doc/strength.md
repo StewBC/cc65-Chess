@@ -1202,8 +1202,9 @@ Every Sargon level has since been timed - six minutes for all seven, in
 `sargon/README.md` - and the screens then measured the costs that matter:
 1.6 hours for 64 games at level 3, 4.3 hours at level 4, and roughly 93 hours
 projected at level 6.  The completed level-4 screen is the competitive pairing:
-cc65 Harder scored 22W-27L-15D, 46.1%, with 28 distinct openings and no
-fifty-move draws.
+cc65 Harder at 15,000 nodes scored 22W-27L-15D, 46.1%, with 28 distinct openings and no
+fifty-move draws. After Phase D (18,000 nodes) the same pairing is **22W-13L-29D, 57.0%**,
+33 openings, still no fifty-move draws; Black went from 5-15-12 to 11-4-17.
 
 ### What this establishes, sample size notwithstanding
 

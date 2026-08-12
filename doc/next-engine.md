@@ -519,7 +519,10 @@ Harder ladder, 512 games, **same-day** 15,000-node control (not the historical A
 | 300 | −217 | −205 |
 
 About +20 Elo at the near-50% rungs. Very Hard 65,000 vs same-day 60,000 is noise (−10 / −3 / 0 / −8).
-Sargon L4 64-game confirmation is recorded in `doc/rework-log.md` Phase 34.
+
+Sargon L4, 64 games: **22-13-29 (57.0%)**, 33 openings, 0 fifty-move. Previous 15k pairing
+was 22-27-15 (46.1%), 28 openings, weak Black 5-15-12. Black is now 11-4-17. Confirmation,
+not a regression.
 
 ---
 

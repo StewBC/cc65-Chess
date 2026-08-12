@@ -281,25 +281,24 @@ limited, Stockfish 18, fastchess. Matches `doc/strength.md` §4.1 within noise:
 
 ```text
 level      SF n=1      SF n=30     SF n=100
-  1         -302         -316        -415
-  2         -182         -194        -259
-  3          +19          +12         -74
-  4         +160         +145         +16
+  1         -285         -319        -429
+  2         -180         -183        -246
+  3          +44          +33         -51
+  4         +150         +142         +16
 
-mean score over the twelve pairings: 0.3699
+mean score over the twelve pairings: 0.379
 ```
 
 ```text
 chesstest match sanity : 196-196-120, conversion 81% of 422
 Sargon L3, cc65 Harder : 42W 12L 10D = 73.4%, 27 distinct in 64, 1 fifty-move draw
-Sargon L4, cc65 Harder : 22W 27L 15D = 46.1%, 28 distinct in 64, 0 fifty-move draws
+Sargon L4, cc65 Harder : 22W 13L 29D = 57.0%, 33 distinct in 64, 0 fifty-move draws
 ```
 
-**Level 4 is the calibrated outside pairing** — inside the 35%–65% band, 28 distinct games in
-64, worst repeat 6×. Its colour split is 17W-12L-3D as White and 5W-15L-12D as Black; that weak
-Black side is part of the categorical baseline and must be compared separately rather than
-averaged away. Sargon is not reproducible, so all comparisons are unpaired and both sides need
-their own 64 games.
+**Level 4 is the calibrated outside pairing** — inside the 35%–65% band, 33 distinct games in
+64, worst repeat 9×. Colour is 11W-9L-12D as White and 11W-4L-17D as Black (the old 15,000-node
+Black 5-15-12 is gone). Sargon is not reproducible, so all comparisons are unpaired and both
+sides need their own 64 games.
 
 ## 8. Scope
 
