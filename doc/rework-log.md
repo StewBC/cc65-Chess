@@ -2235,6 +2235,77 @@ its much larger 6502 cost; it remains outside the proposal rather than becoming 
 
 ---
 
+## Phase 17 - null move saved the nodes and not the games
+
+Null-move pruning was the one candidate to clear the new node pre-gate.  The conservative
+form gave the side to move a pass only below the root, outside check, never twice in a row,
+above the 3200 phase boundary, below a halfmove clock of 99, away from mate bounds, and only
+when that side owned a non-pawn piece beyond its king.  It cleared en passant, advanced and
+restored the halfmove clock, left the piece hash alone, and suppressed repetition inside the
+imaginary line whose side parity cannot describe a legal game.
+
+R=1 and R=2 were measured separately over all 256 book positions at every shipped budget.
+R=1 was the useful dose:
+
+```text
+level   baseline nodes   R=1 nodes   saving   depth b/c   deeper  shallower
+  1          63,224        63,224     0.00%    486/486       0        0
+  2         290,234       211,818    27.02%    516/676     160        0
+  3       2,659,235         2.582m     2.91%    985/1041     56        0
+  4      13,889,536    10,857,708    21.83%   1101/1274    173        0
+```
+
+R=2 did not fire at levels 1 and 2 and saved only 7.48% and 9.00% at levels 3 and 4.  That
+is the shallow-search hazard from the work note in numbers: the conventional reduction
+removed the opportunity before it removed enough work.  The R=1 candidate was therefore
+enabled only at the two exact shipped budgets that cleared 20%, level 2's 1,200 nodes and
+level 4's 60,000.  With that measured per-level gate, levels 1 and 3 reproduced the baseline
+exactly and levels 2 and 4 retained the table above.
+
+The switch-off control was exact over all 1,024 searches.  The full native suite was green,
+including the four real skill budgets, and a new temporary state-restoration check exercised
+an en-passant position with a nonzero halfmove clock and verified board, hash, running
+evaluation, phase, castling, en passant, clock and king squares after the search.  All seven
+targets built.  The terminal startup, AI game, human move and attacker/defender display smokes
+also passed.  Those candidate-only tests and switches were removed with the implementation.
+
+The Atari number demonstrates why its cliff belongs at the end.  Null move moved `DLIST`
+from `$7C00` to `$7E00`, BSS ended at `$9035`, and 202 bytes remained below the `$9100`
+framebuffer.  The candidate compiled and linked, but would have paid two page steps.  That is
+a large portfolio price; it was recorded, not used to prejudge the strength result.
+
+Self-play provided the required sign and live-switch check:
+
+```text
+level 2 null vs baseline   206-198-108
+level 4 null vs baseline   203-187-122
+```
+
+As usual that is not evidence to land it.  The external gauntlet supplied the result.  Levels
+1 and 3, where the budget gate disabled null move, reproduced the baseline ladder exactly.
+The two targeted levels pooled over their three Stockfish rungs as follows:
+
+```text
+level             W-   L-   D       score       baseline       difference
+  2 null        195-1017-324       0.2324         0.2298          +0.0026
+  4 null        805- 363-368       0.6439         0.6452          -0.0013
+all 12 rungs   1601-3196-1347      0.3702         0.3699          +0.0003
+```
+
+From the W-L-D variance, the all-rung difference is about 0.04 sigma; level 2 is +0.20 sigma
+and level 4 is -0.09 sigma.  The large node savings are real, but they changed the resulting
+moves in ways that were neutral in aggregate: four game-points gained at level 2 and two lost
+at level 4 out of 1,536 games each.  This misses the pooled +2 sigma landing gate roughly
+fiftyfold.  No Sargon candidate or on-target timing can rescue a technique that has no
+measurable strength effect at the preceding gate, so both were stopped there.
+
+Null move was reverted.  It is the useful counterexample to the pre-gate's meaning: 20% is
+the minimum scale worth measuring, not a promise that saved nodes become strength.  Here the
+screen correctly bought the experiment a gauntlet, and the gauntlet correctly declined to
+buy two Atari pages.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.
