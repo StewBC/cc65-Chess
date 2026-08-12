@@ -19,6 +19,10 @@
 #include "engine.h"
 #include "eval.h"
 
+#ifdef SEARCH_PROFILE
+#include "c64profile.h"
+#endif
+
 /*-----------------------------------------------------------------------*/
 char geBoard[128];
 char geCastle;
@@ -45,6 +49,14 @@ unsigned int geHashKey;
 static unsigned int	su_hashRing[HASH_RING];
 static char			sc_hashTop;			// next slot to write, wraps
 static char			sc_hashValid;		// entries that can be trusted
+
+#ifdef SEARCH_PROFILE
+// The sink stops cc65 deleting a deliberately discarded duplicate result.
+// sc_profileBoardOnly lets the board row use the real make/unmake code while
+// excluding the evaluation, key and history rows measured beside it.
+static volatile unsigned int su_profileSink;
+static char sc_profileBoardOnly;
+#endif
 
 static const unsigned int sc_zobrist[12 * 64] =
 {
@@ -834,20 +846,44 @@ void eng_Make(const t_engMove *move, t_engUndo *undo)
 	else if(ROOK == (piece & PIECE_DATA))
 		revokeRights(from);
 
-	// keep the running evaluation with the pieces.  eng_Unmake subtracts this
-	// exact call, so the two cannot drift apart
-	geEvalScore += eval_MoveDelta(move, piece, undo->m_captured);
-	gePhase += eval_PhaseDelta(move, piece, undo->m_captured);
-	geEvalEnd += eval_EndDelta(move, piece, undo->m_captured);
-	geHashKey ^= hashDelta(move, piece, undo->m_captured);
 
-	// and record where we now are.  This runs for search moves as well as
-	// real ones, which is the point: the ring is the game's history and the
-	// current search line at the same time
-	su_hashRing[sc_hashTop & HASH_MASK] = positionKey();
-	++sc_hashTop;
-	if(sc_hashValid < HASH_RING)
-		++sc_hashValid;
+#ifdef SEARCH_PROFILE
+	if(!sc_profileBoardOnly)
+#endif
+	{
+#ifdef SEARCH_PROFILE
+		if(PROFILE_EVAL_MOVE == geSearchProfile)
+			su_profileSink = eval_MoveDelta(move, piece, undo->m_captured);
+		if(PROFILE_EVAL_PHASE == geSearchProfile)
+			su_profileSink = eval_PhaseDelta(move, piece, undo->m_captured);
+		if(PROFILE_EVAL_END == geSearchProfile)
+			su_profileSink = eval_EndDelta(move, piece, undo->m_captured);
+		if(PROFILE_HASH_DELTA == geSearchProfile)
+			su_profileSink = hashDelta(move, piece, undo->m_captured);
+#endif
+
+		// keep the running evaluation with the pieces.  eng_Unmake subtracts
+		// this exact call, so the two cannot drift apart
+		geEvalScore += eval_MoveDelta(move, piece, undo->m_captured);
+		gePhase += eval_PhaseDelta(move, piece, undo->m_captured);
+		geEvalEnd += eval_EndDelta(move, piece, undo->m_captured);
+		geHashKey ^= hashDelta(move, piece, undo->m_captured);
+
+		// and record where we now are.  This runs for search moves as well as
+		// real ones, which is the point: the ring is the game's history and the
+		// current search line at the same time
+#ifdef SEARCH_PROFILE
+		if(PROFILE_HISTORY == geSearchProfile)
+		{
+			su_profileSink = positionKey();
+			su_hashRing[sc_hashTop & HASH_MASK] = su_profileSink;
+		}
+#endif
+		su_hashRing[sc_hashTop & HASH_MASK] = positionKey();
+		++sc_hashTop;
+		if(sc_hashValid < HASH_RING)
+			++sc_hashValid;
+	}
 }
 
 /*-----------------------------------------------------------------------*/
@@ -892,12 +928,42 @@ void eng_Unmake(const t_engMove *move, const t_engUndo *undo)
 		}
 	}
 
-	geEvalScore -= eval_MoveDelta(move, moved, undo->m_captured);
-	gePhase -= eval_PhaseDelta(move, moved, undo->m_captured);
-	geEvalEnd -= eval_EndDelta(move, moved, undo->m_captured);
-	geHashKey ^= hashDelta(move, moved, undo->m_captured);
 
-	--sc_hashTop;
-	if(sc_hashValid)
-		--sc_hashValid;
+#ifdef SEARCH_PROFILE
+	if(!sc_profileBoardOnly)
+#endif
+	{
+#ifdef SEARCH_PROFILE
+		if(PROFILE_EVAL_MOVE == geSearchProfile)
+			su_profileSink = eval_MoveDelta(move, moved, undo->m_captured);
+		if(PROFILE_EVAL_PHASE == geSearchProfile)
+			su_profileSink = eval_PhaseDelta(move, moved, undo->m_captured);
+		if(PROFILE_EVAL_END == geSearchProfile)
+			su_profileSink = eval_EndDelta(move, moved, undo->m_captured);
+		if(PROFILE_HASH_DELTA == geSearchProfile)
+			su_profileSink = hashDelta(move, moved, undo->m_captured);
+#endif
+
+		geEvalScore -= eval_MoveDelta(move, moved, undo->m_captured);
+		gePhase -= eval_PhaseDelta(move, moved, undo->m_captured);
+		geEvalEnd -= eval_EndDelta(move, moved, undo->m_captured);
+		geHashKey ^= hashDelta(move, moved, undo->m_captured);
+
+		--sc_hashTop;
+		if(sc_hashValid)
+			--sc_hashValid;
+	}
 }
+
+#ifdef SEARCH_PROFILE
+/*-----------------------------------------------------------------------*/
+void eng_ProfileBoardPair(const t_engMove *move)
+{
+	t_engUndo undo;
+
+	sc_profileBoardOnly = 1;
+	eng_Make(move, &undo);
+	eng_Unmake(move, &undo);
+	sc_profileBoardOnly = 0;
+}
+#endif

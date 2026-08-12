@@ -25,6 +25,10 @@
 #include "eval.h"
 #include "search.h"
 
+#ifdef SEARCH_PROFILE
+#include "c64profile.h"
+#endif
+
 /*-----------------------------------------------------------------------*/
 // One shared move arena, carved up a ply at a time.  Quiescence asks
 // eng_GenCaptures for the handful of moves it actually searches rather than
@@ -56,6 +60,14 @@ static t_engMove	st_killers[SEARCH_MAX_PLY][2];
 static unsigned int	si_nodes;
 static unsigned int	si_budget;
 static char			sc_abort;
+
+#ifdef SEARCH_PROFILE
+// Test-only selector and scratch list for the doubling profiler.  Keeping all
+// rows in one binary makes the baseline and candidate pay the same dispatch
+// overhead, and makes it possible to interleave them in one emulator run.
+char geSearchProfile;
+static t_engMove st_profileMoves[127];
+#endif
 
 #ifdef EVAL_TUNING
 char geSearchRepetition = 1;
@@ -311,17 +323,43 @@ static int quiesce(char side, int alpha, int beta, char ply)
 	if(arenaRoom() < 8)
 		return inCheck ? eval_Position(side) : alpha;
 	moves = &st_arena[si_arenaTop];
+
+#ifdef SEARCH_PROFILE
+	if(inCheck && PROFILE_GEN_MOVES == geSearchProfile)
+		(void)eng_GenMoves(side, st_profileMoves, arenaRoom());
+	else if(!inCheck && PROFILE_GEN_CAPTURES == geSearchProfile)
+		(void)eng_GenCaptures(side, st_profileMoves, arenaRoom());
+#endif
+
 	count = inCheck ? eng_GenMoves(side, moves, arenaRoom())
 	                : eng_GenCaptures(side, moves, arenaRoom());
 	si_arenaTop += count;
 
 	scoreMoves(moves, count, ply);
 
+#ifdef SEARCH_PROFILE
+	if(PROFILE_SCORE == geSearchProfile)
+		scoreMoves(moves, count, ply);
+#endif
+
 	for(i = 0; i < count; ++i)
 	{
 		pickBest(moves, count, i);
 
+#ifdef SEARCH_PROFILE
+		if(PROFILE_SELECT == geSearchProfile)
+			pickBest(moves, count, i);
+		if(PROFILE_BOARD == geSearchProfile)
+			eng_ProfileBoardPair(&moves[i]);
+#endif
+
 		eng_Make(&moves[i], &undo);
+
+#ifdef SEARCH_PROFILE
+		if(PROFILE_LEGALITY == geSearchProfile)
+			(void)eng_IsAttacked(geKing[side], 1 - side);
+#endif
+
 		if(eng_IsAttacked(geKing[side], 1 - side))
 		{
 			eng_Unmake(&moves[i], &undo);
@@ -383,6 +421,12 @@ static int negamax(char side, char depth, int alpha, int beta, char ply)
 	// side with nothing better to do repeats happily - measured over 512
 	// self-play games, 318 draws, 57% of them in positions the engine itself
 	// scored as winning
+
+#ifdef SEARCH_PROFILE
+	if(SEARCH_REPETITION && PROFILE_REPETITION == geSearchProfile)
+		(void)eng_IsRepetition(1);
+#endif
+
 	if(SEARCH_REPETITION && eng_IsRepetition(1))
 		return 0;
 
@@ -400,16 +444,40 @@ static int negamax(char side, char depth, int alpha, int beta, char ply)
 	if(arenaRoom() < 8)
 		return eval_Position(side);
 	moves = &st_arena[si_arenaTop];
+
+#ifdef SEARCH_PROFILE
+	if(PROFILE_GEN_MOVES == geSearchProfile)
+		(void)eng_GenMoves(side, st_profileMoves, arenaRoom());
+#endif
+
 	count = eng_GenMoves(side, moves, arenaRoom());
 	si_arenaTop += count;
 
 	scoreMoves(moves, count, ply);
 
+#ifdef SEARCH_PROFILE
+	if(PROFILE_SCORE == geSearchProfile)
+		scoreMoves(moves, count, ply);
+#endif
+
 	for(i = 0; i < count; ++i)
 	{
 		pickBest(moves, count, i);
 
+#ifdef SEARCH_PROFILE
+		if(PROFILE_SELECT == geSearchProfile)
+			pickBest(moves, count, i);
+		if(PROFILE_BOARD == geSearchProfile)
+			eng_ProfileBoardPair(&moves[i]);
+#endif
+
 		eng_Make(&moves[i], &undo);
+
+#ifdef SEARCH_PROFILE
+		if(PROFILE_LEGALITY == geSearchProfile)
+			(void)eng_IsAttacked(geKing[side], 1 - side);
+#endif
+
 		if(eng_IsAttacked(geKing[side], 1 - side))
 		{
 			eng_Unmake(&moves[i], &undo);
@@ -496,10 +564,21 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 	unsigned int arenaSave = si_arenaTop;
 
 	moves = &st_arena[si_arenaTop];
+
+#ifdef SEARCH_PROFILE
+	if(PROFILE_GEN_MOVES == geSearchProfile)
+		(void)eng_GenMoves(side, st_profileMoves, arenaRoom());
+#endif
+
 	count = eng_GenMoves(side, moves, arenaRoom());
 	si_arenaTop += count;
 
 	scoreMoves(moves, count, 0);
+
+#ifdef SEARCH_PROFILE
+	if(PROFILE_SCORE == geSearchProfile)
+		scoreMoves(moves, count, 0);
+#endif
 
 	// Break ties randomly for the first few moves of a game.  Alpha-beta
 	// returns the same move whatever order the moves are tried in, with one
@@ -537,7 +616,20 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 	{
 		pickBest(moves, count, i);
 
+#ifdef SEARCH_PROFILE
+		if(PROFILE_SELECT == geSearchProfile)
+			pickBest(moves, count, i);
+		if(PROFILE_BOARD == geSearchProfile)
+			eng_ProfileBoardPair(&moves[i]);
+#endif
+
 		eng_Make(&moves[i], &undo);
+
+#ifdef SEARCH_PROFILE
+		if(PROFILE_LEGALITY == geSearchProfile)
+			(void)eng_IsAttacked(geKing[side], 1 - side);
+#endif
+
 		if(eng_IsAttacked(geKing[side], 1 - side))
 		{
 			eng_Unmake(&moves[i], &undo);

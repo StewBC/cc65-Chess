@@ -1014,14 +1014,13 @@ at *any* budget.
 
 ## 6.9 Where the time actually goes
 
-There is no profiler for a 6502 here, and there does not need to be one. Run the search
-normally, then again with one component doing an extra redundant copy of its work; the
-difference is that component's cost *in situ*, including call overhead a source-level model
-would miss. Every doubled operation is either side-effect free or exactly self-reversing, and
-identical node counts across runs prove the tree was untouched. The driver is
-`tests/c64profile.c`.
+`tests/c64profile.c` retains the in-situ profiler. Run the search normally, then again with one
+component doing an extra redundant copy of its work; the difference is that component's cost
+including call overhead a source-level model would miss. Every doubled operation is either
+side-effect free or exactly self-reversing, and identical node counts plus result digests prove
+the tree was untouched.
 
-Real C64, budget 1600, depth 3:
+The original Phase 5 result, on the engine as it stood then, was:
 
 | Component | Share |
 |---|---|
@@ -1055,8 +1054,11 @@ classic way these ship a legality bug.
 The item was dropped on evidence, not on difficulty. **A cost measured on perft does not
 transfer to a search that abandons most of its moves unexamined.**
 
-The profile that remains is flat — 42 / 19 / 18 / 14 with no dominant hotspot, which is what a
-reasonably optimised program looks like. There is no remaining change worth a ply.
+That conclusion belonged to that engine.  The retained Phase 20 profile includes the history,
+three running evaluation totals, mate drive and check evasions added since then.  Its largest
+current C64 rows are capture generation 29.27%, full generation 9.28%, middlegame delta 8.98%,
+hash delta 8.49% and endgame delta 8.04%; `doc/rework-log.md` has the full table and method.
+Those numbers, not the historic 42 / 19 / 18 / 14 grouping, set the next optimisation order.
 
 ## 6.10 Repetition, and the position history
 

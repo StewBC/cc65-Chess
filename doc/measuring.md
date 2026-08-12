@@ -455,10 +455,11 @@ cycles, and 8e9 wasted half the run.
 | `c64evasion.c` | Cost of a node with and without check evasions, over a fixed game |
 | `c64drive.c` | Cost of a node with and without the mate drive, over a fixed *ending* — measured 2.04% |
 
-**The profile in `doc/rework-log.md` was taken with a program that is not in the tree** — it
-needed a modified engine as well as a driver, so it was done on a scratch fork and not kept.
-The technique is worth restating, because it is cheap and it is what overturned the last
-major optimisation on the plan.
+`tests/c64profile.c` now retains this instrument.  It is compile-time isolated behind
+`SEARCH_PROFILE`, replays six fixed middlegame positions, and checks nodes plus a digest of
+move, flags, score and depth before accepting a row.  `tests/profile-run-a2m.py` uses a2m-v2's
+exact emulated cycle counter for the full development profile; VICE remains the C64 landing
+instrument.  The Phase 20 commands and both sets of raw results are in `doc/rework-log.md`.
 
 There is no profiler for a 6502 here and there does not need to be one. Run the search
 normally, then again with **one component doing an extra redundant copy of its work**, and

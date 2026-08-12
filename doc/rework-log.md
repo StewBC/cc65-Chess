@@ -2373,6 +2373,77 @@ shipping engine remains unchanged.
 
 ---
 
+## Phase 20 - the current C64 profile, retained this time
+
+The Phase 5 profile was the right instrument and an old answer.  It predated the position
+history, the endgame and phase totals, mate drive and check evasions, and its modified engine
+lived only on a scratch fork.  The first item in `doc/next-engine.md` was therefore to repeat
+it on the engine that ships and keep the instrument in the tree.
+
+`tests/c64profile.c` replays six fixed middlegame positions from plies 16 through 21 of the
+same level-2 game used by `c64evasion.c`.  Each row performs one redundant copy of one
+component.  Baseline and doubled passes run twice in opposite order.  Every pass visits 7,200
+nodes; the two rounds therefore require the same 14,400 nodes and the same digest of move,
+flags, score, completed depth and node count before a timing is accepted.
+
+The rows are more separated than the old 42 / 19 / 18 / 14 profile:
+
+| # | doubled component | a2m-v2 exact cycles | Apple share | C64 jiffies | C64 share |
+|---|---|---:|---:|---:|---:|
+| 1 | full move generation | 736,923,964 -> 805,232,556 | 9.27% | 46,453 -> 50,762 | **9.28%** |
+| 2 | capture/promotion generation | 736,595,804 -> 953,004,826 | 29.38% | 46,453 -> 60,051 | **29.27%** |
+| 3 | scoring | 738,083,164 -> 789,980,667 | 7.03% | 46,453 -> 49,812 | **7.23%** |
+| 4 | selection | 737,556,092 -> 773,360,126 | 4.85% | 46,454 -> 48,784 | **5.02%** |
+| 5 | ordinary legality | 738,234,364 -> 782,436,583 | 5.99% | 46,454 -> 49,311 | **6.15%** |
+| 6 | board-only make/unmake | 737,373,308 -> 772,020,196 | 4.70% | 46,450 -> 48,637 | **4.71%** |
+| 7 | middlegame score delta | 737,057,244 -> 804,917,956 | 9.21% | 46,454 -> 50,627 | **8.98%** |
+| 8 | endgame delta | 736,404,060 -> 797,938,522 | 8.36% | 46,450 -> 50,186 | **8.04%** |
+| 9 | phase delta | 737,702,812 -> 751,999,772 | 1.94% | 46,450 -> 47,370 | **1.98%** |
+| 10 | piece-placement hash delta | 739,361,084 -> 799,910,216 | 8.19% | 46,450 -> 50,394 | **8.49%** |
+| 11 | `positionKey` and ring write | 739,289,628 -> 741,793,132 | 0.34% | 46,452 -> 46,714 | **0.56%** |
+| 12 | repetition scan | 739,726,652 -> 738,714,735 | -0.14% | 46,452 -> 46,525 | **0.16%** |
+
+The a2m-v2 numbers are the development instrument, not a substitute target.  cc65's Apple II
+runtime has no `clock()`, so the driver and `tests/profile-run-a2m.py` use a two-byte memory
+handshake: the program waits outside the measured interval, the controller pauses, reads the
+emulator's exact cycle counter, acknowledges and resumes.  No breakpoint is armed while the
+search runs, because a2m-v2 otherwise checks it at every instruction and loses its max-mode
+speed.  The Apple and C64 rankings agree closely; the C64 result remains the decision number.
+
+Reproduction, shipping `optsize` throughout:
+
+```sh
+cd tests
+cl65 -t c64 -Or -I../src -I. -DSEARCH_PROFILE -o /tmp/c64profile.prg \
+    ../src/engine.c ../src/eval.c ../src/search.c c64profile.c
+./vice-run.sh /tmp/c64profile.prg /tmp/c64profile.png 22000000000
+
+# The Apple binary uses src/apple2/chessA2.cfg, start address $4000 and
+# PROFILE_EXTERNAL_CLOCK.  Force-export gc_profileMarker/gc_profileAck, put the
+# binary and cc65's loader.system in a copy of apple2/template.po with cadius,
+# then use the addresses printed by the map:
+python3 -u profile-run-a2m.py /tmp/profile.po --marker 0x1544 --ack 0x1545
+```
+
+The full VICE matrix took about 36 minutes on this host; a2m-v2 took about eleven.  Use a2m-v2
+to develop and rank profile rows, then use a narrow candidate-specific C64 replay for landing
+evidence rather than paying this matrix price repeatedly.
+
+All seven shipping targets were rebuilt with `optsize` and maps after adding the test-only
+instrumentation.  Shipping segments are unchanged because every engine hook is behind
+`SEARCH_PROFILE`.  The two tight relations remain exactly the roadmap baseline: Atari DATA
+ends `$7BC1`, `DLIST` starts `$7C00` (62 bytes of padding), BSS ends `$8E33` (716 bytes below
+the `$9100` framebuffer); Apple II MAIN ends `$B271` (1,166 bytes below `$B700`) and BSS ends
+`$17B5` (2,122 bytes below `$2000`).
+
+The profile changes the work order.  Quiescence capture generation is again the largest exact
+row.  Hash, middlegame and endgame deltas are the next cluster.  History construction and the
+repetition scan are below one percent, so B1 is retained as a correctness-priced small screen,
+not promoted by the result; B2/B3 matter because they remove the hash and three evaluation
+deltas together, not because the ring write is expensive on its own.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

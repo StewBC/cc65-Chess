@@ -141,6 +141,14 @@ Every row must walk the same nodes as baseline. Use enough work for jiffy resolu
 the pair interleaved more than once. Record CODE, RODATA, DATA and BSS along with cycles; an
 Atari page can cost more than the code that triggered it.
 
+**Phase 20 result.**  The retained profiler now does this over six fixed middlegame positions,
+twice with baseline/candidate order reversed.  Exact C64 shares were: capture generation
+29.27%, full generation 9.28%, middlegame delta 8.98%, hash delta 8.49%, endgame delta 8.04%,
+scoring 7.23%, legality 6.15%, selection 5.02%, board-only make/unmake 4.71%, phase delta 1.98%,
+history construction 0.56% and repetition scan 0.16%.  All rows walked the same 14,400 nodes
+and returned the same result digest.  Phase A is complete; the B and C order should use these
+numbers rather than the Phase 5 table.
+
 The result chooses the order below. The order written here is the prior, not permission to skip
 the measurement.
 
