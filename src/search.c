@@ -613,7 +613,20 @@ static int negamax(char side, char depth, int alpha, int beta, char ply)
 		}
 		++legal;
 
+#if SEARCH_CHECK_EXT
+		{
+			char nextDepth = (char)(depth - 1);
+
+			// one ply of check extension: search the same remaining depth
+			// rather than reducing, so mates in check stay inside the horizon
+			if(inCheck && ply + 1 < SEARCH_MAX_PLY)
+				nextDepth = depth;
+
+			score = -negamax(1 - side, nextDepth, -beta, -alpha, ply + 1);
+		}
+#else
 		score = -negamax(1 - side, depth - 1, -beta, -alpha, ply + 1);
+#endif
 		eng_Unmake(&moves[i], &undo);
 		restoreState(ply);
 

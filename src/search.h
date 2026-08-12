@@ -74,6 +74,14 @@ extern char geSearchCheckEvasion;
 #endif
 
 /*-----------------------------------------------------------------------*/
+// One extra ply when the side to move is in check (E5).  Bounded by
+// SEARCH_MAX_PLY and the node budget — consecutive checks cannot escape
+// those.  Default off until measured; suite may force it on
+#ifndef SEARCH_CHECK_EXT
+#define SEARCH_CHECK_EXT	0
+#endif
+
+/*-----------------------------------------------------------------------*/
 // Opening randomisation, switchable the same way.  Note the direction: unlike
 // every other switch here this one is a *feature* of the shipped game rather
 // than a term being measured, so the 8-bit build has it permanently on and the

@@ -570,6 +570,11 @@ An extension spends nodes, so the 20% saving pre-gate does not apply. Screen mov
 mate and defensive-only-move suites at each actual skill budget, then use the gauntlet. Stop if
 one level falls below -1 sigma.
 
+**Phase 32 E5 result: rejected.**  One-ply check extension (`SEARCH_CHECK_EXT`) is exact
+relative to the ply/budget caps but at fixed node budgets it **spends** nodes: whole-book L1
+and L3 complete less depth and change moves; mate-in-one at level 1 fell from 11/12 to 10/12
+(below the floor).  Atari pays a display-list page (free 363 → 107).  Defaults off.
+
 ### E6. Mine failures before inventing more evaluation
 
 For new terms, collect the first durable Stockfish swing from Sargon and gauntlet losses, remove

@@ -2812,6 +2812,21 @@ the real 60,000-node budget; levels 1–3 converted 0/8.  Atari could not fund t
 
 ---
 
+## Phase 32 - bounded check extension (E5)
+
+One extra ply when the side to move is in check: `nextDepth = depth` instead of `depth-1`,
+capped by `SEARCH_MAX_PLY`.  Code is small but Atari still takes a `DLIST` page (363 → 107 free).
+
+Whole-book at fixed budgets: L1 −2.5% nodes with less completed depth and 2 move changes; L3
+similar; not a free win.  Mate-in-one at level 1's real budget fell **11/12 → 10/12**, below
+the suite floor.  That is enough to stop.
+
+`SEARCH_CHECK_EXT` defaults 0.  Candidate retained for reproduction.
+
+**E5 rejected.**  Branch: `codex/next-engine-phase-e5-check-ext`.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.
