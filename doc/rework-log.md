@@ -2735,6 +2735,25 @@ change frees on the order of a kilobyte on Atari.
 
 ---
 
+## Phase 29 - zero page and piece lists (C4, C5)
+
+C4 requires every target map before placing hot scalars in zero page.  The shipping
+`ZEROPAGE` segment is **fully used** at `$1A` bytes on c64, c64.chr, plus4, cx16, atmos and
+atari's consumed portion; Apple II's cfg only offers `$1A` total.  Atari configures `$7E`
+bytes from `$82` but only the same `$1A` runtime block is filled — the spare is Atari-only
+and not available as a common engine placement.  No zero-page move of generator pointers or
+search scalars was attempted.
+
+C5 stays deferred.  Phase 20 does not isolate a board-scan cost that outranks the already
+measured capture-generator path, and piece lists tax every make/unmake.  Not implemented.
+
+**Phase C is complete.**  C1–C3 were exact, measured and rejected (noise or Atari size).  C4
+and C5 are closed as deferred screens with map evidence.  Shipping remains the Phase B engine
+(B3+B4) at 38,557 jiffies on the fixed C64 middlegame.  The largest Phase C speed signal that
+did not fit is C3 at 6.3%.  Hand-off branch: `codex/next-engine-phase-c-exact-work`.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

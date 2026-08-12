@@ -420,11 +420,32 @@ runtime reservations differ by target. Do not assume a C64 map describes Apple I
 Atmos, Plus/4 or CX16. A zero-page candidate must build all seven 8-bit targets and preserve
 the terminal build before it is timed.
 
+**Phase 29 C4 result: deferred — no common free zero page.**  Shipping maps use the full
+cc65 `ZEROPAGE` reservation of `$1A` bytes on every target measured:
+
+| target | ZP start | used |
+|---|---|---|
+| c64 / c64.chr / plus4 | `$02` | `$1A` (full) |
+| cx16 | `$22` | `$1A` (full) |
+| atmos | `$E2` | `$1A` (full) |
+| atari | `$82` | `$1A` of `$7E` configured |
+
+Only Atari has headroom beyond the runtime block.  Putting hot engine state there would be an
+Atari-only layout and violate the same-chess / common-structure rule.  Expanding ZP into
+platform-reserved bytes is not safe without per-target proof the OS and cc65 stack leave them
+alone.  No zero-page candidate was coded.
+
 ### C5. Piece lists remain low priority
 
 The 120-square scan was only 7% in Phase 5. A piece list adds work to every make/unmake and a
 new invariant to every special move. Reconsider only if the new profile says the scan changed
 materially; do not justify it with perft.
+
+**Phase 29 C5 result: still deferred.**  Phase 20 folds the board walk into full generation
+(9.28%) and capture generation (29.27%); it does not show a separate empty-square scan tax
+large enough to pay for per-side piece lists, make/unmake updates and special-move invariants.
+C3 already priced a faster capture generator at 6.3% and could not fund it on Atari.  Piece
+lists remain lower priority than that still-blocked path and were not implemented.
 
 ---
 
