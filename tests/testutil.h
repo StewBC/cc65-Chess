@@ -55,6 +55,8 @@ int test_RunMatchRepetition(int verbose);
 int test_RunMatchMateDrive(int verbose);
 int test_RunMatchQueen(int verbose);
 int test_RunMatchPawnStruct(int verbose);
+int test_RunMatchDev(int verbose);
 int test_RunPawnStruct(int verbose);
+int test_RunDev(int verbose);
 
 #endif //_TESTUTIL_H_

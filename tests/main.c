@@ -25,8 +25,9 @@ static void usage(const char *argv0)
 	printf("  tactics                   search finds the obvious moves\n");
 	printf("  convert                   won endings finished before the fifty-move rule\n");
 	printf("  bench                     search speed on the host\n");
-	printf("  match [sanity|terms|depth|repeat|drive|endgame|queen|pawn]  configuration A vs B\n");
+	printf("  match [sanity|terms|depth|repeat|drive|endgame|queen|pawn|dev]  configuration A vs B\n");
 	printf("  pawnstruct                doubled/isolated file counts and scores\n");
+	printf("  dev                       queen-before-minors scores and live switch\n");
 	printf("  fuzz [seed] [games]       random games through the game path, undo/redo checked\n");
 	printf("  castle                    castling and en passant rules\n");
 	printf("  repeat                    repetition detection and its history\n");
@@ -84,6 +85,8 @@ int main(int argc, char **argv)
 		printf("\n");
 		failures += test_RunPawnStruct(verbose);
 		printf("\n");
+		failures += test_RunDev(verbose);
+		printf("\n");
 		failures += test_RunSelfPlay(1, 120, 0);
 		printf("\n== %s ==\n", failures ? "FAILED" : "all green");
 		return failures ? 1 : 0;
@@ -113,11 +116,15 @@ int main(int argc, char **argv)
 		if(!strcmp(what, "drive")) return test_RunMatchMateDrive(verbose);
 		if(!strcmp(what, "queen")) return test_RunMatchQueen(verbose);
 		if(!strcmp(what, "pawn")) return test_RunMatchPawnStruct(verbose);
+		if(!strcmp(what, "dev")) return test_RunMatchDev(verbose);
 		return test_RunMatchSanity(verbose);
 	}
 
 	if(!strcmp(command, "pawnstruct"))
 		return test_RunPawnStruct(verbose) ? 1 : 0;
+
+	if(!strcmp(command, "dev"))
+		return test_RunDev(verbose) ? 1 : 0;
 
 	if(!strcmp(command, "bench"))
 		return test_RunSearchBench(verbose) ? 1 : 0;

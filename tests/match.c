@@ -445,6 +445,17 @@ int test_RunMatchEqualTime(int verbose)
 // Doubled/isolated structure against its own absence.  Equal nodes first;
 // equal-time charged at the host nps ratio until a C64 figure replaces it
 // (board-scan form measured ~1.38x dearer a node on this host)
+int test_RunMatchDev(int verbose)
+{
+	t_Config on  = { "queen-before-minors", EVAL_ALL | EVAL_DEV, 3, 2000, 1 };
+	t_Config off = { "no development term", EVAL_ALL, 3, 2000, 1 };
+
+	printf("match: queen off home while a minor is still home\n");
+	runMatch(&on, &off, 240, verbose);
+	return 0;
+}
+
+/*-----------------------------------------------------------------------*/
 int test_RunMatchPawnStruct(int verbose)
 {
 	// structure is not in EVAL_ALL; turn it on explicitly for the on side

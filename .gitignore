@@ -17,6 +17,7 @@
 /tests/chesstest
 /tests/uci
 /tests/uci-tuning
+/tests/uci-tuning-48
 /tests/genbook
 /tests/collectpos
 *.dSYM/

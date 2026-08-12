@@ -30,11 +30,11 @@ The short version of this note is:
 | B exact state | **B3+B4 kept** (−17.2% C64 fixed middlegame) | yes |
 | C exact work | C1–C3 rejected; C4/C5 deferred | no survivors |
 | D combine / buy nodes | **done** — L1/L2 bank time; L3 18k; L4 65k | L3 ladder up; L4 noise |
-| E chess | E1/E4/E5 rejected; E6 instrument; E2 null; E3 open | no strength terms landed |
+| E chess | E1/E4/E5/E3 rejected; E6 instrument; E2 null | no strength terms landed |
 | F ordering screens | not started | — |
 
 Shipping search is Phase B plus the Phase D budgets. Candidates retained default-off:
-`EVAL_PAWNSTRUCT_ON`, `EVAL_KBN_ON`, `SEARCH_CHECK_EXT`, plus the Phase C speed switches.
+`EVAL_PAWNSTRUCT_ON`, `EVAL_KBN_ON`, `EVAL_DEV_ON`, `SEARCH_CHECK_EXT`, plus the Phase C speed switches.
 
 ---
 
@@ -591,8 +591,12 @@ Maintain it incrementally from the few home squares so it is paid only when one 
 is a new mechanism and needs a zero/small/large predeclared dose, the full outside gauntlet and
 Sargon confirmation. Self-play cannot decide an opening weakness shared by both sides.
 
-**Phase 33 E3 status: not implemented.**  E6 queen-move swings are a reason to try this next,
-with the dual switch and predeclared doses; size must be checked on Atari before any landing.
+**Phase 36 E3 result: rejected.**  Doses 0 / −16 / −48 were declared first. Incremental
+make/unmake overflowed Atari; the eval-time 10-square scan links and takes a `DLIST` page
+(363 → 105). Switch-off is exact (1,024 searches). Dose 16 vs same-day control:
+unweighted **+1.95σ**, pooled +1.67σ, every level non-negative — short of +2σ. Dose 48
+is worse (−0.43σ, L3 −1.33σ). Mechanism live, not enough, stronger dose fails. Defaults
+off; not in `EVAL_ALL`.
 
 ### E4. Fix KBN versus king as a named defect
 
@@ -763,6 +767,7 @@ They are listed so "leave no idea behind" does not become "forget why it failed.
 | pawn-shield king safety | -2.6 sigma; closed |
 | queen d1 PST change | -1.09 sigma; stronger reverse dose +0.40 sigma; mechanism inert |
 | E2 constrained value fit | existing N/B/R/Q + PST scales already at the train/val minimum; bishop −5 is noise |
+| queen-before-minors (E3) | dose 16 +1.95σ / +1.67σ, short of +2σ; dose 48 worse; Atari page |
 | incremental doubled/isolated (E1) | board-scan fits Atari when on; equal nodes +0.9σ; equal time −2.5σ at host 1.38×; rejected |
 | KBN colour corner drive (E4) | L4 can convert when on; L1–3 0/8; Atari overflow; rejected |
 | one-ply check extension (E5) | L1 mate-in-one 11/12→10/12; Atari page; rejected |
@@ -822,12 +827,13 @@ plausible feature whose gates were skipped.
 7. ~~E6 mine failures~~ — instrument + sample (Phase 33); queen-move swings lead.
 8. ~~Phase D budgets~~ — 400 / 1,200 / 18,000 / 65,000 (Phase 34).
 9. ~~**E2** value tuning~~ — existing family already at the constrained minimum (Phase 35).
+10. ~~**E3** queen before minors~~ — rejected (Phase 36).
 
 ### Still open, in cheap order
 
 1. ~~**Stefan:** Phase D for B3+B4~~ — L1/L2 banked time; L3 18k (ladder up); L4 65k (noise).
 2. ~~**E2** locked-set value tuning~~ — existing numbers already at the constrained minimum (Phase 35).
-3. **E3** opening interaction (queen before minors), dual switch, predeclared doses, Atari first.
+3. ~~**E3** opening interaction~~ — rejected; 16 short of +2σ, 48 worse (Phase 36).
 4. **§10** undo-ring pack / arena high-water — only if E2/E3 or a slim KBN/ca65 needs the bytes.
 5. **F1–F5** as cheap whole-book screens.
 6. Reopen a full TT only through §9.

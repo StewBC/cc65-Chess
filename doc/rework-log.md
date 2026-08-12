@@ -2947,6 +2947,37 @@ Branch: `codex/next-engine-phase-e2-values`. `scratch/e2/`,
 
 ---
 
+## Phase 36 - queen before minors (E3)
+
+Doses were written down before any of the code: 0, −16, −48. The term is
+queen off d1/d8 while any original bishop or knight is still on its
+starting square. Dual switch: `EVAL_DEV_ON` compiles it, `EVAL_DEV` is
+not in `EVAL_ALL`.
+
+Incremental make/unmake of the ten homes grew Atari CODE by 344 bytes
+and overflowed MAIN by 151. The eval-time scan of those ten squares
+links: CODE +177, `DLIST` `$7D00` → `$7E00`, 105 bytes below `$9100`.
+Shipping with the term off is still `DLIST` `$7D00`, 363 free.
+
+Purpose tests and the live switch are green. `uci` vs `uci-tuning`
+default: all 1,024 whole-book searches identical. Dev=true changes 2 / 1
+/ 11 / 17 moves at the four budgets. Self-play 201-201-110.
+
+Same-day Stockfish gauntlet, 512 games, levels 1–4 vs nodes 1 / 30 / 100.
+The control reproduced `doc/next-search.md` §7 to the digit.
+
+| dose | pooled | unweighted | per level vs control |
+|---|---:|---:|---|
+| 16 | +1.67σ | +1.95σ | +0.47 / +0.59 / +0.65 / +1.98 |
+| 48 | −0.37σ | −0.43σ | −0.69 / −0.16 / **−1.33** / +1.20 |
+
+Sixteen is a real plus that does not clear +2σ. Forty-eight is worse and
+stops L3. That is the dose-response. `EVAL_DEV_ON` defaults 0.
+
+Branch: `codex/next-engine-phase-e3-queen-minors`. `scratch/e3/`.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

@@ -212,6 +212,35 @@ int geEvalScore;
 int geEvalEnd;
 int gePhase;
 
+#if EVAL_DEV_ON
+int geDevScore;
+
+/*-----------------------------------------------------------------------*/
+// Ten home squares, scanned at eval time.  Incremental make/unmake was the
+// first form and cost a display-list page plus an Atari overflow; this walk
+// is the size-conscious one.  It only runs when the term is compiled in.
+static int devScore(void)
+{
+	char wm, bm;
+
+	wm = (char)((geBoard[0x71] == (KNIGHT | PIECE_WHITE)) +
+	            (geBoard[0x72] == (BISHOP | PIECE_WHITE)) +
+	            (geBoard[0x75] == (BISHOP | PIECE_WHITE)) +
+	            (geBoard[0x76] == (KNIGHT | PIECE_WHITE)));
+	bm = (char)((geBoard[0x01] == KNIGHT) +
+	            (geBoard[0x02] == BISHOP) +
+	            (geBoard[0x05] == BISHOP) +
+	            (geBoard[0x06] == KNIGHT));
+
+	geDevScore = 0;
+	if(wm && geBoard[0x73] != (QUEEN | PIECE_WHITE))
+		geDevScore -= EVAL_DEV_DOSE;
+	if(bm && geBoard[0x03] != QUEEN)
+		geDevScore += EVAL_DEV_DOSE;
+	return geDevScore;
+}
+#endif
+
 #if EVAL_PAWNSTRUCT_ON
 // Doubled / isolated from a pawn-only board scan at eval time.
 //
@@ -625,6 +654,11 @@ int eval_Position(char side)
 	// the running total is white-positive; hand it back the way round the
 	// caller asked for
 	int score = geEvalScore;
+
+#if EVAL_DEV_ON
+	if(EVAL_HAS(EVAL_DEV))
+		score += devScore();
+#endif
 
 #if EVAL_PAWNSTRUCT_ON
 	// Doubled and isolated sit outside geEvalScore: not a property of a piece

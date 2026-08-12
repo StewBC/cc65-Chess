@@ -18,7 +18,7 @@ SRCDIR := ../src
 # defaults them off.  DEDICATED_CAPTURES is exact against the filtered full list.
 CFLAGS := -I$(SRCDIR) -funsigned-char -O2 -g -Wall -DEVAL_TUNING \
 	-DENGINE_FAST_LEGAL=1 -DENGINE_DEDICATED_CAPTURES=1 -DEVAL_PAWNSTRUCT_ON=1 \
-	-DEVAL_KBN_ON=1 -Wno-char-subscripts
+	-DEVAL_KBN_ON=1 -DEVAL_DEV_ON=1 -Wno-char-subscripts
 
 # main.c is deliberately absent - the tests supply their own
 ENGINE := \
@@ -47,7 +47,8 @@ HARNESS := \
 	repetition.c \
 	opening.c \
 	selfplay.c \
-	pawnstruct.c
+	pawnstruct.c \
+	dev.c
 
 # The engine headers are prerequisites too.  Without them an edit to search.h
 # leaves a stale binary and the suite reports green for code that is no longer

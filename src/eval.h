@@ -41,6 +41,7 @@ extern const int gcPieceValue[PAWN+1];
 // neither the byte nor the test
 #define EVAL_MATERIAL		SET_BIT(0)
 #define EVAL_PST			SET_BIT(1)
+#define EVAL_DEV			SET_BIT(2)
 #define EVAL_PAWNSTRUCT		SET_BIT(3)
 #define EVAL_ENDGAME		SET_BIT(4)
 #define EVAL_MATEDRIVE		SET_BIT(5)
@@ -68,12 +69,22 @@ extern const int gcPieceValue[PAWN+1];
 // be measurably worse than -5, and if it is not then this square is inert at
 // this magnitude and §5.2a's mechanism is not where the queen's cost comes from
 
+// SET_BIT(2) was king safety by pawn shield: -2.6 sigma, closed.  E3 reuses
+// the bit for EVAL_DEV, which is a different mechanism and defaults off.
+//
+// E3, predeclared before any of its code existed:
+//   dose 0  = off
+//   dose 16 = small  (EVAL_DEV_SMALL, one 6502 shift)
+//   dose 48 = large  (EVAL_DEV_LARGE, 3 x small)
+// Queen off its original square while any original B or N is still home.
+// Boolean, not per remaining minor.  Incremental from those ten squares.
+//
 // Two terms were built, measured and taken out again; see the Phase 4 notes.
 //
-// SET_BIT(2), king safety by counting pawns in front of the king: -2.6 sigma
-// over 512 games.  A genuine loss, not a wash.  A term based on how many enemy
-// pieces bear on the squares round the king might still work - counting the
-// pawn shield does not.
+// King safety by counting pawns in front of the king: -2.6 sigma over 512
+// games.  A genuine loss, not a wash.  A term based on how many enemy pieces
+// bear on the squares round the king might still work - counting the pawn
+// shield does not.
 //
 // SET_BIT(3), EVAL_PAWNSTRUCT, was the Phase 4 doubled/isolated/passed bundle:
 // +2.0 sigma at equal nodes, then 1.35x dearer per node on a real C64 and
@@ -150,6 +161,24 @@ extern char geEvalTerms;
 // -DEVAL_PAWNSTRUCT_ON=1 is how the node is priced on a 6502.
 #ifndef EVAL_PAWNSTRUCT_ON
 #define EVAL_PAWNSTRUCT_ON	0
+#endif
+
+/*-----------------------------------------------------------------------*/
+// Queen developed while a home-square bishop or knight has not moved (E3).
+// Default off: dose 16 was +1.95σ / +1.67σ, short of +2σ; dose 48 was worse
+// (L3 −1.33σ).  Doses were 0 / 16 / 48 before the code.  Native suite forces
+// ON so the purpose gates stay live.
+#ifndef EVAL_DEV_ON
+#define EVAL_DEV_ON	0
+#endif
+#define EVAL_DEV_SMALL	16
+#define EVAL_DEV_LARGE	48
+#ifndef EVAL_DEV_DOSE
+#define EVAL_DEV_DOSE	EVAL_DEV_SMALL
+#endif
+
+#if EVAL_DEV_ON
+extern int geDevScore;
 #endif
 
 /*-----------------------------------------------------------------------*/
