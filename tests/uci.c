@@ -357,6 +357,13 @@ static void cmdSetOption(char *args)
 		else
 			geEvalTerms &= ~EVAL_QUEENOUT;
 	}
+	else if(0 == strcmp(name, "PawnStruct"))
+	{
+		if(0 == strcmp(value, "true") || atoi(value))
+			geEvalTerms |= EVAL_PAWNSTRUCT;
+		else
+			geEvalTerms &= ~EVAL_PAWNSTRUCT;
+	}
 #endif
 }
 
@@ -381,6 +388,7 @@ static void cmdUci(void)
 	printf("option name Repetition type check default true\n");
 	printf("option name CheckEvasion type check default true\n");
 	printf("option name MateDrive type check default true\n");
+	printf("option name PawnStruct type check default true\n");
 	printf("option name QueenHome type check default false\n");
 	printf("option name QueenOut type check default false\n");
 #endif

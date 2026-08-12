@@ -41,11 +41,12 @@ extern const int gcPieceValue[PAWN+1];
 // neither the byte nor the test
 #define EVAL_MATERIAL		SET_BIT(0)
 #define EVAL_PST			SET_BIT(1)
+#define EVAL_PAWNSTRUCT		SET_BIT(3)
 #define EVAL_ENDGAME		SET_BIT(4)
 #define EVAL_MATEDRIVE		SET_BIT(5)
 #define EVAL_QUEENHOME		SET_BIT(6)
 #define EVAL_QUEENOUT		SET_BIT(7)
-#define EVAL_ALL			(EVAL_MATERIAL|EVAL_PST|EVAL_ENDGAME|EVAL_MATEDRIVE)
+#define EVAL_ALL			(EVAL_MATERIAL|EVAL_PST|EVAL_PAWNSTRUCT|EVAL_ENDGAME|EVAL_MATEDRIVE)
 
 // SET_BIT(6), EVAL_QUEENHOME, is deliberately **not** in EVAL_ALL, and neither
 // is SET_BIT(7).  Every other bit turns off something the shipping engine does;
@@ -71,9 +72,11 @@ extern const int gcPieceValue[PAWN+1];
 // pieces bear on the squares round the king might still work - counting the
 // pawn shield does not.
 //
-// SET_BIT(3), pawn structure (doubled, isolated, passed): +2.0 sigma at equal
-// node counts, but it made every node 1.35x dearer on a real C64, and at equal
-// *time* that came to +0.6 sigma - no measurable difference - for 735 bytes.
+// SET_BIT(3), EVAL_PAWNSTRUCT, was the Phase 4 doubled/isolated/passed bundle:
+// +2.0 sigma at equal nodes, then 1.35x dearer per node on a real C64 and
+// +0.6 sigma at equal time - nothing - for 735 bytes.  That price was full-board
+// leaf evaluation.  Phase E1 rebuilds doubled and isolated from per-file pawn
+// counts updated on make/unmake; passed pawns stay a separate candidate.
 //
 // A phase-aware endgame king table: +1.9 sigma pooled over 1024 games, and
 // 1.28x dearer per node for the same reason.  Working out the phase from a
@@ -130,9 +133,34 @@ extern char geEvalTerms;
 #endif
 
 /*-----------------------------------------------------------------------*/
+// Incremental pawn structure: doubled and isolated only.  Same dual-switch
+// shape as the mate drive - the tuning build can clear EVAL_PAWNSTRUCT for
+// A/B, and a shipping build with -DEVAL_PAWNSTRUCT_ON=0 is the only honest
+// way to price the node on a 6502.
+#ifndef EVAL_PAWNSTRUCT_ON
+#define EVAL_PAWNSTRUCT_ON	1
+#endif
+
+/*-----------------------------------------------------------------------*/
 // The running score, always from white's point of view.  Nothing outside
 // eval.c and the two make/unmake functions should write it
 extern int geEvalScore;
+
+#if EVAL_PAWNSTRUCT_ON
+/*-----------------------------------------------------------------------*/
+// Pawns per file per side (SIDE_BLACK=0, SIDE_WHITE=1).  Maintained by
+// eng_Make / eng_Unmake and rebuilt by eval_Refresh.  The aggregate score
+// derived from them is white-positive and added in eval_Position, not folded
+// into geEvalScore - so B4's restore path does not need another word of state
+extern char gePawnFiles[2][8];
+extern int gePawnStruct;
+
+// Apply or reverse one move against the file counts and the aggregate score.
+// "dir" is +1 after make and -1 after unmake; "piece" is the mover as it
+// stood before the move, matching eval_MoveDelta
+void eval_PawnApply(const t_engMove *move, char piece, char captured,
+                    signed char dir);
+#endif
 
 /*-----------------------------------------------------------------------*/
 // Non-pawn material left on the board, both sides, carried by make/unmake the
@@ -170,5 +198,10 @@ void eval_Refresh(void);
 // so unmake undoes make exactly, by construction rather than by care.  Any
 // term added here has to obey that - it must be derivable from the move alone
 int eval_MoveDelta(const t_engMove *move, char piece, char captured);
+
+// Hundredths of a pawn for the doubled/isolated term.  Exposed so tests can
+// name the doses they expect rather than hard-coding the numbers twice
+#define EVAL_PAWN_DOUBLED	(-10)
+#define EVAL_PAWN_ISOLATED	(-20)
 
 #endif //_EVAL_H_

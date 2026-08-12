@@ -45,7 +45,8 @@ HARNESS := \
 	legality.c \
 	repetition.c \
 	opening.c \
-	selfplay.c
+	selfplay.c \
+	pawnstruct.c
 
 # The engine headers are prerequisites too.  Without them an edit to search.h
 # leaves a stale binary and the suite reports green for code that is no longer

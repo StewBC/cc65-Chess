@@ -226,6 +226,10 @@ void eng_Clear(void)
 	geHalfmove = 0;
 	geKing[0] = geKing[1] = ENG_NO_SQUARE;
 	geEvalScore = 0;
+#if EVAL_PAWNSTRUCT_ON
+	memset(gePawnFiles, 0, sizeof(gePawnFiles));
+	gePawnStruct = 0;
+#endif
 
 	// an empty board is a position like any other, and starting the history
 	// here means a caller that sets pieces up and forgets eng_HashReset gets
@@ -1068,7 +1072,12 @@ void eng_Make(const t_engMove *move, t_engUndo *undo)
 	else if(ROOK == (piece & PIECE_DATA))
 		revokeRights(from);
 
-
+	// pawn-file counts ride with the board, not with the evaluation deltas:
+	// the search may restore geEvalScore from a ply stack, but the files have
+	// to track every make and unmake the same way the squares do
+#if EVAL_PAWNSTRUCT_ON
+	eval_PawnApply(move, piece, undo->m_captured, 1);
+#endif
 
 #ifdef SEARCH_PROFILE
 	if(!sc_profileBoardOnly)
@@ -1156,6 +1165,11 @@ void eng_Unmake(const t_engMove *move, const t_engUndo *undo)
 		}
 	}
 
+	// always reverse the file counts - they are board state, not a total the
+	// search can stash and restore
+#if EVAL_PAWNSTRUCT_ON
+	eval_PawnApply(move, moved, undo->m_captured, -1);
+#endif
 
 #ifdef SEARCH_PROFILE
 	if(!sc_profileBoardOnly && !sc_restoreEnabled)

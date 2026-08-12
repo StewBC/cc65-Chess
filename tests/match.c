@@ -430,11 +430,29 @@ int test_RunMatchEndgame(int verbose)
 /*-----------------------------------------------------------------------*/
 int test_RunMatchEqualTime(int verbose)
 {
+	// historical Phase 4 equal-time shape: structure on at a reduced budget
+	// against material+pst.  The node charge is refreshed by match pawn after
+	// the on-target cost is known; 1480 was the old full-board 1.35x figure
 	t_Config rich = { "pawn struct, 1480 nodes", EVAL_ALL, 3, 1480, 1 };
 	t_Config lean = { "material+pst, 2000 nodes", EVAL_MATERIAL|EVAL_PST, 3, 2000, 1 };
 
 	printf("match: pawn structure at equal TIME rather than equal nodes\n");
 	runMatch(&rich, &lean, 240, verbose);
+	return 0;
+}
+
+/*-----------------------------------------------------------------------*/
+// Incremental doubled/isolated structure against its own absence.  Equal
+// nodes first; the equal-time half uses a placeholder charge until the C64
+// node price is measured (match pawn is the live-switch screen, not the
+// landing number - the Stockfish gauntlet is)
+int test_RunMatchPawnStruct(int verbose)
+{
+	t_Config on  = { "pawn structure", EVAL_ALL, 3, 2000, 1 };
+	t_Config off = { "no structure",   EVAL_ALL & ~EVAL_PAWNSTRUCT, 3, 2000, 1 };
+
+	printf("match: incremental pawn structure at equal nodes\n");
+	runMatch(&on, &off, 240, verbose);
 	return 0;
 }
 
