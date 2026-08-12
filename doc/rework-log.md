@@ -2564,6 +2564,34 @@ No budget changed.  This is banked fixed-budget time for Phase D.
 
 ---
 
+## Phase 24 - B5 saves cycles and costs the wrong page
+
+After B4, phase and endgame deltas run only on make in the search.  B5 first guarded them from
+facts already decoded there: phase can change only on a non-pawn capture or promotion; the
+endgame difference can change only when a pawn or king moves or is captured.  The middlegame
+delta remained unconditional.
+
+The direct guards passed the full suite and returned all 1,024 whole-book records identically.
+On the retained C64 replay they were a real but small win:
+
+| build | first pass | second pass | change |
+|---|---:|---:|---:|
+| B3+B4 control | 38,557 | 38,556 | — |
+| direct phase/end guards | 37,662 | 37,663 | **2.3%** |
+
+They grew common code by 71 bytes.  B4 had only eight bytes of padding left before Atari's
+next display-list page, so `DLIST` moved from `$7D00` to `$7E00`, BSS ended `$9094`, and only
+107 bytes remained below the `$9100` framebuffer.  The code itself fits; the page it triggers
+is the unacceptable part.
+
+The alternate dose fused all three running updates behind one call, retaining the pure delta
+functions as references.  It saved two bytes relative to the direct guards—nowhere near the 63
+needed to recover the page—and the extra cc65 call reduced the C64 win to 38,558 -> 38,297,
+**0.7%**.  That settles both forms: the mechanism has a measurable ceiling, and it is not worth
+a 256-byte Atari page.  B5 was reverted completely.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

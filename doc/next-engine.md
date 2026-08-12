@@ -266,6 +266,13 @@ The branches themselves cost cycles, so price quiet, capture-heavy and endgame r
 the pure-delta reference implementation for fuzz comparison. Do not fold a board read into a
 delta function; make and unmake see different boards.
 
+**Phase 24 B5 result: rejected.**  Direct guards were exact across the suite and 1,024
+whole-book searches and reduced the fixed C64 replay from 38,557 to 37,662 jiffies, **2.3%**.
+They added 71 bytes, however, moving Atari `DLIST` from `$7D00` to `$7E00` and leaving only 107
+bytes below the framebuffer.  A single fused update call saved two bytes but only 0.7% because
+its extra cc65 call erased most of the guarded work.  Neither form justifies a 256-byte Atari
+page.  Both were reverted; the pure delta path remains.
+
 ### B6. Only then hand-code the remaining key update
 
 The current cc65 output for `pieceKey` performs software-stack traffic and calls 16-bit shift
