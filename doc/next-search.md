@@ -155,7 +155,7 @@ around him.
 
 ### 3c. Very Easy, which is now a strength question and not only an ergonomic one
 
-At ~1240 it is not a beginner's opponent, and 13 seconds a move on a stock C64 is slow for the
+At ~1240 it is not a beginner's opponent, and 11 seconds a move on a stock C64 is slow for the
 weakest setting. Lowering level 1's budget makes it **faster and easier at once**, both wanted.
 
 It was out of scope while the search work was live. After §3b it is the same conversation, and

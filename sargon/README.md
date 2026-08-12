@@ -141,8 +141,8 @@ game:
 |---:|---|---:|
 | 1 | Very Easy | 400 |
 | 2 | Easy | 1,200 |
-| 3 | Harder | 15,000 |
-| 4 | Very Hard | 60,000 |
+| 3 | Harder | 18,000 |
+| 4 | Very Hard | 65,000 |
 
 The shipping 8-bit front end bypasses normal search for the first move of a
 game - four entries as White, and five entries of two replies each as Black.
@@ -333,8 +333,8 @@ levels:
 
 1. Very Easy, 400 nodes;
 2. Easy, 1,200 nodes;
-3. Harder, 15,000 nodes;
-4. Very Hard, 60,000 nodes.
+3. Harder, 18,000 nodes;
+4. Very Hard, 65,000 nodes.
 
 Run 64-game screens.  A score below 35% advances to the next cc65 tier.  A
 score in the 35%-65% band is a candidate for the 512-game measured match.  If

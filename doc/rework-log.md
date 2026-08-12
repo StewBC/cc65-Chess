@@ -2841,7 +2841,57 @@ hypothesis, not invent one from a single sample.  Both remain open with E6 as in
 **E portfolio (this pass):** E1 rejected equal-time; E4 rejected size; E5 rejected L1 mates;
 E6 instrument + sample; E2/E3 deferred with direction.  Shipping still Phase B speed (B3+B4).
 
-Branch tip: `codex/next-engine-phase-e6-mine` (stack includes E1/E4/E5).
+Branch tip: `codex/next-engine-phase-e6-mine` (stack includes E1/E4/E5).  Merged to
+`master` at `da38df2` before Phase D.
+
+---
+
+## Phase 34 - spend B3+B4 (Phase D)
+
+The only exact-speed survivors were B3+B4 (−17.2% on the fixed C64 middlegame). Nothing from
+C to combine. The product split:
+
+- Very Easy 400 and Easy 1,200 stay. Those levels are menu experience; 400 is a conversion
+  floor. Whole-book at both budgets is **identical** (0 move, 0 depth changes).
+- Harder 15,000 → **18,000**. 15/256 book positions complete another ply, 5 change the move.
+  49 same-depth positions spent extra nodes (started a ply they then aborted). Not cosmetic.
+- Very Hard 60,000 → **65,000**, short of the 16-bit edge. 23/256 complete another ply, 5
+  change the move.
+- Depth caps stay 3 / 4 / 5 / 6. Same budgets on every target.
+
+C64 `c64skill.c`, 20-ply self-chosen game, NTSC jiffies / 60:
+
+| level | mean | lo | hi | mean nodes | full depth |
+|---|---:|---:|---:|---:|---|
+| 1 | 659 (11.0s) | 267 | 1018 | 307 | 0/20 |
+| 2 | 2383 (39.7s) | 1230 | 3464 | 1115 | 0/20 |
+
+That is the published 13s / 46s after B3+B4, banked rather than spent.
+
+Mate-in-one at the real budgets: 10 / 12 / 12 / 12, floors held. Convert: L3 13/13 mean 22
+plies (was 23), L4 13/13 mean 21 (was 19).
+
+Stockfish ladder, 512 games, L3 and L4 only (L1/L2 same nodes). fastchess alpha 1.8.2,
+Stockfish 18, `book.epd`:
+
+| level | SF nodes | W-L-D | score | Elo | was |
+|---|---:|---|---:|---:|---:|
+| 3 | 1 | 215-150-147 | 0.563 | +44 | +20 |
+| 3 | 30 | 207-158-147 | 0.548 | +33 | +6 |
+| 3 | 100 | 158-232-122 | 0.428 | −51 | −67 |
+| 3 | 300 | 80-351-81 | 0.235 | −205 | −215 |
+| 4 | 1 | 292-84-136 | 0.703 | +150 | +156 |
+| 4 | 30 | 291-93-128 | 0.693 | +142 | +136 |
+| 4 | 100 | 211-187-114 | 0.523 | +16 | +19 |
+| 4 | 300 | 124-294-94 | 0.334 | −120 | −115 |
+
+Harder is a real granted-node gain, larger than the 16 Elo formula at the 50% rungs. Very
+Hard is noise, as 8% more nodes at cap 6 suggested.
+
+Sargon II L4, 64 games, cc65 skill 3, windowed a2m-v2, `--own-book` default on — see the
+summary written when that run finished (`scratch/sargon-l4-phase-d-20260812`).
+
+Branch: `codex/next-engine-phase-d-budgets`.
 
 ---
 

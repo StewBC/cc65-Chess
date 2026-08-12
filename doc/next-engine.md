@@ -29,13 +29,12 @@ The short version of this note is:
 | A profile | complete | retained `c64profile` instrument |
 | B exact state | **B3+B4 kept** (−17.2% C64 fixed middlegame) | yes |
 | C exact work | C1–C3 rejected; C4/C5 deferred | no survivors |
-| D combine / buy nodes | **skipped** — nothing from C to combine; B3+B4 spend is Stefan's call |
-| E chess | E1/E4/E5 rejected; E6 instrument; E2/E3 open with queen-move direction | no strength terms landed |
+| D combine / buy nodes | **done** — L1/L2 bank time; L3 18k; L4 65k | L3 ladder up; L4 noise |
+| E chess | E1/E4/E5 rejected; E6 instrument; E2/E3 open | no strength terms landed |
 | F ordering screens | not started | — |
 
-Shipping search is Phase B. Candidates retained default-off: `EVAL_PAWNSTRUCT_ON`,
-`EVAL_KBN_ON`, `SEARCH_CHECK_EXT`, plus the Phase C speed switches. Branch tip for the E
-pass: `codex/next-engine-phase-e6-mine`.
+Shipping search is Phase B plus the Phase D budgets. Candidates retained default-off:
+`EVAL_PAWNSTRUCT_ON`, `EVAL_KBN_ON`, `SEARCH_CHECK_EXT`, plus the Phase C speed switches.
 
 ---
 
@@ -498,6 +497,30 @@ opponent should be consistently modest rather than sound until it hangs a queen.
 must retain a tactical safety floor, run mate-in-one at its actual budget, and update
 `tests/c64level1.c` and its ladder row.
 
+**Phase 34 D result.**  B3+B4 were the only speed survivors. The spend:
+
+| level | nodes | what happened |
+|---|---|---|
+| Very Easy | 400 (unchanged) | same chess; C64 20-ply mean **11.0s** (was 13s) |
+| Easy | 1,200 (unchanged) | same chess; C64 20-ply mean **39.7s** (was 46s) |
+| Harder | 15,000 → **18,000** | 15/256 whole-book positions complete another ply, 5 change move |
+| Very Hard | 60,000 → **65,000** | 23/256 complete another ply, 5 change move |
+
+18,000 is not cosmetic. Depth caps unchanged. Mate-in-one unchanged (10/12/12/12). Convert
+13/13 at L3 mean 22 plies (was 23) and L4 mean 21 (was 19).
+
+Harder ladder, 512 games, same rungs as Appendix A:
+
+| vs SF | 15,000 | 18,000 |
+|---|---|---|
+| 1 node | +20 | **+44** |
+| 30 | +6 | **+33** |
+| 100 | −67 | −51 |
+| 300 | −215 | −205 |
+
+Very Hard is noise around the old row (+150 / +142 / +16 / −120 vs +156 / +136 / +19 / −115).
+Sargon L4 64-game confirmation is recorded in `doc/rework-log.md` Phase 34.
+
 ---
 
 ## 7. Phase E: direct chess candidates with a reason to work
@@ -790,11 +813,12 @@ plausible feature whose gates were skipped.
 5. ~~E4 KBN~~ — rejected Atari size (Phase 31).
 6. ~~E5 check extension~~ — rejected L1 mate floor (Phase 32).
 7. ~~E6 mine failures~~ — instrument + sample (Phase 33); queen-move swings lead.
+8. ~~Phase D budgets~~ — 400 / 1,200 / 18,000 / 65,000 (Phase 34).
 
 ### Still open, in cheap order
 
-1. **Stefan:** Phase D for B3+B4 — keep wall time, raise budgets, or a mix (and Very Easy).
-2. **E2** locked-set value tuning, steered by E6 queen-move clustering (not another d1 dose).
+1. ~~**Stefan:** Phase D for B3+B4~~ — L1/L2 banked time; L3 18k (ladder up); L4 65k (noise).
+2. **E2** locked-set value tuning of the existing constant family (not another d1 dose).
 3. **E3** opening interaction (queen before minors), dual switch, predeclared doses, Atari last.
 4. **§10** undo-ring pack / arena high-water — only if E2/E3 or a slim KBN/ca65 needs the bytes.
 5. **F1–F5** as cheap whole-book screens.

@@ -225,10 +225,10 @@ static char arenaRoom(void)
 // "very easy" level that cannot beat a bare king is broken, not easy
 const t_searchSkill gcSearchSkill[SEARCH_NUM_SKILLS] =
 {
-	{ 3,   400 },	// very easy  - bank B3+B4 speed; 400 is the conversion floor
-	{ 4,  1200 },	// easy       - bank the time; menu role is responsiveness
-	{ 5, 18000 },	// harder     - reinvest almost all of the 17.2% C64 saving
-	{ 6, 65000u },	// very hard  - reinvest what fits in 16 bits, stay off 65535
+	{ 3,   400 },	// very easy  - 11.0s mean / 20-ply C64 game; 400 is the floor
+	{ 4,  1200 },	// easy       - 39.7s mean; bank B3+B4 rather than buy ~8 Elo
+	{ 5, 18000 },	// harder     - reinvest the 17.2%; 15 extra whole-book depths
+	{ 6, 65000u },	// very hard  - 16-bit headroom; 23 extra whole-book depths
 };
 
 /*-----------------------------------------------------------------------*/

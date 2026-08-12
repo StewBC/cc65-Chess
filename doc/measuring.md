@@ -460,7 +460,8 @@ cycles, and 8e9 wasted half the run.
 | `c64perft.c` | Raw move generation |
 | `c64search.c` | Search cost at three fixed budgets |
 | `c64level1.c` | Per-move time through a real game at the easiest setting |
-| `c64skill.c` | Per-move time and depth reached, per skill level, over 20 plies |
+| `c64skill.c` | Per-move time and depth reached, levels 1–2, over 20 plies |
+| `c64phased.c` | Old vs new Harder/Very Hard budgets on fixed opening, middlegame, KRK |
 | `c64evasion.c` | Cost of a node with and without check evasions, over a fixed game |
 | `c64drive.c` | Cost of a node with and without the mate drive, over a fixed *ending* — measured 2.04% |
 

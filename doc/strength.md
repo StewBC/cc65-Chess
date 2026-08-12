@@ -20,10 +20,10 @@ runners.
 
 | Menu level | Node budget | Time on a stock C64 | Approximate rating |
 |---|---|---|---|
-| 1 — Very Easy | 400 | 13 seconds a move | **~1240** |
-| 2 — Easy | 1,200 | 46 seconds | **~1430** |
-| 3 — Harder | 15,000 | ~11 minutes | **~1700** |
-| 4 — Very Hard | 60,000 | ~45 minutes | **~1950** |
+| 1 — Very Easy | 400 | 11 seconds a move | **~1240** |
+| 2 — Easy | 1,200 | 40 seconds | **~1430** |
+| 3 — Harder | 18,000 | ~11 minutes | **~1720** |
+| 4 — Very Hard | 65,000 | ~40 minutes | **~1950** |
 
 The first two times are measured on an emulated C64 over real games; the last two are computed
 from the same node rate and are upper bounds, because levels 3 and 4 often finish an iteration
@@ -269,8 +269,8 @@ colours swapped. Figures are rating differences relative to the Stockfish settin
 |---|---|---|---|---|
 | 1 — Very Easy | −285 | −319 | −429 | −570 |
 | 2 — Easy | −180 | −183 | −246 | −434 |
-| 3 — Harder | +20 | +6 | −67 | −215 |
-| 4 — Very Hard | **+156** | +136 | +19 | −115 |
+| 3 — Harder | **+44** | +33 | −51 | −205 |
+| 4 — Very Hard | **+150** | +142 | +16 | −120 |
 
 Confidence intervals run from ±26 points at the top of the table to ±69 at the bottom. The
 first two columns are identical within noise, for the reason given in §3.1.
@@ -281,20 +281,20 @@ difficulty menu delivers four genuinely different opponents — which was an ass
 this exercise and is now a measurement. The uneven spacing is not a defect: the node budgets
 step by 3x, 12.5x and 4x, and §4.2 shows those gaps are exactly what that buys.
 
-**The headline row is level 4 against Stockfish at one node: 298–82–132 over 512 games,
-+156 points.** An engine that fits in 31 KB and runs on a 1 MHz processor is well past the
-weakest configuration a modern engine can be persuaded into. Equality now sits at Stockfish
-**100 nodes**: +19, interval −7 to +45. Level 3 has arrived where level 4 used to be, drawing
-level with Stockfish at one node.
+**The headline row is level 4 against Stockfish at one node: 292–84–136 over 512 games,
++150 points.** An engine that fits in 31 KB and runs on a 1 MHz processor is well past the
+weakest configuration a modern engine can be persuaded into. Equality still sits at Stockfish
+**100 nodes**: +16, interval −9 to +42. Level 3, after Phase D's 18,000-node budget, is
+**+44** at one node — past the dead-heat it held at 15,000.
 
 The honest framing of that result: Stockfish at one node is not playing chess in any
 meaningful sense — it is making a well-informed snap judgement using a world-class evaluation
 function. It is a low bar for Stockfish. It is still a real opponent, and clearing it is a
 real result.
 
-**These numbers are current as of the endgame piece-square tables.** The ladder has been run
-three times over the life of the project, and §5.1.3 sets the three generations side by side —
-that comparison, not this table, is where the strength changes are visible.
+**Levels 3 and 4 are current as of Phase D (18,000 and 65,000 nodes).** Levels 1 and 2 were
+not re-run: same budgets, whole-book identical after B3+B4. The ladder has been run four
+times over the life of the project; §5.1.3 keeps the earlier generations.
 
 ## 4.2 What a doubling of thinking time buys
 
@@ -318,14 +318,14 @@ This is a useful number to carry around:
 - Conversely, an optimisation that makes the search twice as fast is worth about 60 points —
   real, but not transformative. The two changes that doubled the search speed on real
   hardware are worth slightly under half of one step on the difficulty menu.
-- Diminishing returns are visible in the table: the step from level 3 to level 4 quadruples
-  the budget for only 113 points.
+- Diminishing returns are visible in the table: the step from level 3 to level 4 is now
+  18,000 to 65,000, about 3.6×, for about 106 points on the one-node rung.
 - And it sets the price of a rating point. Another 100 points from thinking alone would need
   roughly triple the node budget — about 45 minutes a move on a stock C64, and around 187,000
   nodes. That number does not fit: budgets are held in a 16-bit counter, which stops at
-  65,535, and level 4 already spends 60,000 of it. **The engine is within 10% of the
-  strongest setting it can currently express.** Past that, strength has to come from playing
-  better per node, not from searching more of them.
+  65,535, and level 4 now spends 65,000 of it. **The engine is within 1% of the
+  strongest setting a 16-bit budget can express.** Past that, strength has to come from
+  playing better per node, not from searching more of them.
 
 ## 4.3 The anchor, and why it is the soft part
 
@@ -1504,7 +1504,9 @@ will stay current; naming them here would only date this document.
 
 512 games a rung. Rating difference relative to the Stockfish setting, 95% interval, and the
 opening-pair breakdown (both games lost, split, both drawn, split the other way, both won).
-fastchess alpha 1.8.2, Stockfish 18, `tests/book.epd`, both sides node limited.
+fastchess alpha 1.8.2, Stockfish 18, `tests/book.epd`, both sides node limited. Levels 3–4
+are Phase D (18,000 / 65,000 nodes); levels 1–2 are the previous generation at the same
+400 / 1,200.
 
 | Level | Opponent | W–L–D | Score | Diff | 95% interval | Pairs (0–2) |
 |---|---|---|---|---|---|---|
@@ -1516,14 +1518,14 @@ fastchess alpha 1.8.2, Stockfish 18, `tests/book.epd`, both sides node limited.
 | 2 | SF 30 nodes | 67–314–131 | 0.259 | −183 | [−211, −155] | 97,76,65,13,5 |
 | 2 | SF 100 nodes | 50–362–100 | 0.195 | −246 | [−277, −215] | 124,76,46,8,2 |
 | 2 | SF 300 nodes | 14–448–50 | 0.076 | −434 | [−480, −387] | 197,41,17,1,0 |
-| 3 | SF 1 node | 194–165–153 | 0.528 | +20 | [−6, +45] | 30,45,84,60,37 |
-| 3 | SF 30 nodes | 184–175–153 | 0.509 | +6 | [−19, +31] | 32,46,85,67,26 |
-| 3 | SF 100 nodes | 147–244–121 | 0.405 | −67 | [−92, −41] | 54,58,94,31,19 |
-| 3 | SF 300 nodes | 78–360–74 | 0.225 | −215 | [−247, −183] | 126,54,56,16,4 |
-| 4 | SF 1 node | 298–82–132 | 0.711 | **+156** | [+129, +184] | 5,25,65,71,90 |
-| 4 | SF 30 nodes | 291–100–121 | 0.687 | +136 | [+109, +164] | 11,22,68,75,80 |
-| 4 | SF 100 nodes | 211–183–118 | 0.527 | +19 | [−7, +45] | 28,47,91,49,41 |
-| 4 | SF 300 nodes | 122–286–104 | 0.340 | −115 | [−143, −87] | 80,58,78,26,14 |
+| 3 | SF 1 node | 215–150–147 | 0.563 | +44 | [+18, +70] | 25,40,81,65,45 |
+| 3 | SF 30 nodes | 207–158–147 | 0.548 | +33 | [+9, +57] | 21,41,97,62,35 |
+| 3 | SF 100 nodes | 158–232–122 | 0.428 | −51 | [−76, −26] | 48,54,96,40,18 |
+| 3 | SF 300 nodes | 80–351–81 | 0.235 | −205 | [−235, −174] | 120,52,66,15,3 |
+| 4 | SF 1 node | 292–84–136 | 0.703 | **+150** | [+122, +177] | 6,25,66,73,86 |
+| 4 | SF 30 nodes | 291–93–128 | 0.693 | +142 | [+114, +169] | 9,23,65,79,80 |
+| 4 | SF 100 nodes | 211–187–114 | 0.523 | +16 | [−9, +42] | 29,43,100,43,41 |
+| 4 | SF 300 nodes | 124–294–94 | 0.334 | −120 | [−147, −92] | 79,58,87,18,14 |
 
 ## A.1 The three earlier runs, kept for comparison
 

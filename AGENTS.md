@@ -6,10 +6,9 @@ terminal build used for development. C, compiled with cc65.
 `doc/engine.md` explains how the engine works and is the right thing to read first. This
 file is the short list of constraints that are easy to violate by accident.
 
-`doc/next-engine.md` is the current forward work note. Phases A–C and the E chess portfolio
-through E6 are measured there (B3+B4 are the only speed survivors; E1/E4/E5 rejected; E2/E3
-open with E6's queen-move direction). Phase D (spend B3+B4 on time vs nodes) is Stefan's call.
-Read its prerequisites before starting one of its open items; in particular, it does not
+`doc/next-engine.md` is the current forward work note. Phases A–D and the E chess portfolio
+through E6 are measured there (B3+B4 are the only speed survivors; D spent them as L1/L2
+wall time and L3 18,000 / L4 65,000 nodes; E1/E4/E5 rejected; E2/E3 open). It does not
 reopen the rejected search portfolio by changing its name.
 
 ## Hard constraints
