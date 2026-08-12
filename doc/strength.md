@@ -932,7 +932,9 @@ middlegame it is zero by construction. Check evasions cost 22.7% by the same met
 **Charged at 2%, it still wins** — `match drive` at equal time, 2,940 nodes against 3,000, comes
 to 246-238-28 where equal nodes gave 245-240-27. That makes it the second evaluation term in the
 project to survive the equal-time test and the first to survive it comfortably; pawn structure
-and the endgame king table both died there.
+and the endgame king table both died there. (Phase 30 / E1 rebuilt doubled and isolated as a
+board scan that fitted Atari when on and still died at equal time — host ~1.38× dearer, −2.5σ
+over 512 — so the Phase 4 lesson was not an implementation accident.)
 
 **The ratings in Part IV are unchanged by this section.** They are measured against node-limited
 Stockfish, which does not reach these endings, and Phase 9 already established that a change

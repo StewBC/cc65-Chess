@@ -12,14 +12,30 @@ Read, in this order:
 3. `doc/measuring.md` §3, §6 and §8.
 4. `doc/next-search.md` §2–§6. Do not skip §2: null move saved 27% / 22% of its
    nodes and measured +0.04 sigma. Saved work and granted work are different currencies.
-5. `doc/rework-log.md` Phases 5, 14–19. Phase 5 is where the hot path was first measured;
-   Phase 19 is why the transposition table is closed in the current architecture.
+5. `doc/rework-log.md` Phases 5, 14–19, then 20–33 for A–E. Phase 5 is where the hot path
+   was first measured; Phase 19 is why the transposition table is closed in the current
+   architecture.
 
 The short version of this note is:
 
 > First make a real C64 do less exact work for the same search. Then deliberately grant the
 > saved nodes back to the engine. In parallel, prefer chess knowledge that is free, incremental
 > or confined to cheap positions. Nothing lands because it is plausible.
+
+### Portfolio status (2026-08-12)
+
+| phase | status | shipping effect |
+|---|---|---|
+| A profile | complete | retained `c64profile` instrument |
+| B exact state | **B3+B4 kept** (−17.2% C64 fixed middlegame) | yes |
+| C exact work | C1–C3 rejected; C4/C5 deferred | no survivors |
+| D combine / buy nodes | **skipped** — nothing from C to combine; B3+B4 spend is Stefan's call |
+| E chess | E1/E4/E5 rejected; E6 instrument; E2/E3 open with queen-move direction | no strength terms landed |
+| F ordering screens | not started | — |
+
+Shipping search is Phase B. Candidates retained default-off: `EVAL_PAWNSTRUCT_ON`,
+`EVAL_KBN_ON`, `SEARCH_CHECK_EXT`, plus the Phase C speed switches. Branch tip for the E
+pass: `codex/next-engine-phase-e6-mine`.
 
 ---
 
@@ -717,13 +733,16 @@ They are listed so "leave no idea behind" does not become "forget why it failed.
 | pin set | about 7% estimated net, high correctness risk; Phase 5 rejection |
 | pawn-shield king safety | -2.6 sigma; closed |
 | queen d1 PST change | -1.09 sigma; stronger reverse dose +0.40 sigma; mechanism inert |
+| incremental doubled/isolated (E1) | board-scan fits Atari when on; equal nodes +0.9σ; equal time −2.5σ at host 1.38×; rejected |
+| KBN colour corner drive (E4) | L4 can convert when on; L1–3 0/8; Atari overflow; rejected |
+| one-ply check extension (E5) | L1 mate-in-one 11/12→10/12; Atari page; rejected |
 | per-target optimization or table sizes | violates same-engine rule |
 | `optspeed` on selected targets | violates uniformity and does not fit Atari |
 | timing on host or perft | wrong instrument for 6502 search cost |
 
-History, full PV, root ordering, check extension, aspiration and the move-only cache are untried,
-not endorsed. They stay behind the exact-speed and incremental-evaluation work because their
-expected ceiling is lower.
+History, full PV, root ordering, aspiration and the move-only cache are still untried, not
+endorsed. Check extension is tried and rejected (E5). They stay behind work with a higher
+expected ceiling only as cheap screens (F1–F5), not as the next strength bet.
 
 ---
 
@@ -762,20 +781,26 @@ plausible feature whose gates were skipped.
 
 ## 13. Recommended order
 
-Unless the new profile overturns it:
+### Done through Phase E (do not reopen without new evidence)
 
-1. Current C64 component profile.
-2. B1–B5: remove unused history work, duplicate unmake work and guaranteed-zero calls.
-3. C1: fuse scoring and first selection.
-4. C2: on-demand discovered-check legality.
-5. C3: dedicated capture generator.
-6. B6 and then other ca65 only for what remains hot.
-7. Combine exact savings; ask Stefan how much becomes time and how much becomes nodes.
-8. E1: incremental pawn structure.
-9. E4: KBN conversion, and E5: one bounded check extension.
-10. E2/E3: locked-set value tuning and the opening interaction.
-11. F1–F5 as cheap screens.
-12. Reopen a full TT only through §9.
+1. ~~Current C64 component profile~~ (A / Phase 20).
+2. ~~B1–B7 exact state~~ — survivors **B3+B4 only** (−17.2% C64).
+3. ~~C1–C5 exact work outside hash~~ — no survivors; defaults off.
+4. ~~E1 pawn structure~~ — rejected equal-time (Phase 30).
+5. ~~E4 KBN~~ — rejected Atari size (Phase 31).
+6. ~~E5 check extension~~ — rejected L1 mate floor (Phase 32).
+7. ~~E6 mine failures~~ — instrument + sample (Phase 33); queen-move swings lead.
+
+### Still open, in cheap order
+
+1. **Stefan:** Phase D for B3+B4 — keep wall time, raise budgets, or a mix (and Very Easy).
+2. **E2** locked-set value tuning, steered by E6 queen-move clustering (not another d1 dose).
+3. **E3** opening interaction (queen before minors), dual switch, predeclared doses, Atari last.
+4. **§10** undo-ring pack / arena high-water — only if E2/E3 or a slim KBN/ca65 needs the bytes.
+5. **F1–F5** as cheap whole-book screens.
+6. Reopen a full TT only through §9.
+7. Reopen E1/E4 only with a free or near-free mechanism (true incremental that fits; ca65 KBN
+   under ~300 CODE; or a measured memory reclaim that funds them).
 
 This order is not a claim that the first idea wins. It is the cheapest sequence that can find
 out, stop cleanly, keep every target playing the same chess, and leave the next person a result

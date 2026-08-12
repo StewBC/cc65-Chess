@@ -30,8 +30,10 @@ node before a cutoff — and that fact turns out to explain most of what follows
 | losing-capture skipping | 13.7% | stopped at the pre-gate |
 | **null move** | **27.0% / 21.8%** at levels 2 / 4 | cleared the node gate, then measured **+0.04σ** |
 
-**Still untried:** history heuristic, SEE, check extensions, late move reductions, aspiration
-windows. The portfolio result gives none of them a reason to move ahead of §3b.
+**Still untried:** history heuristic, SEE, late move reductions, aspiration windows.
+**Tried since:** one-ply check extension (E5 / Phase 32) — rejected; L1 mate-in-one fell below
+its floor and Atari took a page. The portfolio result still gives none of the untried list a
+reason to move ahead of exact-speed leftovers or E2/E3.
 
 ## 2. What the portfolio established — read this before proposing anything
 

@@ -510,8 +510,14 @@ property of *a piece on a square*. Material and piece-square tables qualify. Paw
 (doubled, isolated, passed pawns) does not, because it is a property of the whole pawn
 configuration — it would need a per-file pawn count carried alongside the score.
 
-There is exactly one term in the engine that does not obey this, and §5.4b is about why it was
-allowed to: it got in by running only where nodes are cheap, rather than by being cheap.
+Phase 30 (E1) tried both: incremental file counts on make/unmake overflowed Atari (~750 CODE
+bytes), and a pawn-only board scan at eval time fitted when on but made host nodes ~1.38×
+dearer and lost at equal time (−2.5σ). The candidate remains default-off
+(`EVAL_PAWNSTRUCT_ON`); see `doc/next-engine.md` §7 E1 and `doc/rework-log.md` Phase 30.
+
+There is exactly one term in the shipping engine that does not obey the piece-on-a-square
+rule, and §5.4b is about why it was allowed to: it got in by running only where nodes are
+cheap, rather than by being cheap.
 
 `tests/gamefuzz.c` checks the running total against a full recount after every move, undo and
 redo, over 300 games weighted toward castling, en passant and promotion — the three moves
@@ -1680,10 +1686,16 @@ database is gone, and probably the best remaining value per byte. It needed incr
 position hashing first, and §6.10 has now built that — so what remains is the table itself,
 and finding the RAM for it on the Apple II, which is the tightest target by a wide margin.
 
-**Pawn structure** — doubled, isolated and passed pawns (§5.4). The one deferred term still
-out. Its sibling came back as the endgame tables (§5.4a); this one needs a per-file pawn count
-carried alongside the score, since it is a property of the whole pawn configuration rather than
-of a piece on a square.
+**Pawn structure** — doubled, isolated and passed pawns (§5.4). Deferred after Phase 4's
+equal-time failure; tried again as E1 (Phase 30). Incremental file counts do not fit Atari;
+a board-scan form fits but reintroduces the equal-time loss. Default-off candidate only —
+not absent for lack of measurement. Passed pawns were never rebuilt.
+
+**KBN vs bare king** — colour-aware corner drive (E4 / Phase 31). Converts some positions at
+level 4's budget when forced on; does not fit Atari and does not help levels 1–3. Default off.
+
+**Main-search check extension** — one ply when in check (E5 / Phase 32). Hurt level-1
+mate-in-one at its real budget and cost an Atari display-list page. Default off.
 
 **No opening variety.** From the starting position the engine plays the same first move every
 game, because the evaluation rates several openings exactly equal and ties break on generator

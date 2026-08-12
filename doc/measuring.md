@@ -53,7 +53,8 @@ it runs:
 | `qgen` | The capture-only generator is an exact subsequence of the full one |
 | `tactics` | The search finds the obvious moves |
 | `matein1` | Mate in one at each level's *own* budget, not level 4's |
-| `convert` | Thirteen basic won endings, mated before the fifty-move rule |
+| `convert` | Thirteen basic won endings, mated before the fifty-move rule; with `EVAL_KBN_ON=1` also eight KBN positions (floors 0/0/0/1) |
+| `pawnstruct` | Doubled/isolated file scores and live switch when `EVAL_PAWNSTRUCT_ON=1` |
 | `alwaysmoves` | A move is returned whenever one exists, at any budget down to a single node |
 | `match sanity` | A configuration playing itself comes out exactly level |
 | `selfplay` | A full game at each skill level, with timings |
@@ -198,8 +199,10 @@ knowing why before trusting them. Both contain only bare-king endings. A term th
 in positions with rooks and minors still on the board passes both of them perfectly, and both
 self-play harnesses too, because in self-play the harm is symmetric. It took an outside
 opponent — Sargon II on an Apple II — to find a change that had scored *better* on every
-instrument here and was a twenty-point regression in real games. **King, bishop and knight against a bare king is 0 of 25 either way**, and no
-amount of mate-drive weighting changes that; it needs a table that knows which corner.
+instrument here and was a twenty-point regression in real games. **King, bishop and knight
+against a bare king** needs a table that knows which corner: mate drive alone does not fix it.
+E4 (Phase 31) built a colour-aware drive that can convert at level 4 when forced on; it does
+not ship (Atari size, L1–3 still fail). Shipping is still effectively 0/25 on that defect.
 
 **`match sanity` is the check on the instrument itself.** A configuration against itself must
 come out exactly level, because the harness plays every opening twice with the colours
@@ -344,7 +347,13 @@ everything if you do.
 ./gauntlet.py --games 512 --anchor               # ...and the rated rung
 ./gauntlet.py --levels 4 --nodes 100 --games 128 # one rung
 ./gauntlet.py --games 512 --pgn-dir /tmp/pgn     # keep the games
+# after a pgn-dir run of *our* losses, group first durable SF swings (E6):
+./mine_failures.py /tmp/pgn/L3-sf30.pgn --our-name cc65 --depth 12 --min-swing 150
 ```
+
+`mine_failures.py` needs `python-chess` and Stockfish. It drops mate-clamped scores and tags
+the first swing after our move by piece kind — a screen for which mechanism to invent next,
+not landing evidence.
 
 Each skill level plays a ladder of Stockfish settings, and scores become rating differences
 with 95% intervals. `--anchor` adds a rung against Stockfish's rating-limited mode, which is
