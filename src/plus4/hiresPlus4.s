@@ -10,6 +10,7 @@
 
 ;-----------------------------------------------------------------------
 .export _plat_gfxFill, _plat_showStrXY, _plat_showPiece, _plat_colorStringXY, _plat_colorFill
+.export _plat_copyFont
 .import popa
 
 ;-----------------------------------------------------------------------
@@ -20,6 +21,42 @@
 
 ;-----------------------------------------------------------------------
 .code
+
+;-----------------------------------------------------------------------
+; Copy the lowercase character ROM ($D400-$D7FF) to CHARMAP_RAM ($C000).
+; Must use a register index and zp temps: anything in $8000+ disappears
+; the moment ROM is paged in, which is why the old C loop (index in BSS)
+; wrote nothing useful after the engine grew past $8000.
+.proc _plat_copyFont
+
+    php
+    sei
+    ldx #0
+loop:
+    sta $FF3E                                   ; ROM in
+    lda $D400, x
+    sta tmp1
+    lda $D500, x
+    sta tmp2
+    lda $D600, x
+    sta tmp3
+    lda $D700, x
+    sta tmp4
+    sta $FF3F                                   ; RAM in
+    lda tmp1
+    sta CHARMAP_RAM, x
+    lda tmp2
+    sta CHARMAP_RAM+$100, x
+    lda tmp3
+    sta CHARMAP_RAM+$200, x
+    lda tmp4
+    sta CHARMAP_RAM+$300, x
+    inx
+    bne loop
+    plp
+    rts
+
+.endproc
 
 ;-----------------------------------------------------------------------
 ; Utility - Turn tmp2 (y) and tmp3 (x) into a pointer in ptr2 that points

@@ -62,6 +62,7 @@ rowH:
 ; the functions exported to "C"
 .export _plat_atariInit
 .export _plat_gfxFill
+.export _plat_gfxXor
 .export _plat_showPiece
 .export _plat_showStrXY
 
@@ -84,8 +85,16 @@ rowH:
 
 ;-----------------------------------------------------------------------
 ; void plat_gfxFill(char fill, char x, char y, char w, char h)
-.proc _plat_gfxFill
-
+; void plat_gfxXor (char fill, char x, char y, char w, char h)
+; same arguments.  xor keeps the pixels underneath so a highlight does
+; not erase the piece.  rows past 191 are skipped: rowL/rowH are 192
+; entries, and a write through the next byte lands in BSS.
+_plat_gfxFill:
+    ldy #0
+    .byte $2c                                   ; bit abs, skip ldy #1
+_plat_gfxXor:
+    ldy #1
+    sty tmp4                                    ; 0 = store, 1 = eor
     sta ptr2 + 1                                ; h was in acc
     jsr popa                                    ; w
     sta ptr2
@@ -98,24 +107,35 @@ rowH:
 
 rowStart:
     ldy tmp1                                    ; get the row top
+    cpy #192                                    ; rowL/rowH are 192 entries
+    bcs nextRow
     lda rowL, y                                 ; get the address where the row starts
     sta ptr1
     lda rowH, y
     sta ptr1 + 1
-    lda tmp3                                    ; get the fill byte
     ldx ptr2                                    ; width in x
     ldy tmp2                                    ; and col x in y register
+    lda tmp4
+    bne xorCol
 :
+    lda tmp3
     sta (ptr1), y                               ; write the fill byte
     iny                                         ; memory is linear
     dex                                         ; one less column to do
     bne :-                                      ; do for all columns
+    beq nextRow
+xorCol:
+    lda tmp3
+    eor (ptr1), y
+    sta (ptr1), y
+    iny
+    dex
+    bne xorCol
+nextRow:
     inc tmp1                                    ; go down one row
     dec ptr2 + 1                                ; one less row to do in height
     bne rowStart                                ; repeat till all height rows done
-    rts 
-
-.endproc
+    rts
 
 ;-----------------------------------------------------------------------
 ; void plat_showPiece(char x, char Y, const char *src)
@@ -134,6 +154,8 @@ rowStart:
     ldx #0                                      ; start at the 1st byte of the piece
 loop:
     ldy tmp1                                    ; get the current piece row
+    cpy #192
+    bcs skipPieceRow
     lda rowL, y                                 ; look up teh row start address in memory
     sta ptr1 
     lda rowH, y 
@@ -150,11 +172,18 @@ read:
     iny                                         ; next byte on screen
     dec tmp3                                    ; one less col byte to do
     bne read                                    ; if not all done, do the rest of the cols on this row
+nextPieceRow:
     inc tmp1                                    ; next row
     dec tmp4                                    ; one less row to do of the 22
     bne loop                                    ; if not all done, do the next row
 
     rts
+
+skipPieceRow:
+    inx                                         ; still consume the 3 piece bytes
+    inx
+    inx
+    jmp nextPieceRow
 
 .endproc
 
@@ -208,6 +237,8 @@ strRead:
 
 charPlot:
     sty tmp3                                    ; copy the pixel row
+    cpy #192                                    ; do not index past rowL/rowH
+    bcs skipCharRow
     lda rowL, y                                 ; look up the screen address of the row
     sta ptr1 
     lda rowH, y 
@@ -217,6 +248,7 @@ charPlot:
 fontRead:
     lda $ffff, x                                ; read the font defenition for this char row (char row in x)
     sta (ptr1), y                               ; store to the screen
+skipCharRow:
     ldy tmp3                                    ; get the screen pixel row in y
     iny                                         ; go down a row
     inx                                         ; one more of the 8 character rows done

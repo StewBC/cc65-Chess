@@ -228,6 +228,8 @@ char cpu_Play(char side)
 		            gcSearchSkill[gSkillLevel].m_nodes, &result);
 
 		plat_ClearMessage();
+		if(search_Interrupted())
+			return OUTCOME_MENU;
 	}
 
 	// No legal move: mate or stalemate, whichever the position says

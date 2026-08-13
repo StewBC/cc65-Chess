@@ -400,46 +400,32 @@ void plat_ClearMessage()
 /*-----------------------------------------------------------------------*/
 void plat_AddToLogWin()
 {
-	char i;
+	char bot = SCREEN_HEIGHT-2, y = 1, x = 2+(8*BOARD_PIECE_WIDTH);
 
-	// Scroll the log up
-	for(i=2; i<SCREEN_HEIGHT-1; ++i)
+	// walk the undo stack.  gTile is only filled by undo_FindUndoLine
+	// now, so the old scroll-and-print-current-globals path logged
+	// NULL_TILE as "A(-A(" and then repeated the previous move
+	for(; y<=bot; ++y)
 	{
-		memcpy(SCREEN_RAM+1+((i-1)*SCREEN_WIDTH)+(8*BOARD_PIECE_WIDTH), SCREEN_RAM+1+(i*SCREEN_WIDTH)+(8*BOARD_PIECE_WIDTH), SCREEN_WIDTH-1-(8*BOARD_PIECE_WIDTH));
-		memcpy(COLOR_OFFSET+SCREEN_RAM+1+((i-1)*SCREEN_WIDTH)+(8*BOARD_PIECE_WIDTH), COLOR_OFFSET+SCREEN_RAM+1+(i*SCREEN_WIDTH)+(8*BOARD_PIECE_WIDTH), SCREEN_WIDTH-1-(8*BOARD_PIECE_WIDTH));
+		gotoxy(x, y);
+		if(undo_FindUndoLine(bot-y))
+		{
+			frontend_FormatLogString();
+			textcolor(gColor[0] ? COLOR_WHITE : COLOR_RED);
+			cprintf("%-6s",gLogStrBuffer);
+		}
+		else
+		{
+			textcolor(COLOR_LIGHTBLUE);
+			cprintf("%-6s"," ");
+		}
 	}
-	memset(SCREEN_RAM+1+(SCREEN_HEIGHT-2)*SCREEN_WIDTH+8*BOARD_PIECE_WIDTH,FONT_SPACE,SCREEN_WIDTH-1-8*BOARD_PIECE_WIDTH);
-
-	// format and draw the information to the bottom of the log area
-	frontend_FormatLogString();
-	gotoxy(2+(8*BOARD_PIECE_WIDTH),SCREEN_HEIGHT-2);
-	textcolor(gColor[0] ? HCOLOR_WHITE : HCOLOR_BLACK);
-	cprintf("%.*s",SCREEN_WIDTH-2-(8*BOARD_PIECE_WIDTH),gLogStrBuffer);
 }
 
 /*-----------------------------------------------------------------------*/
-// Important note about this function is that it alters the gTile...
-// global data trackers so beware when calling it
 void plat_AddToLogWinTop()
 {
-	char i;
-	
-	// Scroll the log down
-	for(i=SCREEN_HEIGHT-2; i>1; --i)
-	{
-		memcpy(SCREEN_RAM+1+(i*SCREEN_WIDTH)+(8*BOARD_PIECE_WIDTH), SCREEN_RAM+1+((i-1)*SCREEN_WIDTH)+(8*BOARD_PIECE_WIDTH), SCREEN_WIDTH-1-(8*BOARD_PIECE_WIDTH));
-		memcpy(COLOR_OFFSET+SCREEN_RAM+1+(i*SCREEN_WIDTH)+(8*BOARD_PIECE_WIDTH), COLOR_OFFSET+SCREEN_RAM+1+((i-1)*SCREEN_WIDTH)+(8*BOARD_PIECE_WIDTH), SCREEN_WIDTH-1-(8*BOARD_PIECE_WIDTH));
-	}
-	memset(SCREEN_RAM+1+SCREEN_WIDTH+8*BOARD_PIECE_WIDTH,FONT_SPACE,SCREEN_WIDTH-1-8*BOARD_PIECE_WIDTH);
-
-	// If an older entry is there to become visible, add it at the top of the log
-	if(undo_FindUndoLine(SCREEN_HEIGHT-3))
-	{
-		frontend_FormatLogString();
-		gotoxy(2+(8*BOARD_PIECE_WIDTH),1);
-		textcolor(gColor[0] ? HCOLOR_WHITE : HCOLOR_BLACK);
-		cprintf("%.*s",SCREEN_WIDTH-2-(8*BOARD_PIECE_WIDTH),gLogStrBuffer);
-	}
+	plat_AddToLogWin();
 }
 
 /*-----------------------------------------------------------------------*/
@@ -489,7 +475,8 @@ int plat_ReadKeys(char blocking)
 			keyMask |= INPUT_LEFT;
 		break;
 		
-		case 3:			// Esc
+		case 3:			// RUN/STOP
+		case 27:		// ESC (plus4 / some emulators)
 			keyMask |= INPUT_BACKUP;
 		break;
 

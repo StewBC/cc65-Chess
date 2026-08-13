@@ -60,6 +60,32 @@ static t_engMove	st_killers[SEARCH_MAX_PLY][2];
 static unsigned int	si_nodes;
 static unsigned int	si_budget;
 static char			sc_abort;
+static char			sc_userStop;
+
+// plat_ReadKeys is the one question the search asks the UI: did anyone
+// hit M or RUN/STOP.  declared here so search.c does not pull plat.h
+extern int plat_ReadKeys(char blocking);
+
+/*-----------------------------------------------------------------------*/
+// budget and a cheap UI poll share one test.  every 64th node is often
+// enough that a held RUN/STOP is seen in a second or two even at level 1,
+// and cheap enough that the 8-bit builds do not feel it
+static char outOfTime(void)
+{
+	if(si_nodes >= si_budget)
+	{
+		sc_abort = 1;
+		return 1;
+	}
+	if(!(si_nodes & 63) &&
+	   (plat_ReadKeys(0) & (INPUT_MENU | INPUT_BACKUP)))
+	{
+		sc_userStop = 1;
+		sc_abort = 1;
+		return 1;
+	}
+	return 0;
+}
 
 #if SEARCH_RESTORE_UNMAKE
 // Four 16-bit values for each reachable move-making ply: 96 bytes, kept out
@@ -603,11 +629,8 @@ static int quiesce(char side, int alpha, int beta, char ply)
 	int stand, score;
 	unsigned int arenaSave;
 
-	if(si_nodes >= si_budget)
-	{
-		sc_abort = 1;
+	if(outOfTime())
 		return 0;
-	}
 	++si_nodes;
 
 	// Being in check changes what this function is allowed to do, and getting
@@ -760,11 +783,8 @@ static int negamax(char side, char depth, int alpha, int beta, char ply)
 	int score;
 	unsigned int arenaSave;
 
-	if(si_nodes >= si_budget)
-	{
-		sc_abort = 1;
+	if(outOfTime())
 		return 0;
-	}
 	++si_nodes;
 
 #if SEARCH_FOLLOW_PV_ON
@@ -1226,6 +1246,7 @@ void search_Best(char side, char maxDepth, unsigned int nodeBudget, t_searchResu
 	si_budget = nodeBudget;
 	si_arenaTop = 0;
 	sc_abort = 0;
+	sc_userStop = 0;
 #if SEARCH_FOLLOW_PV_ON
 	sc_prevPVLen = 0;
 	sc_onPV = 0;
@@ -1376,6 +1397,12 @@ void search_Best(char side, char maxDepth, unsigned int nodeBudget, t_searchResu
 #if SEARCH_RESTORE_UNMAKE
 	eng_RestoreEnable(0);
 #endif
+}
+
+/*-----------------------------------------------------------------------*/
+char search_Interrupted(void)
+{
+	return sc_userStop;
 }
 
 #ifdef EVAL_TUNING

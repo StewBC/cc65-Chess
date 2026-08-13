@@ -64,8 +64,9 @@ void mainLoop()
 		
 		while(outcome <= OUTCOME_MENU)
 		{
-			// Allows interruption of AI vs AI
-			if(INPUT_MENU & plat_ReadKeys(0))
+			// between moves.  M and RUN/STOP / ESC both mean menu;
+			// during a think the search polls the same two itself
+			if(plat_ReadKeys(0) & (INPUT_MENU | INPUT_BACKUP))
 				outcome = OUTCOME_MENU;
 			
 			if(OUTCOME_MENU == outcome)

@@ -212,6 +212,10 @@ extern const t_searchSkill gcSearchSkill[SEARCH_NUM_SKILLS];
 // iteration that finished
 void search_Best(char side, char maxDepth, unsigned int nodeBudget, t_searchResult *result);
 
+// Non-zero if the last search_Best stopped because the user asked for
+// the menu, not because the node budget ran out
+char search_Interrupted(void);
+
 /*-----------------------------------------------------------------------*/
 // Start a game's opening randomisation from this seed, and restart the count
 // of randomised moves.  Called once a game, by the game.  Zero means no

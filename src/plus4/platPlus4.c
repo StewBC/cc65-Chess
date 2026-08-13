@@ -46,6 +46,7 @@ void plat_colorFill(char color, char x, char y, char w, char h);
 void plat_showStrXY(char x, char y, char *str);
 void plat_colorStringXY(char color, char x, char y, char *str);
 void plat_showPiece(char x, char Y, const char *src);
+void plat_copyFont(void);
 
 /*-----------------------------------------------------------------------*/
 // Local storage
@@ -57,19 +58,9 @@ static char subMenu;
 // Called one-time to set up the platform (or computer or whatever)
 void plat_Init()
 {
-    // Clearly something I don't understand here.  If I make the loop counter an
-    // int, or even another char I define, this all stops working.
-    char a, b, c;
-    for(gReturnToOS = 0; gReturnToOS < 255; gReturnToOS++) {
-        TED.enable_rom = 1;
-        a = *((char*)(CHARMAP_ROM+gReturnToOS));
-        b = *((char*)(CHARMAP_ROM+256+gReturnToOS));
-        c = *((char*)(CHARMAP_ROM+512+gReturnToOS));
-        TED.enable_ram = 0;
-        *((char*)(CHARMAP_RAM+gReturnToOS)) = a;
-        *((char*)(CHARMAP_RAM+256+gReturnToOS)) = b;
-        *((char*)(CHARMAP_RAM+512+gReturnToOS)) = c;
-    }
+    // charset lives at $C000 and the ROM that holds it is paged over
+    // everything from $8000 up, so the copy cannot use a C variable
+    plat_copyFont();
 
     // Setting this to 0 will not show the "Quit" option in the main menu
     gReturnToOS = 1;
@@ -420,7 +411,7 @@ void plat_ClearMessage()
 void plat_AddToLogWin()
 {
     char bot = (8*BOARD_PIECE_HEIGHT)-2, y = 1, x = 2+(8*BOARD_PIECE_WIDTH);
-    char i = 0;
+    char i, j, *p;
 
     // Show a log of the moves that have been played
     for(; y<=bot; ++y)
@@ -431,6 +422,16 @@ void plat_AddToLogWin()
             sprintf(textStr, "%-6s",gLogStrBuffer);
             plat_showStrXY(x, y, textStr);
             plat_colorStringXY((gColor[0] ? COLOR_WHITE : COLOR_BLACK)<<4|COLOR_GREEN, x, y, textStr);
+            // black's moves as inverse video, same as the Oric / Apple II / Atari
+            if(!gColor[0])
+            {
+                p = (char*)(BITMAP_ADDRESS + (unsigned int)y * 320 + (unsigned int)x * 8);
+                for(i = 0; i < 6; ++i)
+                {
+                    for(j = 0; j < 8; ++j)
+                        *p++ ^= 0xff;
+                }
+            }
         }
         else
         {
@@ -514,7 +515,8 @@ int plat_ReadKeys(char blocking)
             keyMask |= INPUT_LEFT;
         break;
         
-        case 3:            // Esc
+        case 3:            // STOP
+        case 27:           // ESC (the plus4 has both)
             keyMask |= INPUT_BACKUP;
         break;
 

@@ -78,7 +78,6 @@ struct __cx16regs
 };
 
 #define REG16					(*(struct __cx16regs*)0x02)
-#define jiffyTime 				((char*)0xA039)
 #define CURS_FLAG				((char*)0x037B)
 
 /*-----------------------------------------------------------------------*/
@@ -376,12 +375,17 @@ void plat_DrawBoard(char clearLog)
 {
 	char i, c;
 
-	clearTextLayer(0, 0, 40, 25);
+	// the log lives on the text layer.  a full-width clear flashes it
+	// on undo: LogMove has just drawn the new lines, then this wiped
+	// them, then they came back.  only the board columns need wiping
+	// (leftover menu and B-display numbers).
+	clearTextLayer(0, 0, 33, 25);
 
 	if(clearLog)
 	{
 		// Clear the log area pixels and color to green
 		plat_gfxFill(COLOR_GREEN,COLOR_GREEN,33,0,7,25);
+		clearTextLayer(33, 0, 7, 25);
 	}
 
 	plat_setColors(COLOR_WHITE, COLOR_GREEN, COLOR_GREEN);
@@ -531,17 +535,21 @@ void plat_AddToLogWinTop()
 }
 
 /*-----------------------------------------------------------------------*/
-// Use timer B to time a duration
+// interval in jiffies via RDTIM.  do not poke the kernal clock.
 char plat_TimeExpired(unsigned int aTime, char *timerInit)
 {
-	VIA1.pra = 0;
-	if(!*timerInit || aTime < *jiffyTime )
-	{
-		*timerInit = 1;
-		*jiffyTime = 0;
+	static char now;
+	char last;
 
+	__asm__("jsr $ffde");
+	__asm__("sta %v", now);
+
+	last = *timerInit;
+	if(!last || (char)(now - last) >= (char)aTime)
+	{
+		*timerInit = now ? now : 1;
 		return 1;
-	}	
+	}
 	return 0;
 }
 
@@ -574,7 +582,8 @@ int plat_ReadKeys(char blocking)
 			keyMask |= INPUT_LEFT;
 		break;
 		
-		case 3:			// Esc
+		case 3:			// RUN/STOP (cx16 Esc is this, via the kernal)
+		case 27:		// literal ESC
 			keyMask |= INPUT_BACKUP;
 		break;
 
@@ -624,16 +633,12 @@ int plat_ReadKeys(char blocking)
 /*-----------------------------------------------------------------------*/
 char plat_GetSeed()
 {
-	// The Kernal's 60Hz TIMER is at $A03B in *bank 0* (cx16.inc), three bytes
-	// big endian, so $A03D is the fast one.  $A000 is banked RAM, so bank 0
-	// has to be paged in over whatever is there and put back afterwards - the
-	// bank register is $00, in the always-present low page
-	char bank = *(char*)0x00, seed;
+	// $A03B was the r39 TIMER; r49 left that location frozen.  RDTIM is
+	// the kernal call and still ticks in 320x240
+	static char seed;
 
-	*(char*)0x00 = 0;
-	seed = *(char*)0xA03D;
-	*(char*)0x00 = bank;
-
+	__asm__("jsr $ffde");
+	__asm__("sta %v", seed);
 	return seed;
 }
 

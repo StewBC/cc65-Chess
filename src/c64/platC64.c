@@ -486,7 +486,8 @@ int plat_ReadKeys(char blocking)
 			keyMask |= INPUT_LEFT;
 		break;
 		
-		case 3:			// Esc
+		case 3:			// RUN/STOP
+		case 27:		// ESC (plus4 / some emulators)
 			keyMask |= INPUT_BACKUP;
 		break;
 

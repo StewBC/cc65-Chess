@@ -33,6 +33,7 @@ char plat_TimeExpired(unsigned char aTime);
 // Function Prototype for functions in hiresAtari.s
 extern void plat_atariInit(void);
 extern void plat_gfxFill(char fill, char x, char y, char w, char h);
+extern void plat_gfxXor(char fill, char x, char y, char w, char h);
 extern void plat_showPiece(char x, char Y, const char *src);
 extern void plat_showStrXY(char x, char y, char *str);
 
@@ -259,27 +260,32 @@ void plat_DrawSquare(char position)
 		plat_showPiece(1 + x * BOARD_PIECE_WIDTH, 8 + y * BOARD_PIECE_HEIGHT, gfxTiles[piece-1][index]);
 	}
 	
-	// Show the attack numbers
+	// Show the attack numbers.  character rows from the piece's pixel
+	// box, not (y+1)*3 - that last one is row 24, past the 192-line
+	// table, and used to write the glyphs into BSS
 	if(gShowAttackBoard)
 	{
 		char piece_value = (gChessBoard[y][x] & 0x0f);
 		char piece_color = (gChessBoard[y][x] & PIECE_WHITE) >> 7;
+		char py = 8 + y * BOARD_PIECE_HEIGHT;
+		char top = py / 8;
+		char bot = (py + BOARD_PIECE_HEIGHT - 8) / 8;
 
 		// Attackers (bottom left)
 		sprintf(textStr, "%d",(gpAttackBoard[giAttackBoardOffset[position][0]]));
-		plat_showStrXY(1+x*BOARD_PIECE_WIDTH,(y+1)*3, textStr);
+		plat_showStrXY(1+x*BOARD_PIECE_WIDTH,bot, textStr);
 
 		// Defenders (bottom right)
 		sprintf(textStr, "%d",(gpAttackBoard[giAttackBoardOffset[position][1]]));
-		plat_showStrXY(1+x*BOARD_PIECE_WIDTH+3,(y+1)*3, textStr);
+		plat_showStrXY(1+x*BOARD_PIECE_WIDTH+3,bot, textStr);
 		
 		// Color (0 is black, 128 is white) and piece value (1=ROOK, 2=KNIGHT, 3=BISHOP, 4=QUEEN, 5=KING, 6=PAWN)
 		sprintf(textStr, "%0d",piece_value);
-		plat_showStrXY(1+x*BOARD_PIECE_WIDTH,1+y*3, textStr);
+		plat_showStrXY(1+x*BOARD_PIECE_WIDTH,top, textStr);
 
 		// Color
 		sprintf(textStr, "%d",piece_color);
-		plat_showStrXY(1+x*BOARD_PIECE_WIDTH+3,1+y*3, textStr);
+		plat_showStrXY(1+x*BOARD_PIECE_WIDTH+3,top, textStr);
 	}
 }
 
@@ -317,9 +323,10 @@ void plat_Highlight(char position, char color, char cursor)
 	// The board is 1 line down from the top
 	y += 8;
 
-	// Draw the two vertical bars - the "cursor"
-	plat_gfxFill(color, x + 1                , y, 1, BOARD_PIECE_HEIGHT);
-	plat_gfxFill(color, x + BOARD_PIECE_WIDTH, y, 1, BOARD_PIECE_HEIGHT);
+	// xor, not fill: a fill erases two-thirds of the piece and looks
+	// like the wrong tiles are being eaten.  DrawSquare still restores
+	plat_gfxXor(color, x + 1                , y, 1, BOARD_PIECE_HEIGHT);
+	plat_gfxXor(color, x + BOARD_PIECE_WIDTH, y, 1, BOARD_PIECE_HEIGHT);
 }
 
 /*-----------------------------------------------------------------------*/
@@ -353,6 +360,9 @@ void plat_AddToLogWin()
 			frontend_FormatLogString();
 			sprintf(textStr, "%-6s",gLogStrBuffer);
 			plat_showStrXY(x, y, textStr);
+			// black's moves as inverse video, same as the Oric / Apple II
+			if(!gColor[0])
+				plat_gfxXor(0xff, x, y * 8, 6, 8);
 		}
 		else
 		{
@@ -383,33 +393,59 @@ char plat_TimeExpired(unsigned char aTime)
 int plat_ReadKeys(char blocking)
 {
 	char key = 0;
+	char stick;
 	int keyMask = 0;
+	static char prevStick = 15;
 
-	if(blocking)
+	for(;;)
 	{
-		while(KEY_NONE == (key = OS.ch));
-	}
-	else
-	{
-		if(KEY_NONE == (key = OS.ch))
+		key = OS.ch;
+		if(KEY_NONE != key)
+			break;
+
+		/* one event per push, not a stream while held */
+		stick = OS.stick0;
+		if(15 != stick && 15 == prevStick)
+		{
+			if(0 == (stick & 1))
+				keyMask |= INPUT_UP;
+			else if(0 == (stick & 2))
+				keyMask |= INPUT_DOWN;
+			else if(0 == (stick & 4))
+				keyMask |= INPUT_LEFT;
+			else if(0 == (stick & 8))
+				keyMask |= INPUT_RIGHT;
+			prevStick = stick;
+			return keyMask;
+		}
+		prevStick = stick;
+
+		if(!blocking)
 			return 0;
 	}
-		
+
 	switch(key)
 	{
-		case KEY_DASH | KEY_CTRL: //KEY_UP:		// Up
+		/* the 800XL prints arrows on - = + *.  Control makes the OS
+		   cursor codes; without it they are just those four keys.
+		   accept both so a tap works on the real board and in Altirra */
+		case KEY_UP:
+		case KEY_DASH:
 			keyMask |= INPUT_UP;
 		break;
 
-		case KEY_RIGHT:		// Right
+		case KEY_RIGHT:
+		case KEY_ASTERISK:
 			keyMask |= INPUT_RIGHT;
 		break;
 
-		case KEY_DOWN:		// Down
+		case KEY_DOWN:
+		case KEY_EQUALS:
 			keyMask |= INPUT_DOWN;
 		break;
 
-		case KEY_LEFT:		// Left
+		case KEY_LEFT:
+		case KEY_PLUS:
 			keyMask |= INPUT_LEFT;
 		break;
 		
