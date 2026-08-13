@@ -49,9 +49,8 @@ in `eng_IsAttacked`. Legality testing went from the most expensive thing the pro
 one of the cheapest, and 2.4 KB of RAM went away with the database.
 
 The target is a 1 MHz 6502 with a few kilobytes to spare, so the cost of everything here was
-measured on real hardware rather than reasoned about. Several sections below end with a
-number that overturned the design that preceded it; those are kept because the number is the
-interesting part.
+measured on real hardware rather than reasoned about. Several sections end with a number
+that is why the code is shaped this way.
 
 ---
 
@@ -508,12 +507,9 @@ assertion catches.
 This constrains what can be added to the evaluation. A term folds in cheaply only if it is a
 property of *a piece on a square*. Material and piece-square tables qualify. Pawn structure
 (doubled, isolated, passed pawns) does not, because it is a property of the whole pawn
-configuration — it would need a per-file pawn count carried alongside the score.
-
-Phase 30 (E1) tried both: incremental file counts on make/unmake overflowed Atari (~750 CODE
-bytes), and a pawn-only board scan at eval time fitted when on but made host nodes ~1.38×
-dearer and lost at equal time (−2.5σ). The candidate remains default-off
-(`EVAL_PAWNSTRUCT_ON`); see `doc/next-engine.md` §7 E1 and `doc/rework-log.md` Phase 30.
+configuration — it would need a per-file pawn count carried alongside the score. A scan or
+an incremental file count both exist as default-off experiments (`EVAL_PAWNSTRUCT_ON`);
+neither ships. The evidence is in `doc/rework-log.md`.
 
 There is exactly one term in the shipping engine that does not obey the piece-on-a-square
 rule, and §5.4b is about why it was allowed to: it got in by running only where nodes are
@@ -558,10 +554,9 @@ And on the number the work was actually for — the share of clear material adva
 become wins — 69% to **78%** from openings, 87% to **90%** from endgame positions. Games that
 ran out the 240-ply limit halved.
 
-Those are self-play figures. Against Stockfish the same change measured **+52 to +94** across
-sixteen ladder rungs, and against Stockfish's *rated* mode it did not measure at all —
-`doc/strength.md` §5.1.3 is about why three careful instruments gave three answers, and why the
-honest claim is narrower than any of them.
+Those are self-play figures. Against node-limited Stockfish the same change lifted every
+rung; against Stockfish's rated mode it did not. Three careful instruments, three answers —
+`doc/rework-log.md` is why the honest claim is narrower than any single number.
 
 **The king alone was nearly worthless, and that is the lesson.** It measured +15 Elo and moved
 conversion not at all. The engine could not finish won endings because marching a pawn from
@@ -572,10 +567,10 @@ what one was worth alone.
 
 ## 5.4b The one term that is not a property of a piece
 
-§5.3 states the rule that has governed the evaluation since Phase 5: a term folds in cheaply
-only if it is a property of *a piece on a square*, because that is what `eval_MoveDelta` can
-carry. `mateDrive` is the one term in the engine that breaks it, and the reason it is here
-anyway is worth more than the term itself.
+§5.3 states the rule that has governed the evaluation: a term folds in cheaply only if it is
+a property of *a piece on a square*, because that is what `eval_MoveDelta` can carry.
+`mateDrive` is the one term in the engine that breaks it, and the reason it is here anyway
+is worth more than the term itself.
 
 **The problem it solves.** `sc_pstKingEnd` sends a king to the middle of the board once the
 queens are off. It is a per-piece table, so it says that to *both* kings — including the one
@@ -600,9 +595,9 @@ static int mateDrive(char winner, char loser)
 ```
 
 There is no piece-and-square this is a property of, so there is nothing for make/unmake to add
-and subtract. By the Phase 5 rule it should have been unaffordable, and by the Phase 4 rule —
-anything done per node is paid twenty thousand times a move — it should have been unaffordable
-twice.
+and subtract. By the piece-on-a-square rule it should have been unaffordable, and by the
+equal-time rule — anything done per node is paid twenty thousand times a move — it should
+have been unaffordable twice.
 
 **Why it is affordable anyway, and this is the general point.** It is not cheaper than the
 terms that were rejected. It runs *somewhere else*. It sits behind two gates — `gePhase <=
@@ -630,17 +625,15 @@ three times king-proximity. Measured here across five ratios, weighting them nea
 (10 and 8) beat it at every level, and *halving* proximity collapsed level 1 from twelve
 conversions to seven. The cause is depth: the textbook ratio assumes a search that can see the
 corner drive pay off, and at four plies it cannot, so the term that pays inside the horizon is
-the one that has to be large. The full table is in Phase 11.
+the one that has to be large.
 
-**The phase gate is the whole difference between this working and not, and it cost a match to
-find.** The first version gated only on `PHASE_ENDGAME`, which is 3200 — two rooks and two
-minors still on the board. Every test in `tests/` passed, because `chesstest convert` and the
-Stockfish benchmark contain nothing but bare-king endings and the two match harnesses are
-self-play, where both sides carry the term and the harm cancels. Played against Sargon II it
-took 51.6% to 31.2% over 32 games: it was changing moves in positions where the engine was a
-piece *down*, at gePhase 1650. `doc/strength.md` §5.1.6 has the position and both binaries'
-opinion of it. The bound now sits just above the mates it exists for — rook 500, bishop and
-knight 660, queen 900, two rooks 1000 — rather than at a guess.
+**The phase gate is the whole difference between this working and not.** A gate at
+`PHASE_ENDGAME` (3200) fires with two rooks and two minors still on the board, and
+`|score| > 400` is true when the engine is losing as well as winning. The bound now sits
+just above the mates it exists for — rook 500, bishop and knight 660, queen 900, two rooks
+1000 — so the term cannot change a middlegame. A gate has to be measured against an outside
+opponent; self-play and a suite of bare-king positions cannot see it fire out of range.
+`doc/rework-log.md` has the match that set 1100.
 
 **What it was worth.** Basic won endings finished before the fifty-move rule, by level:
 5/11/8/13 → **12/13/13/13**. Against Stockfish defending 100 random won endings, level 1 from
@@ -979,9 +972,8 @@ cannot finish", it buys whatever depth the position can afford. Endgames get sea
 for nothing. So the final table is budget-driven, with the depth cap as a safety rail.
 
 Level 1's 400 nodes is a floor, not a preference: at 300 it goes straight back to shuffling a
-won endgame into a draw. It costs about 8 seconds a move against a 3–5 second target, and
-that is a deliberate trade — **a "very easy" level that cannot beat a bare king is broken,
-not easy.**
+won endgame into a draw. It costs about 11 seconds a move, and that is a deliberate trade —
+**a "very easy" level that cannot beat a bare king is broken, not easy.**
 
 ### The AI that gave up
 
@@ -1026,57 +1018,42 @@ including call overhead a source-level model would miss. Every doubled operation
 side-effect free or exactly self-reversing, and identical node counts plus result digests prove
 the tree was untouched.
 
-The original Phase 5 result, on the engine as it stood then, was:
+The current C64 profile, over six fixed middlegame positions, puts the largest rows at
+capture generation 29.27%, full generation 9.28%, middlegame delta 8.98%, hash delta 8.49%
+and endgame delta 8.04%. `doc/rework-log.md` has the full table and method.
 
-| Component | Share |
-|---|---|
-| Move generation | **41.9%** |
-| — of which the 120-square board scan | 7.0% |
-| make / unmake (including the eval delta) | 18.7% |
-| Move ordering (`scoreMoves` + `pickBest`) | 18.2% |
-| Legality (`eng_IsAttacked` after make) | 13.7% |
-| Everything else | ~7.5% |
+An earlier profile, before repetition, the second running evaluation, mate drive and check
+evasions, had generation at 42% and legality at 14%. That inversion is still the lesson
+worth keeping.
 
-**This overturned the assumption the remaining optimisation work rested on**, and the reason
-is the most transferable lesson in this document.
-
-The plan had said: the hot path is `eng_IsAttacked`, not move generation — generation is only
-about 8% of the time. The proposed fix was a **pin set**: work out once per position which
-pieces are pinned against the king, and skip the legality test for every move that provably
-cannot expose it. That reasoning is correct, and it is a large win.
-
-It was measured on **perft**. Perft makes, tests and unmakes *every* generated move, so
+The obvious optimisation from a **perft** measurement is a **pin set**: work out once per
+position which pieces are pinned against the king, and skip the legality test for every move
+that provably cannot expose it. Perft makes, tests and unmakes *every* generated move, so
 legality naturally dominates. An alpha-beta search with working move ordering tries only
 **2.28 moves per generating node** before a cutoff — most generated moves are never tested at
-all. The ratio therefore inverts: generation 42%, legality 14%.
+all. The ratio therefore inverts.
 
-So the ceiling on a *perfect, free* pin set is 1/(1−0.137) = **1.16x**. The real thing removes
-about 89% of the calls (king moves, en passant and genuinely pinned pieces still need
-testing) and *adds* a pin computation of eight rays at every generating node, amortised over
-only 2.28 calls. Net: about **1.07x** — for the highest-correctness-risk change left in the
-plan, since the en passant horizontal pin (where two pawns leave a rank at once) is the
-classic way these ship a legality bug.
+The ceiling on a *perfect, free* pin set, even on that older profile, is 1/(1−0.137) =
+**1.16x**. The real thing removes about 89% of the calls (king moves, en passant and
+genuinely pinned pieces still need testing) and *adds* a pin computation of eight rays at
+every generating node, amortised over only 2.28 calls. Net: about **1.07x** — for the
+highest-correctness-risk change available, since the en passant horizontal pin (where two
+pawns leave a rank at once) is the classic way these ship a legality bug.
 
 The item was dropped on evidence, not on difficulty. **A cost measured on perft does not
 transfer to a search that abandons most of its moves unexamined.**
 
-That conclusion belonged to that engine.  The retained Phase 20 profile includes the history,
-three running evaluation totals, mate drive and check evasions added since then.  Its largest
-current C64 rows are capture generation 29.27%, full generation 9.28%, middlegame delta 8.98%,
-hash delta 8.49% and endgame delta 8.04%; `doc/rework-log.md` has the full table and method.
-Those numbers, not the historic 42 / 19 / 18 / 14 grouping, set the next optimisation order.
-
 ## 6.10 Repetition, and the position history
 
-For most of this engine's life the search could not tell a position from the same position two
-moves later. Nothing scored a repeat as worthless, so in any position where it could not find
-progress it would shuffle a piece back and forth indefinitely, and the fifty-move rule was the
-only thing that ever ended it.
+Without repetition detection the search cannot tell a position from the same position two
+moves later. Nothing scores a repeat as worthless, so in any position where it cannot find
+progress it shuffles a piece back and forth indefinitely, and the fifty-move rule is the
+only thing that ever ends it.
 
-That was on the list of known absences for a long time, and it was assumed to be a small one.
-It was not: measured over 512 self-play games, **62% of all games were drawn, every one of them
-by repetition, and 57% of those were positions the engine itself scored as winning** (§5.1 of
-`doc/strength.md`). Eighteen percent of the whole match was drawn while a rook or more ahead.
+That is not a small absence. Measured over 512 self-play games without it, **62% of all games
+were drawn, every one of them by repetition, and 57% of those were positions the engine
+itself scored as winning**. Eighteen percent of the whole match was drawn while a rook or
+more ahead.
 
 ### The key
 
@@ -1152,7 +1129,7 @@ fifty-move counter, so no position it reaches can repeat one above it.
 | CODE | +1038 bytes |
 | Speed | **−9% on a real C64** |
 | Strength | **+44 Elo** at equal nodes, **+38 Elo** at equal time, 512 games, 3.7 sigma |
-| ...against Stockfish | **+9 to +16** at levels 3 and 4; the self-play figure was threefold optimistic (`strength.md` §5.1.2) |
+| ...against Stockfish | **+9 to +16** at levels 3 and 4; the self-play figure was threefold optimistic |
 | Self-play draws | 53% → 32%; decisive games 240 → 350 of 512 |
 
 **The speed figure is the part worth stopping on.** Measured on this host — same 512-game
@@ -1174,8 +1151,10 @@ position rather than producing an error anybody would notice. The fix if it ever
 matter is a wider key, not a cleverer scan. Nothing in the measurements above suggests it
 currently does.
 
-This is also most of the groundwork for a transposition table, which is the other thing the
-absence of incremental hashing was blocking.
+A 16-bit key is adequate for scanning a short repetition ring. It is not a transposition
+key: a 60,000-node search collides constantly. Widening it to 32 bits costs 15.3% on a C64
+before any table exists, which is why there is no transposition table; see
+`doc/rework-log.md`.
 
 ## 6.10b Check evasions in quiescence, or: how the engine hung mate in one
 
@@ -1232,8 +1211,7 @@ while in check, there is no stand-pat score to fall back on and `alpha` may stil
 
 **`eng_InCheck` runs at every quiescence node**, and that is where the cost is. Measured over
 identical work it is 12.2% more per node on a modern host and **22.7% on a real C64** — the
-host understating the target by 1.86x, which is the third time that particular lesson has been
-paid for in this project.
+host understating the target by 1.86x. A cost measured here is not the cost on a 6502.
 
 | | |
 |---|---|
@@ -1297,11 +1275,9 @@ honest version of that is "no evidence of harm, and the direction favours the ta
 
 Three details:
 
-**It fires in exactly two positions**, and it used to be one. White with `undo_CanUndo()`
-false, which is true only while no move has been played — and Black with exactly one move on
-the undo stack, keyed on what that move was. This paragraph used to say a Black reply "would
-need a real book keyed on what White played", meaning it as a reason not to have one. It turned
-out to be a five-entry table and thirty bytes; see below.
+**It fires in exactly two positions.** White with `undo_CanUndo()` false, which is true only
+while no move has been played — and Black with exactly one move on the undo stack, keyed on
+what that move was.
 
 **The roll is looked up in the generator's output** rather than trusted. A wrong square in a
 hand-written table would otherwise put an illegal move on the board; instead the entry matches
@@ -1335,10 +1311,8 @@ noise:
 ```
 
 What the table is actually for is that **the engine is deterministic, so one reply means one
-game**. Against Sargon II the Black side of a 64-game run held five distinct games, one of
-which was a 103-ply loss that got counted fourteen times and dragged the Black score to 25%.
-Two replies an entry takes that from five to ten. `doc/strength.md` §5.1.7 is the whole story,
-including the part where the deficit turned out not to be an opening problem at all.
+game**. Two replies an entry spreads the sample. The replies were chosen by playing them;
+`doc/rework-log.md` is why a desktop ranking of variety does not transfer to Sargon.
 
 **Knowing which move is on the board needs no new state.** `undo_FindUndoLine(1)` is false for
 exactly the first two plies of a game and `(0)` then loads White's move into `gTile` — the same
@@ -1653,57 +1627,35 @@ nodes; that is not the question a player is asking.
 
 ---
 
-# Appendix A — Where the engine stands
+# Appendix A — Where the numbers live
 
-Measured on a real C64 (NTSC jiffies, opening position), showing what the two Phase 5
-optimisations bought:
-
-| Budget | Depth | Before | After | Speedup |
-|---|---|---|---|---|
-| 400 | 2 | 1071 | 529 | 2.02x |
-| 1600 | 3 | 2456 | 1299 | 1.89x |
-| 6000 | 4 | 18095 | 8866 | 2.04x |
-
-Note that 2x is **not** a ply. At an effective branching factor of about 6, a ply costs 6x.
-Doubling the speed is worth having and does not make the engine visibly deeper.
-
-Against the engine it replaced, at that engine's strongest setting: **6 wins, 0 losses**,
-mating on ply 31 as White and ply 52 as Black.
-
-Size on the C64 at `optspeed`: 34123 bytes total (CODE 25892, RODATA 3819, DATA 341,
-BSS 4071); 31705 at `optsize`. Repetition detection accounts for 2882 of that — see §6.10.
-**All seven targets link and fit**, the Apple II most narrowly at 1255 bytes spare; the
-full table is in the Phase 5 notes of `doc/rework-log.md`.
+- **How well it plays** — `doc/strength.md`.
+- **Free space on each target** — `AGENTS.md`. All seven targets link at `optsize`.
+- **Where a C64 node goes** — §6.9.
+- **The engine this replaced** — `doc/original-engine.md`.
 
 # Appendix B — What is deliberately absent
 
-**No opening book.** It competes with the tightest memory budget, and it would reduce test
-coverage by making self-play games repeat their openings.
+**No transposition table.** A 16-bit repetition key is not a TT key. Widening it to 32 bits
+costs 15.3% on a C64 before any table exists. Closed; do not reopen without new evidence.
+`doc/rework-log.md` has the measurement.
 
-**No transposition table.** Different move orders often reach the same position; a hash table
-of positions already searched avoids re-searching them. Affordable now that the attack
-database is gone, and probably the best remaining value per byte. It needed incremental
-position hashing first, and §6.10 has now built that — so what remains is the table itself,
-and finding the RAM for it on the Apple II, which is the tightest target by a wide margin.
+**No general opening book.** The shipping game has a four-entry White first-move table and a
+five-entry Black reply table (§6.10a). A real book competes with the tightest memory budget
+and would make the search's own openings untestable.
 
-**Pawn structure** — doubled, isolated and passed pawns (§5.4). Deferred after Phase 4's
-equal-time failure; tried again as E1 (Phase 30). Incremental file counts do not fit Atari;
-a board-scan form fits but reintroduces the equal-time loss. Default-off candidate only —
-not absent for lack of measurement. Passed pawns were never rebuilt.
+**No pawn-structure term in the shipping evaluation.** Doubled, isolated and passed pawns
+are not a property of a piece on a square (§5.3). A default-off scan exists; it does not
+survive equal time. Passed pawns were never rebuilt.
 
-**KBN vs bare king** — colour-aware corner drive (E4 / Phase 31). Converts some positions at
-level 4's budget when forced on; does not fit Atari and does not help levels 1–3. Default off.
+**No KBN-vs-king table.** A colour-aware corner drive can convert some positions at level 4
+when forced on; it does not fit Atari and does not help levels 1–3. Default off.
 
-**Main-search check extension** — one ply when in check (E5 / Phase 32). Hurt level-1
-mate-in-one at its real budget and cost an Atari display-list page. Default off.
-
-**No opening variety.** From the starting position the engine plays the same first move every
-game, because the evaluation rates several openings exactly equal and ties break on generator
-order. The fix is to choose randomly among moves within a few hundredths of a pawn of the best,
-and it has to be switchable, since every measurement here depends on the search being
-deterministic. What blocks it is not the choosing but the seed: `plat.h` exposes no clock, so
-the entropy has to come from human input — menu choices, cursor keys, the squares of moves
-played — which leaves the very first move after a cold boot deterministic.
+**No main-search check extension.** One extra ply when in check hurt mate-in-one at
+level 1's real budget and cost an Atari display-list page. Default off.
 
 **No pin set** (§6.9) — dropped on measurement, and the reasoning is recorded so it does not
 get re-proposed.
+
+The closed-portfolio list — every search and evaluation candidate that was measured and
+stopped — is the last section of `doc/rework-log.md`.

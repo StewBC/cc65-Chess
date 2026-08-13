@@ -18,6 +18,12 @@
 /tests/uci
 /tests/uci-tuning
 /tests/uci-tuning-48
+/tests/uci-mc32
+/tests/uci-mc64
+/tests/uci-mc128
+/tests/movecache32
+/tests/movecache64
+/tests/movecache128
 /tests/genbook
 /tests/collectpos
 *.dSYM/

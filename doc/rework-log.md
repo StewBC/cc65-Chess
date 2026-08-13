@@ -14,7 +14,9 @@
 > `doc/engine.md` describes the engine that came out of this and is the better starting
 > point if you want to understand the code. `doc/strength.md` measures how well it plays.
 > The durable rules distilled from the journal live in `AGENTS.md` at the repo root; this
-> file is the history, not the standing instructions.
+> file is the history, not the standing instructions. The last section is the closed
+> search and evaluation portfolios — read that before proposing a technique that looks
+> untried.
 >
 > Checkboxes are as they stood when the work paused: `[ ]` not done, `[X]` done. Phases are
 > ordered by dependency, not by importance.
@@ -3253,3 +3255,161 @@ Kept here so they do not get relitigated.
 - The current engine's speed problem was largely self-inflicted by the data structure
   rather than by C: legality testing cost a full Attack DB rebuild. Once that is a
   ray-cast, accurate and fast stop being opposed, which is why `gDeepThoughts` can go.
+
+---
+
+# Closed portfolios
+
+The two working notes that drove Phases 14–42 (`doc/next-search.md`, then
+`doc/next-engine.md`) are deleted. Their job was a queue; the queue is empty.
+This section is what an agent needs so those afternoons are not spent again.
+
+The phase write-ups above are the evidence. This is the map.
+
+## What shipped
+
+| | |
+|---|---|
+| Speed | **B3+B4 only** — no history in quiescence, restore running state on unmake. **−17.2%** on a C64 fixed middlegame. Identical chess. |
+| Budgets | 400 / 1,200 / **18,000** / **65,000**. Levels 1 and 2 banked the B3+B4 saving as wall time (11s / 40s). Levels 3 and 4 took more nodes. |
+| Memory | Atari undo ring at `$AF00–$B2FF` (+1,024 BSS below the framebuffer). |
+| Instruments | Retained C64 profiler; `mine_failures.py`; `OwnBook` / `BookSeed` on `tests/uci`. |
+
+Everything else in those notes was measured and stopped, or is default-off and
+must stay that way.
+
+## Search techniques (Phases 14–19)
+
+The premise those notes started from — *strength here is a node budget, so any
+technique that reaches deeper within the same budget is a direct win* — is
+**wrong**.
+
+**Saved nodes are not granted nodes.** The 60 Elo per doubling in
+`doc/strength.md` §4.2 was measured by *giving* the search more budget. Nodes
+you prune away are removed on an assumption that is sometimes wrong, so the
+extra depth is lower-fidelity depth. The two currencies are different and only
+the second has a measured rate against Elo.
+
+| candidate | best node saving | outcome |
+|---|---|---|
+| principal variation search | 5–6% at levels 3–4, *worse* at 1–2 | below the instrument |
+| delta pruning | 3.2% | stopped at the pre-gate |
+| losing-capture skipping | 13.7% | stopped at the pre-gate |
+| **null move** | **27.0% / 21.8%** at levels 2 / 4 | cleared the node gate, then **+0.04σ** |
+| 32-bit hash (TT prerequisite) | same 152 / 1,509 / 5,232 nodes | **15.3% slower** on a C64; no table written |
+| late move reductions / futility / razoring / SEE-for-pruning | — | not tried; four-for-four on assumption-based pruning is the reason |
+
+The node pre-gate is a floor, not a predictor. Passing it means "large enough
+to measure". It says nothing about whether the saving becomes strength.
+
+A 16-bit `geHashKey` is adequate for the repetition ring and **unusable as a
+transposition key** (65,536 keys; a 60,000-node search collides constantly).
+The TT's first cost is widening that key, paid on every target including the
+ones with no room for a table. 15.3% closed it. Per-target table sizes would
+mean seven engines; that is a product decision, not a search one.
+
+**Do not reopen the transposition table** except by re-pricing a 32-bit
+incremental key on a C64 and beating 10%. Do not write table code first.
+
+## Engine portfolio A–F (Phases 20–42)
+
+| phase | status | shipping effect |
+|---|---|---|
+| A profile | complete | retained `c64profile` |
+| B exact state | **B3+B4 kept**; B1/B2/B5/B6/B7 rejected | −17.2% C64 |
+| C exact work | C1–C3 rejected; C4/C5 deferred | none |
+| D combine / buy nodes | done | L1/L2 time; L3 18k; L4 65k |
+| E chess | E1/E3/E4/E5 rejected; E2 already at minimum; E6 instrument | no strength terms |
+| F ordering | F1–F5 rejected | none |
+
+Default-off leftovers, not invitations: `EVAL_PAWNSTRUCT_ON`, `EVAL_KBN_ON`,
+`EVAL_DEV_ON`, `SEARCH_CHECK_EXT`, `SEARCH_FOLLOW_PV`, `SEARCH_ROOT_SCORES`,
+`SEARCH_HISTORY`, `SEARCH_ASPIRATION`, plus the Phase C speed switches.
+`SEARCH_MOVE_CACHE` is host-only and defaults 0.
+
+Current C64 profile (six fixed middlegames): capture generation 29.27%, full
+generation 9.28%, middlegame delta 8.98%, hash delta 8.49%, endgame delta
+8.04%. Those numbers, not the Phase 5 42/19/18/14 grouping, describe HEAD.
+
+## What the strength games found (do not rediscover)
+
+These were in `doc/strength.md` when that file was also the working journal.
+They live here now.
+
+**Repetition.** Without detection, 62% of self-play games drew, all by
+threefold, 57% of those in positions the engine scored as winning. Fix: +44
+Elo at equal nodes, +38 at equal time in self-play; **+9 to +16** against
+Stockfish at levels 3–4. Self-play overstated it about threefold.
+
+**Endgame tables.** Self-play +44 equal nodes / +30 equal time. The ladder
+said +52 to +94. The rated anchor said approximately nothing. **Self-play
+bias has no fixed sign** — it overstated repetition and understated the
+tables — so it cannot be corrected with a factor.
+
+**Mate in one.** Level 1 found 27 of 60. Quiescence stood pat and generated
+only captures while in check. Found by a person on an Apple II, not by
+40,000 measured games. The tactics suite had searched every position at
+60,000 nodes. After check evasions: 55/60 at level 1; +82 / +49 / +31 Elo
+at levels 2 / 3 / 4 at equal time; a wash at level 1 on rating, and the
+ability to finish a game.
+
+**Mate drive.** `sc_pstKingEnd` sends both kings to the centre, including
+the one being mated. The first gate (`PHASE_ENDGAME` = 3200) passed every
+test in `tests/` and scored *better* on self-play conversion than the
+version that shipped — and lost 51.6% → 31.2% to Sargon II, because
+`|score| > 400` is also true when the engine is losing. The shipped gate is
+`DRIVE_PHASE` 1100. Conversion against Sargon 26% → 92%; fifty-move draws
+15 → 2; drew-still-a-piece-up 15 → 0.
+
+**Black 25% was one lost game, played fourteen times.** All eighteen Black
+losses against Sargon L1 sat in two lines; the fourteen `1.e4 Nc6` games
+were identical for 103 plies. Outside those lines Black scored 57% and did
+not lose. Played from `tests/book.epd`, where no table fires, the engine
+scores the same with either colour at level 1 to the digit.
+
+**A desktop ranking of replies does not transfer to Sargon.** `1.e4 d6`
+ranked second on score and first on a variety measure built to count
+distinct games; against Sargon it was 0/21 over two games. The shipped
+alternative is `e5`. Two proxies, both reasonable, both wrong.
+
+**The queen-home PST is inert.** `sc_pstQueen` pays ten centipawns to leave
+d1. Zeroing that (`d1 = +5`) measured −1.09σ over 6,144 games; tripling it
+(`d1 = −15`) measured +0.40σ. Both directions ran backwards. The square is
+not the cause. A mean over Stockfish evaluation deltas is not a robust
+statistic: mate scores clamp at ±10000, and one clamped move outweighs two
+hundred ordinary ones.
+
+**Nothing in this repository could reach `cpu.c` until `OwnBook` existed.**
+The UCI adapter called the search directly; the Sargon harness carried a
+Python copy of the White table. A feature the harness cannot execute is not
+covered.
+
+## Floor — do not reopen without new evidence
+
+| Idea | Why it is closed |
+|---|---|
+| PVS, delta, losing-capture skip, null move | measured; null move is the existence proof that saved nodes ≠ Elo |
+| Transposition table | 32-bit key 15.3% on a C64; no table written |
+| Pin set | ~7% estimated net; perft does not transfer; en passant pin risk |
+| Pawn-shield king safety | −2.6σ |
+| Incremental / scan pawn structure (E1) | equal time −2.5σ |
+| Constrained value fit (E2) | existing family already at the train/val minimum |
+| Queen-before-minors (E3) | dose 16 short of +2σ; dose 48 worse |
+| KBN colour corner (E4) | L4 only; Atari overflow |
+| One-ply check extension (E5) | L1 mate-in-one worse; Atari page |
+| Full PV / root scores / history / 16-bit move cache / aspiration (F1–F5) | all below floor or negative at L1 |
+| Queen d1 PST | dose test; square inert |
+| Per-target opt / table sizes / `optspeed` on some ports | same-engine rule; Atari does not fit |
+| Host or perft timing as a 6502 price | hash 5.5% here, 9% on a C64; evasions 12.2% / 22.7% |
+
+## Still open, and only this
+
+- Pack the undo ring (8 → 6 bytes) or re-measure the move-arena high-water
+  **only if** a later feature needs 256–512 bytes and has already earned them.
+- Reopen a full TT **only** through a cheaper-than-10% 32-bit key on a C64.
+- Reopen E1 / E4 **only** with a free or near-free mechanism (true incremental
+  that fits; ca65 KBN under ~300 CODE; or a measured memory reclaim that
+  funds them).
+
+A rejected measurement is complete work. Reverted code plus a durable number
+is preferable to a plausible feature whose gates were skipped.

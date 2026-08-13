@@ -6,10 +6,10 @@ terminal build used for development. C, compiled with cc65.
 `doc/engine.md` explains how the engine works and is the right thing to read first. This
 file is the short list of constraints that are easy to violate by accident.
 
-`doc/next-engine.md` is the current forward work note. Phases A–D and the E chess portfolio
-through E6 are measured there (B3+B4 are the only speed survivors; D spent them as L1/L2
-wall time and L3 18,000 / L4 65,000 nodes; E1/E4/E5/E3 rejected; E2 null). It does not
-reopen the rejected search portfolio by changing its name.
+`doc/rework-log.md` is the working journal, and its last section is the closed search and
+evaluation portfolios. Read that before proposing a search technique or an evaluation term.
+B3+B4 shipped (−17.2% per node on a C64). The skill budgets are 400 / 1,200 / 18,000 /
+65,000. Do not reopen a rejected candidate by renaming it.
 
 ## Hard constraints
 
@@ -100,8 +100,8 @@ existed it had 460 bytes and repetition detection would not have linked.
 `apple2` and `plus4` also *run* here — `../a2m-v2` for the Apple II, VICE's `xplus4` binary
 monitor for the Plus/4 — so a change to either can be verified instead of argued (§7 of
 `doc/measuring.md`). `atari` runs here too now, under AltirraSDL's JSON bridge — see
-`scratch/altirra-bridge-usage.md`, which is how the framebuffer collision was found and the
-fix confirmed.
+`recipes/altirra-bridge-usage.md`, which is how the framebuffer collision was found and the
+fix confirmed. Emulator how-tos for the targets that run here live in `recipes/`.
 
 **Compiling a target says nothing about whether it runs.** The plus4 build linked inside its
 budget throughout the rework and was broken end to end — by a **cc65 bug**, not ours: in
@@ -145,8 +145,8 @@ had asked levels 1 and 2 whether they could see a mate in one. They could not: l
 27 of 60, and a person playing on an Apple II found it before any test did. Anything that
 depends on how much the engine searches has to be exercised at `gcSearchSkill`'s own numbers.
 
-**Self-play cannot see a defect both sides share.** That is twice now: the repetition blindness
-of §5.1 and the mate blindness of §5.1.5 both produced perfectly balanced matches. A balanced
+**Self-play cannot see a defect both sides share.** That is twice now: the repetition
+blindness and the mate blindness both produced perfectly balanced matches. A balanced
 result means the two configurations are equal, not that either is right.
 
 **A green suite can be a stale binary.** `tests/Makefile` did not list the engine headers as
@@ -178,8 +178,9 @@ hundred ordinary ones. Over 64 games, 26 clamped moves in 547 turned the mean co
 −23.5 into **−289.3**, twelve times its own robust value, and 15 in 661 turned a pawn move from
 −20.6 into **+68.5** — a pawn move that reads as a gain. `analyse.py` has always
 warned that the clamp confuses blunder counts; nobody asked what it did to the averages, and
-`doc/strength.md` §5.2a's per-piece table is fourteen queen moves over six games computed
-exactly that way. Drop the mate scores and print a median beside the mean.
+the table that started this was fourteen queen moves over six games computed exactly that
+way. Drop the mate scores and print a median beside the mean. `doc/rework-log.md` has the
+replication.
 
 **A mechanism that explains a measurement is not the cause of it, and turning the mechanism
 *up* is the cheap way to find out.** The queen was measured costing four times a pawn per move
@@ -188,7 +189,7 @@ fitted perfectly. Removing those ten centipawns measured −1.1 sigma over 6,144
 them, which had to measure worse if the square mattered at all, measured **+0.4 sigma**. Both
 directions ran backwards, so the square is inert and the explanation was wrong while the
 measurement it explained was right. The dose cost twenty minutes and settled what another
-candidate table would not have. `doc/strength.md` §5.2b.
+candidate table would not have. `doc/rework-log.md` has the dose.
 
 **A test that only asks for a legal move cannot see a dead table entry.** The first version of
 the black reply check asked that the reply be legal and that more than one distinct reply come
@@ -230,6 +231,9 @@ the harness itself made them play different games.
 conservative one — after eight moves nothing has been traded and the lines are open, so the
 middlegame is about 25% slower per node. Anything that has to hold at the board gets
 measured over a real game.
+
+Emulator how-tos for the targets that run here — Apple II, Plus/4, Atari, C64 — are in
+`recipes/`. Generated match output stays in `scratch/`.
 
 ## Building and testing
 
@@ -289,8 +293,8 @@ same harm. Any term with a gate needs an outside opponent before it is believed.
 
 **A self-play number is a reason to go and measure, not a result.** It overstated repetition
 detection about threefold and understated the endgame tables by half — same instrument, both
-directions — so there is no correction factor, only an outside opponent. `doc/strength.md`
-§5.1.2 and §5.1.3.
+directions — so there is no correction factor, only an outside opponent. `doc/rework-log.md`
+has both measurements.
 
 **A feature being measured has to be switchable.** The two sides of a match live in one
 binary, so a change gets a flag under `EVAL_TUNING` — `geEvalTerms` for evaluation terms,

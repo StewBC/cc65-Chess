@@ -159,8 +159,7 @@ recapture is a peak of +3 and means nothing, and counting those put 880 winning 
 games.
 
 Current baseline, shipped configuration against itself from the opening set (`match sanity`,
-the only same-config run here): **81%**, against 79% immediately before the mate drive of
-Phase 11 and 78% when Phase 8 built the metric. `doc/strength.md` §5.1.6 has what moved it.
+the only same-config run here): **81%**. `doc/rework-log.md` has what moved it.
 
 The endgame-set figures printed by `match endgame` — 88 to 89% — are **not** a baseline of the
 same kind. The two configurations in that comparison differ, so the number is pooled across two
@@ -190,19 +189,18 @@ pessimistic ones need an outside defender:
 ```
 
 That instrument is not vendored either — it is a dozen lines of `python-chess` driving
-`tests/uci` against `stockfish` — but it is the one that produced the level 1 / level 2 figures
-in `doc/strength.md` §5.1.6, and self-play conversion ran about fifteen points optimistic
-against it.
+`tests/uci` against `stockfish` — but it is the one that produced the level 1 / level 2
+conversion figures, and self-play conversion ran about fifteen points optimistic against it.
 
-**Neither of these could see the defect that mattered most in Phase 11**, and it is worth
-knowing why before trusting them. Both contain only bare-king endings. A term that misbehaves
-in positions with rooks and minors still on the board passes both of them perfectly, and both
-self-play harnesses too, because in self-play the harm is symmetric. It took an outside
-opponent — Sargon II on an Apple II — to find a change that had scored *better* on every
-instrument here and was a twenty-point regression in real games. **King, bishop and knight
-against a bare king** needs a table that knows which corner: mate drive alone does not fix it.
-E4 (Phase 31) built a colour-aware drive that can convert at level 4 when forced on; it does
-not ship (Atari size, L1–3 still fail). Shipping is still effectively 0/25 on that defect.
+**Neither of these can see a term that misbehaves outside a bare-king ending.** Both contain
+only those positions. A term that fires with rooks and minors still on the board passes both
+of them perfectly, and both self-play harnesses too, because in self-play the harm is
+symmetric. It took an outside opponent — Sargon II on an Apple II — to find a change that
+had scored *better* on every instrument here and was a twenty-point regression in real games.
+**King, bishop and knight against a bare king** needs a table that knows which corner: mate
+drive alone does not fix it. A colour-aware drive exists as a default-off experiment; it
+does not ship (Atari size, levels 1–3 still fail). Shipping is still effectively 0/25 on
+that defect. `doc/rework-log.md` has the match.
 
 **`match sanity` is the check on the instrument itself.** A configuration against itself must
 come out exactly level, because the harness plays every opening twice with the colours
@@ -267,12 +265,10 @@ through this adapter, so the default has to be the configuration those games wer
 searches exactly as the shipping game does — so it is a different engine from the one the
 ladder measures, and it says so.
 
-Until these existed, **nothing in this repository could reach `cpu.c` at all.** The adapter
-calls `search_Best` directly and never goes through `cpu_Play`; nothing in `tests/` calls
-`search_SetSeed`, which the tables are gated behind; and `sargon/match.py` needed White's
-opening to vary, so it carried a copy of the table written out again in Python. The tables
-shipped for two releases with no instrument able to play them, and a Python copy of a table is
-a copy of what the table was *believed* to hold. `doc/strength.md` §5.1.7 is what that cost.
+The adapter calls `search_Best` directly and never goes through `cpu_Play`; nothing in
+`tests/` calls `search_SetSeed`, which the tables are gated behind. Without `OwnBook` the
+tables are unreachable from every harness, and a Python copy of a table is a copy of what
+the table was *believed* to hold.
 
 The general rule this is an instance of: **a feature the harness cannot execute is not
 covered, however green the suite is.** Before trusting a measurement of anything, check that
@@ -282,8 +278,8 @@ the binary being measured can actually reach the code in question.
 
 `make uci-tuning` builds the same adapter *with* `-DEVAL_TUNING`, which exposes the tuning
 switches as UCI options. This is how a term gets priced against Stockfish rather than against
-the engine's own opinion of itself, which §5.1.2 and §5.1.3 of `doc/strength.md` show is a
-different number in an unpredictable direction.
+the engine's own opinion of itself, which `doc/rework-log.md` shows is a different number
+in an unpredictable direction.
 
 ```bash
 ./gauntlet.py --uci ./uci-tuning --games 512 --levels 1,2 --nodes 1,100,300
@@ -308,7 +304,7 @@ every game where the change never came up should be the same game in both runs
 and should contribute nothing to the difference between them. That argument is
 written here because it is wrong, and it was checked rather than believed.
 
-Diffing the PGNs of the queen-table A/B in §5.2b, one evaluation term altered
+Diffing the PGNs of a queen-table A/B, one evaluation term altered
 by ten centipawns on **one square**: 95% of games differed at level 1 and
 **100%** at level 4. A piece-square value shifts the score of nearly every
 position that piece appears in, which reorders moves, which changes the game.
@@ -358,8 +354,8 @@ not landing evidence.
 Each skill level plays a ladder of Stockfish settings, and scores become rating differences
 with 95% intervals. `--anchor` adds a rung against Stockfish's rating-limited mode, which is
 the only thing that turns a ladder into a number — and the only thing here that uses a clock
-and is therefore not reproducible. `doc/strength.md` §4.3 explains why that rung deserves
-more suspicion than its error bar suggests.
+and is therefore not reproducible. `doc/strength.md` §4.3 explains why that rung deserves more suspicion than its error bar
+suggests.
 
 ---
 
@@ -469,7 +465,7 @@ cycles, and 8e9 wasted half the run.
 `SEARCH_PROFILE`, replays six fixed middlegame positions, and checks nodes plus a digest of
 move, flags, score and depth before accepting a row.  `tests/profile-run-a2m.py` uses a2m-v2's
 exact emulated cycle counter for the full development profile; VICE remains the C64 landing
-instrument.  The Phase 20 commands and both sets of raw results are in `doc/rework-log.md`.
+instrument.  The commands and both sets of raw results are in `doc/rework-log.md`.
 
 There is no profiler for a 6502 here and there does not need to be one. Run the search
 normally, then again with **one component doing an extra redundant copy of its work**, and
@@ -525,10 +521,10 @@ stale glyphs in its terminal model that a real terminal would not show.
 
 ### On the real Apple II
 
-`../a2m-v2` is an Apple II emulator with a scriptable control port, which makes `apple2` the
-one 8-bit target that can be driven the same way — except that here the machine really is the
-machine, so it also catches what the terminal build cannot: character sets, video modes,
-firmware entry points.
+Full notes are in `recipes/apple2-debugging.md`. `../a2m-v2` is an Apple II emulator with a
+scriptable control port, which makes `apple2` the one 8-bit target that can be driven the
+same way — except that here the machine really is the machine, so it also catches what the
+terminal build cannot: character sets, video modes, firmware entry points.
 
 ```bash
 make TARGETS=apple2 && make po      # the image step is a second make
@@ -549,9 +545,9 @@ from an encoding bug.
 
 ### On the real Plus/4
 
-VICE's `xplus4` does the same job through its **binary** monitor. The wire protocol and its
-traps are documented in `../c64m/agents/vice-oracle.md`; a minimal Python client lives in
-`scratch/vice/`.
+Full notes are in `recipes/plus4-debugging.md`. VICE's `xplus4` does the same job through
+its **binary** monitor. The wire protocol and its traps are documented in
+`../c64m/agents/vice-oracle.md`; a minimal Python client lives in `recipes/vice/`.
 
 ```bash
 xplus4 -TEDdsize -autostart-delay 40 -autostart cc65-Chess.plus4 \
@@ -595,21 +591,17 @@ its own explanation before the speed is banked.
 
 ## 9. What none of this covers
 
-**Two targets have never been run.** `c64.chr` and `atmos` compile clean and link inside
+**Two targets have never been run here.** `c64.chr` and `atmos` compile clean and link inside
 their budgets, and no platform file was edited, so they *should* be fine. That is an
 argument, not evidence, and it is the largest untested surface in the project.
 
-`apple2` has since been booted and played here under `../a2m-v2`, `plus4` under VICE (both
-§7), and `atari` on the Windows machine under Altirra. All three build here; only `atari`
-still needs the other machine to run.
+`apple2` and `plus4` run here (§7). `atari` builds here and runs here under AltirraSDL —
+`recipes/altirra-bridge-usage.md`. `cx16` builds here but is still not *run* here.
 
 **Running a target is not the same as compiling it, and the plus4 proved it.** That build
 compiled clean and linked inside its budget for the whole rework, and it was broken by a cc65
 bug: in bitmap mode `cgetc()` returns a character that was never typed, underflowing the
 Kernal's key count, after which the menus navigated themselves and the game quit. Nothing
 short of running it could have found that.
-
-**`cx16` does not build here** — a pre-existing failure in its platform file, unrelated to
-the engine work.
 
 **There is no continuous integration.** `make test` is a command someone has to remember.

@@ -30,52 +30,14 @@ Measured over roughly 40,000 games against Stockfish, using two independent matc
 | 4 — Very Hard | 65,000 nodes | ~48 minutes | ~1950 |
 
 Ratings are on Stockfish's own scale, ±150 — and that uncertainty is honest rather than
-statistical. At its strongest setting the engine scores 71% against Stockfish restricted to a
-single search node and draws level with it at a hundred. `doc/strength.md` explains what the
-numbers mean, what they do not mean, and how to reproduce them.
+statistical. At its strongest setting the engine scores 70% against Stockfish restricted to a
+single search node and draws level with it at a hundred. Against **Sargon II** — a 1978
+program, on an Apple II — Harder scored 57% at Sargon's level 4. `doc/strength.md` explains
+what the numbers mean, what they do not mean, and how to reproduce them.
 
 Emulator speed-up is a free multiplier: strength is measured in positions searched, not
 seconds, so an accelerated machine plays the same game sooner. Roughly 60 rating points per
 doubling of thinking time.
-
-The table is current as of Phase D. B3+B4 made every node 17.2% cheaper on a C64; Very Easy
-and Easy bank that as wall time (13s/46s → 11s/40s, same chess). Harder and Very Hard take
-more nodes at similar or slightly better time. The longer times versus the first published
-table are still check evasions in quiescence — `doc/strength.md` §5.1.5.
-
-The ratings are unchanged by the most recent fix, and the fix is the best story in the project.
-Played against **Sargon II** — a 1978 program, on an Apple II — the engine kept drawing games it
-had already won: it reached king and rook against a bare king on move 66 of one game, still had
-it on move 115, and drew by the fifty-move rule. The cause was that the endgame king table sends
-*both* kings to the centre, including the one being mated, so with bare kings every move scored
-the same. Basic won endings finished before the fifty-move rule went from 42 to **75** out of
-100 at level 1, and against Sargon the White column went from 7 wins and 9 draws to **14 wins
-and 2 draws** with no losses either way.
-
-The first version of that fix scored **better** on every test in this repository and was a
-twenty-point regression in real games — its gate was loose enough to change moves in
-middlegames, which only an outside opponent could see, because self-play applies the same harm
-to both sides. `doc/strength.md` §5.1.6 keeps the whole thing, wrong turn included.
-
-That same Sargon match left one number unexplained: 85.9% with White against 25.0% with Black.
-This file used to call it an opening-book gap. **It was one lost game, played fourteen times.**
-All eighteen Black losses came from two openings; the fourteen `1.e4 Nc6` games were identical
-for all 103 plies; outside those two lines Black scored 57% and did not lose once. Play the
-engine from positions where no book fires and it scores the same with either colour — at level
-1, to the digit. A book helps by spreading the sample, not by improving the moves.
-
-Black now has a reply table too, thirty bytes of it. Played against Sargon II it took the Black
-score from 25.0% to **45.3%**, but the number worth reading is the other one: **five distinct
-games in thirty-two became twenty-four**, and the most-repeated game went from fourteen copies
-to five. The first attempt at the table put a *new* game in the same trap — one entry lost all
-21 of its games over 2 distinct games — and neither desktop measurement predicted it; the
-losing reply ranked second on score and **first** on a measure built specifically to count
-variety. Only the real opponent could see it.
-
-The thing that made the original mistake possible is the better story: **no harness in this
-repository could reach the opening table at all.** The UCI adapter called the search directly, and the Sargon harness had a copy of the
-table written out again in Python. It shipped for two releases with nothing able to play it.
-`doc/strength.md` §5.1.7.
 
 ## Playing it
 
@@ -137,8 +99,7 @@ cc -Isrc -lcurses -funsigned-char src/globals.c src/engine.c src/eval.c src/sear
 | [doc/original-engine.md](doc/original-engine.md) | **How the engine that was replaced worked, and why it was weak.** Two structural decisions, both of them traps that are well known inside computer chess and nearly invisible from outside it. |
 | [doc/strength.md](doc/strength.md) | **How strong it is and how that was established.** The measurement, the methodology, and an honest account of what the numbers are worth. |
 | [doc/measuring.md](doc/measuring.md) | **The instruments.** What to run, which question each answers, and the workflow for changing the engine without breaking it. |
-| [doc/rework-log.md](doc/rework-log.md) | **The working journal**, published unsanitised. Its value is the measurements that demolished the plan around them. |
-| [doc/next-search.md](doc/next-search.md) | **What to try next, and how to know it worked.** The search has classical techniques missing that cost almost nothing; this is the candidate list with a gate and an off-ramp on each, written so that "measured, rejected, recorded" is a successful afternoon. |
+| [doc/rework-log.md](doc/rework-log.md) | **The working journal**, published unsanitised. Its value is the measurements that demolished the plan around them. Closed search and evaluation portfolios live at the end of it. |
 | [doc/readme-2014.txt](doc/readme-2014.txt) | The original readme, kept verbatim as a historical document. Its description of the AI describes the *old* engine, which is the point. |
 
 Contributors and agents should also read [AGENTS.md](AGENTS.md) — the constraints that are
