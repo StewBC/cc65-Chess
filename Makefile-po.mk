@@ -1,5 +1,5 @@
 NAME = chess
-PO = $(NAME).po
+PO = cc65-Chess.po
 
 CA ?= cadius
 
@@ -32,7 +32,7 @@ $(PO): $(PROGRAM).apple2 $(NAME).system
 	$(call CP, apple2/template.po $@)
 	$(call CP, $(PROGRAM).apple2 $(NAME)#064000)
 	# Always use an explicit forward slash '/' for ProDOS.
-	$(NO_CONV) $(CA) addfile $(NAME).po /$(subst -,.,$(PROGRAM)) $(NAME).system#FF2000
-	$(NO_CONV) $(CA) addfile $(NAME).po /$(subst -,.,$(PROGRAM)) $(NAME)#064000
+	$(NO_CONV) $(CA) addfile $(PO) /$(subst -,.,$(PROGRAM)) $(NAME).system#FF2000
+	$(NO_CONV) $(CA) addfile $(PO) /$(subst -,.,$(PROGRAM)) $(NAME)#064000
 	$(RM) $(NAME).system#FF2000
 	$(RM) $(NAME)#064000
