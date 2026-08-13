@@ -61,24 +61,24 @@ friendly piece defending it. Attackers in cyan, defenders in red.
 ## Building
 
 ```bash
-make                    # every target
-make TARGETS=c64        # or just one
+make OPTIONS=optsize                    # every target
+make OPTIONS=optsize TARGETS=c64        # or just one
 ```
 
 The full target list is `apple2 atari atmos c64 c64.chr plus4 cx16`, and a bare `make` builds
-all of them. Every one is built at the same optimisation setting, `optsize`, which is the
-default — the Atari does not fit at `optspeed`, and a port built differently is a port that
-behaves differently.
+all of them. Every one is built at the same optimisation setting, `optsize` — the Atari does
+not fit at `optspeed`, and a port built differently is a port that behaves differently.
 
-Most platforms have a second step to produce a disk, tape or program image — `d64`, `dsk`,
-`po`, `atr`, `tap`, `prg`, `cprg`, `cxprg`. The binaries have to exist first, so build them in
+Most platforms have a second step to produce a disk, tape or program image — `d64`, `po`,
+`atr`, `tap`, `prg`, `cprg`, `cxprg`. The binaries have to exist first, so build them in
 the same invocation:
 
 ```bash
-make all d64 dsk po atr tap prg cprg cxprg
+make OPTIONS=optsize all d64 po atr tap prg cprg cxprg
 ```
 
-`po` needs `cadius` and `atr` needs `dir2atr`; the rest need nothing extra.
+'d64' needs C1541, `po` needs `cadius` and `atr` needs `dir2atr`; the rest need nothing
+extra.
 
 `cx16` needs a reasonably current cc65: it uses `c_sp` in inline assembly, which older
 versions called `sp`.
