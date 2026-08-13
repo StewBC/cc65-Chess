@@ -144,6 +144,26 @@ static char			sc_rootWork;
 static char			st_history[6][64];
 #endif
 
+#if SEARCH_MOVE_CACHE
+// Host-only 16-bit move cache.  A hit may reorder; it never returns a score
+// and never injects a move that was not generated.
+typedef struct tag_mcEntry
+{
+	unsigned int	m_lock;
+	char			m_from;
+	char			m_to;
+	char			m_flags;
+	char			m_occ;
+} t_mcEntry;
+
+static t_mcEntry		st_mc[SEARCH_MOVE_CACHE];
+static unsigned long	sl_mcProbes;
+static unsigned long	sl_mcOccupied;
+static unsigned long	sl_mcLocks;
+static unsigned long	sl_mcFound;
+static unsigned long	sl_mcUseful;
+#endif
+
 // Opening randomiser state.  Zero means "never seeded", which is how every
 // test harness gets the old behaviour to the digit without knowing this is here
 static char			sc_rand;
@@ -399,6 +419,74 @@ static void recordHistory(const t_engMove *move, char depth)
 		st_history[piece - 1][tile] = (char)(cur + bonus);
 	else
 		st_history[piece - 1][tile] = 99;
+}
+#endif
+
+#if SEARCH_MOVE_CACHE
+/*-----------------------------------------------------------------------*/
+static unsigned int mcKey(void)
+{
+	return geHashKey;
+}
+
+/*-----------------------------------------------------------------------*/
+static char mcProbe(t_engMove *moves, char count)
+{
+	unsigned int key = mcKey();
+	t_mcEntry *e = &st_mc[key & (SEARCH_MOVE_CACHE - 1)];
+	char i;
+
+	++sl_mcProbes;
+	if(!e->m_occ)
+		return 0;
+	++sl_mcOccupied;
+	if(e->m_lock != key)
+		return 0;
+	++sl_mcLocks;
+	for(i = 0; i < count; ++i)
+	{
+		if(moves[i].m_from == e->m_from &&
+		   moves[i].m_to == e->m_to &&
+		   moves[i].m_flags == e->m_flags)
+		{
+			++sl_mcFound;
+			// 254 sits under the previous-iteration root 255
+			if(moves[i].m_score != (char)255)
+				moves[i].m_score = 254;
+			return 1;
+		}
+	}
+	return 0;
+}
+
+/*-----------------------------------------------------------------------*/
+static void mcStore(const t_engMove *move)
+{
+	unsigned int key = mcKey();
+	t_mcEntry *e = &st_mc[key & (SEARCH_MOVE_CACHE - 1)];
+
+	e->m_lock = key;
+	e->m_from = move->m_from;
+	e->m_to = move->m_to;
+	e->m_flags = move->m_flags;
+	e->m_occ = 1;
+}
+
+/*-----------------------------------------------------------------------*/
+void search_MoveCacheReset(void)
+{
+	sl_mcProbes = sl_mcOccupied = sl_mcLocks = sl_mcFound = sl_mcUseful = 0;
+}
+
+/*-----------------------------------------------------------------------*/
+void search_MoveCacheStats(unsigned long *probes, unsigned long *occupied,
+	unsigned long *locks, unsigned long *found, unsigned long *useful)
+{
+	*probes = sl_mcProbes;
+	*occupied = sl_mcOccupied;
+	*locks = sl_mcLocks;
+	*found = sl_mcFound;
+	*useful = sl_mcUseful;
 }
 #endif
 
@@ -665,6 +753,9 @@ static int negamax(char side, char depth, int alpha, int beta, char ply)
 #if SEARCH_FOLLOW_PV_ON
 	char wasOnPV;
 #endif
+#if SEARCH_MOVE_CACHE
+	char mcFirst;
+#endif
 	int score;
 	unsigned int arenaSave;
 
@@ -743,6 +834,9 @@ static int negamax(char side, char depth, int alpha, int beta, char ply)
 #endif
 #if SEARCH_FOLLOW_PV_ON
 	promotePV(moves, count, ply);
+#endif
+#if SEARCH_MOVE_CACHE
+	mcFirst = mcProbe(moves, count);
 #endif
 
 #ifdef SEARCH_PROFILE
@@ -836,6 +930,11 @@ static int negamax(char side, char depth, int alpha, int beta, char ply)
 				recordHistory(&moves[i], depth);
 #endif
 			}
+#if SEARCH_MOVE_CACHE
+			mcStore(&moves[i]);
+			if(mcFirst)
+				++sl_mcUseful;
+#endif
 			si_arenaTop = arenaSave;
 			return beta;
 		}
@@ -846,7 +945,13 @@ static int negamax(char side, char depth, int alpha, int beta, char ply)
 			if(SEARCH_FOLLOW_PV)
 				recordPV(ply, &moves[i]);
 #endif
+#if SEARCH_MOVE_CACHE
+			mcStore(&moves[i]);
+#endif
 		}
+#if SEARCH_MOVE_CACHE
+		mcFirst = 0;
+#endif
 	}
 
 	si_arenaTop = arenaSave;
@@ -997,6 +1102,9 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 #if SEARCH_ROOT_SCORES_ON
 	promoteRootScores(moves, count);
 #endif
+#if SEARCH_MOVE_CACHE
+	(void)mcProbe(moves, count);
+#endif
 
 #if ENGINE_FAST_LEGAL
 	wasInCheck = eng_InCheck(side);
@@ -1075,6 +1183,9 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 			if(SEARCH_FOLLOW_PV)
 				recordPV(0, &moves[i]);
 #endif
+#if SEARCH_MOVE_CACHE
+			mcStore(&moves[i]);
+#endif
 		}
 #if SEARCH_ROOT_SCORES_ON
 		storeRootScore(&moves[i], score);
@@ -1122,6 +1233,14 @@ void search_Best(char side, char maxDepth, unsigned int nodeBudget, t_searchResu
 		for(hp = 0; hp < 6; ++hp)
 			for(ht = 0; ht < 64; ++ht)
 				st_history[hp][ht] = 0;
+	}
+#endif
+#if SEARCH_MOVE_CACHE
+	{
+		unsigned int mi;
+
+		for(mi = 0; mi < SEARCH_MOVE_CACHE; ++mi)
+			st_mc[mi].m_occ = 0;
 	}
 #endif
 #if SEARCH_RESTORE_UNMAKE

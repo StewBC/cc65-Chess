@@ -3128,6 +3128,60 @@ Branch: `grok/next-engine-phase-f-ordering`.
 
 ---
 
+## Phase 41 - 16-bit transposition move cache (F4)
+
+Host instrument only. No target table. A 16-bit key cannot return a score;
+it can promote a stored move that is found in the generated list. The search
+still evaluates every move. Collision changes order, never injects an
+illegal move or a foreign score. Table cleared at every `search_Best`.
+
+```
+cd tests && make -B movecache32 movecache64 movecache128 \
+    uci-mc32 uci-mc64 uci-mc128 uci
+./movecache32 && ./movecache64 && ./movecache128
+./nodecompare.py --baseline ./uci --candidate ./uci-mc32 --report-only
+./nodecompare.py --baseline ./uci --candidate ./uci-mc64 --report-only
+./nodecompare.py --baseline ./uci --candidate ./uci-mc128 --report-only
+```
+
+Probe stats (256 book positions, shipped budgets, counters reset once at
+the start so "all" is cumulative):
+
+| size | L | nodes | depth | probes | occup | lock | found | useful |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 32 | 1 | 63,224 | 486 | 6,520 | 2,463 | 254 | 254 | 0 |
+| 32 | 2 | 290,234 | 516 | 18,602 | 11,625 | 856 | 855 | 397 |
+| 32 | 3 | 3,002,951 | 1,002 | 283,341 | 273,810 | 6,214 | 5,239 | 4,427 |
+| 32 | 4 | 14,865,941 | 1,122 | 883,797 | 874,258 | 12,537 | 9,765 | 8,777 |
+| 64 | 1 | 63,224 | 486 | 6,520 | 1,574 | 254 | 254 | 0 |
+| 64 | 2 | 290,206 | 517 | 18,795 | 8,854 | 1,809 | 1,808 | 1,039 |
+| 64 | 3 | 2,986,743 | 1,002 | 284,209 | 264,175 | 14,430 | 13,008 | 11,385 |
+| 64 | 4 | 14,875,570 | 1,125 | 885,321 | 865,253 | 27,396 | 23,371 | 21,273 |
+| 128 | 1 | 63,224 | 486 | 6,520 | 811 | 254 | 254 | 0 |
+| 128 | 2 | 290,206 | 517 | 18,963 | 6,468 | 2,664 | 2,663 | 1,763 |
+| 128 | 3 | 3,021,084 | 1,004 | 289,133 | 249,770 | 27,280 | 25,328 | 22,992 |
+| 128 | 4 | 14,873,533 | 1,124 | 887,817 | 848,056 | 52,437 | 46,918 | 43,459 |
+
+Useful cutoff-first hits scale with size. Node savings do not. vs `uci`:
+
+| size | L1 save | L2 | L3 | L4 | moves L1–4 |
+|---:|---:|---:|---:|---:|---|
+| 32 | 0.00% | 0.00% | −0.65% | +0.31% | 0 / 0 / 1 / 2 |
+| 64 | 0.00% | +0.01% | −0.11% | +0.25% | 0 / 0 / 1 / 2 |
+| 128 | 0.00% | +0.01% | −1.26% | +0.26% | 0 / 0 / 2 / 3 |
+
+No size is a speed candidate. None is a chess change with a 20% floor.
+RAM size is still Stefan's; the instrument says do not spend it. No
+8-bit table, no per-target sizes, `SEARCH_MOVE_CACHE` defaults 0. The
+host driver stays for reproduction.
+
+This is not a reopen of the full score TT. §9's prerequisites are
+unchanged.
+
+Branch: `grok/next-engine-phase-f-ordering`.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

@@ -127,6 +127,14 @@ extern char geSearchHistory;
 #endif
 
 /*-----------------------------------------------------------------------*/
+// F4 host instrument: a 16-bit move cache, not a score TT.  Size is the
+// entry count (32 / 64 / 128).  Default 0 — no table, no target code.
+// Probe may only promote a stored move that is in the generated list.
+#ifndef SEARCH_MOVE_CACHE
+#define SEARCH_MOVE_CACHE	0
+#endif
+
+/*-----------------------------------------------------------------------*/
 // Opening randomisation, switchable the same way.  Note the direction: unlike
 // every other switch here this one is a *feature* of the shipped game rather
 // than a term being measured, so the 8-bit build has it permanently on and the
@@ -224,6 +232,12 @@ char search_TestRootStored(void);
 
 // Non-zero history entries after the last search.  Zero when History is off.
 unsigned int search_TestHistoryUsed(void);
+#endif
+
+#if SEARCH_MOVE_CACHE
+void search_MoveCacheReset(void);
+void search_MoveCacheStats(unsigned long *probes, unsigned long *occupied,
+	unsigned long *locks, unsigned long *found, unsigned long *useful);
 #endif
 
 #endif //_SEARCH_H_

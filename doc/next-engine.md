@@ -31,7 +31,7 @@ The short version of this note is:
 | C exact work | C1–C3 rejected; C4/C5 deferred | no survivors |
 | D combine / buy nodes | **done** — L1/L2 bank time; L3 18k; L4 65k | L3 ladder up; L4 noise |
 | E chess | E1/E4/E5/E3 rejected; E6 instrument; E2 null | no strength terms landed |
-| F ordering screens | F1–F3 rejected; F4–F5 open | no survivors yet |
+| F ordering screens | F1–F4 rejected; F5 open | no survivors yet |
 | §10 Atari undo RAM | **kept** — ring at `$AF00–$B2FF` | Atari +1,024 BSS below `$9100` |
 
 Shipping search is Phase B plus the Phase D budgets. Candidates retained default-off:
@@ -720,18 +720,40 @@ Shipping maps unchanged. One candidate, one screen; stop.
 
 ### F4. A 16-bit transposition move cache
 
-The current key is unsafe for returning a score. It is safe as a hint if a probe only promotes
-a stored move that is found in the generated list and the search still evaluates every move.
-A collision then changes ordering, never supplies an unrelated score or illegal move.
+**Phase 41 F4 result: rejected at the host instrument; no target code.**  Probe
+promotes a stored move only if it is in the generated list. The search still
+evaluates every move. Table cleared at every `search_Best`. Host-only
+`-DSEARCH_MOVE_CACHE=32|64|128`; shipping is 0.
 
-Before target code, instrument 32-, 64- and 128-entry common-size caches on the host and report:
+Whole-book probe stats (`tests/movecache.c`):
 
-- probes, occupied probes and matching locks;
-- stored moves found in the generated list;
-- useful cutoff-first hits;
-- whole-book nodes and completed depths at every budget.
+| size | L | nodes | depth | probes | occup | lock | found | useful |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 32 | 1 | 63,224 | 486 | 6,520 | 2,463 | 254 | 254 | 0 |
+| 32 | 2 | 290,234 | 516 | 18,602 | 11,625 | 856 | 855 | 397 |
+| 32 | 3 | 3,002,951 | 1002 | 283,341 | 273,810 | 6,214 | 5,239 | 4,427 |
+| 32 | 4 | 14,865,941 | 1122 | 883,797 | 874,258 | 12,537 | 9,765 | 8,777 |
+| 64 | 1 | 63,224 | 486 | 6,520 | 1,574 | 254 | 254 | 0 |
+| 64 | 2 | 290,206 | 517 | 18,795 | 8,854 | 1,809 | 1,808 | 1,039 |
+| 64 | 3 | 2,986,743 | 1002 | 284,209 | 264,175 | 14,430 | 13,008 | 11,385 |
+| 64 | 4 | 14,875,570 | 1125 | 885,321 | 865,253 | 27,396 | 23,371 | 21,273 |
+| 128 | 1 | 63,224 | 486 | 6,520 | 811 | 254 | 254 | 0 |
+| 128 | 2 | 290,206 | 517 | 18,963 | 6,468 | 2,664 | 2,663 | 1,763 |
+| 128 | 3 | 3,021,084 | 1004 | 289,133 | 249,770 | 27,280 | 25,328 | 22,992 |
+| 128 | 4 | 14,873,533 | 1124 | 887,817 | 848,056 | 52,437 | 46,918 | 43,459 |
 
-RAM size is still Stefan's decision. No per-target sizes.
+Hits are real: most lock matches are in the list, and most of those cut first.
+They do not buy nodes. vs shipping `uci`:
+
+| size | L1 | L2 | L3 | L4 | L4 moves |
+|---|---:|---:|---:|---:|---:|
+| 32 | 0.00% | 0.00% | **−0.65%** | +0.31% | 2 |
+| 64 | 0.00% | +0.01% | −0.11% | +0.25% | 2 |
+| 128 | 0.00% | +0.01% | **−1.26%** | +0.26% | 3 |
+
+No common size clears the floor. RAM size is still Stefan's if he wants one;
+the instrument says none of 32 / 64 / 128 is worth the bytes. No target
+table. `SEARCH_MOVE_CACHE` stays 0.
 
 ### F5. Aspiration windows
 
@@ -836,11 +858,10 @@ They are listed so "leave no idea behind" does not become "forget why it failed.
 | `optspeed` on selected targets | violates uniformity and does not fit Atari |
 | timing on host or perft | wrong instrument for 6502 search cost |
 
-Full PV (F1), root-score ordering (F2) and compact history (F3) are tried
-and rejected. Aspiration and the move-only cache are still untried, not
-endorsed. Check extension is tried and rejected (E5). They stay behind work
-with a higher expected ceiling only as cheap screens (F4–F5), not as the next
-strength bet.
+Full PV (F1), root-score ordering (F2), compact history (F3) and the 16-bit
+move cache (F4, host instrument) are tried and rejected. Aspiration is still
+untried, not endorsed. Check extension is tried and rejected (E5). F5 is the
+last cheap screen, not the next strength bet.
 
 ---
 
@@ -894,6 +915,7 @@ plausible feature whose gates were skipped.
 11. ~~**F1** full PV follow~~ — rejected (Phase 38).
 12. ~~**F2** previous root scores~~ — rejected (Phase 39).
 13. ~~**F3** compact history~~ — rejected (Phase 40).
+14. ~~**F4** 16-bit move cache~~ — rejected at host instrument (Phase 41).
 
 ### Still open, in cheap order
 
@@ -902,7 +924,7 @@ plausible feature whose gates were skipped.
 3. ~~**E3** opening interaction~~ — rejected; 16 short of +2σ, 48 worse (Phase 36).
 4. **§10** undo-ring *pack* / arena high-water — only if a slim KBN/ca65 needs another 256–512.
    The Atari upper-RAM claim is done: undo ring at `$AF00–$B2FF`, 1,387 free below `$9100`.
-5. **F1–F5** as cheap whole-book screens — **F1–F3 rejected** (Phases 38–40).
+5. **F1–F5** as cheap whole-book screens — **F1–F4 rejected** (Phases 38–41).
 6. Reopen a full TT only through §9.
 7. Reopen E1/E4 only with a free or near-free mechanism (true incremental that fits; ca65 KBN
    under ~300 CODE; or a measured memory reclaim that funds them).

@@ -77,6 +77,25 @@ uci: $(ENGINE) uci.c testutil.c engineperft.c platStub.c $(HEADERS)
 uci-tuning: $(ENGINE) uci.c testutil.c engineperft.c platStub.c $(HEADERS)
 	$(CC) $(CFLAGS) -o $@ $(ENGINE) uci.c testutil.c engineperft.c platStub.c
 
+# F4 host instrument.  Size is the entry count; never built for a target.
+movecache32: $(ENGINE) movecache.c testutil.c engineperft.c platStub.c $(HEADERS)
+	$(CC) $(UCIFLAGS) -DSEARCH_MOVE_CACHE=32 -o $@ $(ENGINE) movecache.c testutil.c engineperft.c platStub.c
+
+movecache64: $(ENGINE) movecache.c testutil.c engineperft.c platStub.c $(HEADERS)
+	$(CC) $(UCIFLAGS) -DSEARCH_MOVE_CACHE=64 -o $@ $(ENGINE) movecache.c testutil.c engineperft.c platStub.c
+
+movecache128: $(ENGINE) movecache.c testutil.c engineperft.c platStub.c $(HEADERS)
+	$(CC) $(UCIFLAGS) -DSEARCH_MOVE_CACHE=128 -o $@ $(ENGINE) movecache.c testutil.c engineperft.c platStub.c
+
+uci-mc32: $(ENGINE) uci.c testutil.c engineperft.c platStub.c $(HEADERS)
+	$(CC) $(UCIFLAGS) -DSEARCH_MOVE_CACHE=32 -o $@ $(ENGINE) uci.c testutil.c engineperft.c platStub.c
+
+uci-mc64: $(ENGINE) uci.c testutil.c engineperft.c platStub.c $(HEADERS)
+	$(CC) $(UCIFLAGS) -DSEARCH_MOVE_CACHE=64 -o $@ $(ENGINE) uci.c testutil.c engineperft.c platStub.c
+
+uci-mc128: $(ENGINE) uci.c testutil.c engineperft.c platStub.c $(HEADERS)
+	$(CC) $(UCIFLAGS) -DSEARCH_MOVE_CACHE=128 -o $@ $(ENGINE) uci.c testutil.c engineperft.c platStub.c
+
 genbook: $(ENGINE) genbook.c testutil.c platStub.c $(HEADERS)
 	$(CC) $(UCIFLAGS) -o $@ $(ENGINE) genbook.c testutil.c platStub.c
 
@@ -100,7 +119,9 @@ gauntlet: uci genbook
 
 # note book.epd is not removed here: make clean must not delete a tracked file
 clean:
-	rm -f chesstest uci uci-tuning genbook collectpos
+	rm -f chesstest uci uci-tuning genbook collectpos \
+		movecache32 movecache64 movecache128 \
+		uci-mc32 uci-mc64 uci-mc128
 	rm -rf chesstest.dSYM uci.dSYM uci-tuning.dSYM genbook.dSYM
 
 .PHONY: test clean gauntlet book
