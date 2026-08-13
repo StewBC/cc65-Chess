@@ -98,6 +98,21 @@ extern char geSearchFollowPV;
 #endif
 
 /*-----------------------------------------------------------------------*/
+// F2: keep every previous root score, not only the winner.  Later root
+// children then inherit last iteration's order instead of falling back to
+// MVV-LVA.  Default off until the whole-book screen.
+#ifdef EVAL_TUNING
+extern char geSearchRootScores;
+#define SEARCH_ROOT_SCORES	geSearchRootScores
+#define SEARCH_ROOT_SCORES_ON	1
+#elif !defined(SEARCH_ROOT_SCORES)
+#define SEARCH_ROOT_SCORES	0
+#define SEARCH_ROOT_SCORES_ON	0
+#else
+#define SEARCH_ROOT_SCORES_ON	SEARCH_ROOT_SCORES
+#endif
+
+/*-----------------------------------------------------------------------*/
 // Opening randomisation, switchable the same way.  Note the direction: unlike
 // every other switch here this one is a *feature* of the shipped game rather
 // than a term being measured, so the 8-bit build has it permanently on and the
@@ -188,6 +203,10 @@ char search_TestOrderSequence(char side, char capturesOnly);
 // Length of the PV collected by the last completed iteration.  Zero when
 // FollowPV is off or the last search never finished a depth.
 char search_TestPVLength(void);
+
+// How many previous-iteration root scores are stored.  Zero when RootScores
+// is off or only one iteration finished.
+char search_TestRootStored(void);
 #endif
 
 #endif //_SEARCH_H_

@@ -113,6 +113,7 @@ char geSearchRepetition = 1;
 char geSearchRandomOpening = 1;
 char geSearchCheckEvasion = 1;
 char geSearchFollowPV = 0;
+char geSearchRootScores = 0;
 #endif
 
 #if SEARCH_FOLLOW_PV_ON
@@ -123,6 +124,18 @@ static char			sc_prevPVLen;
 static t_engMove	st_triPV[SEARCH_MAX_PLY][SEARCH_MAX_PLY];
 static char			sc_triLen[SEARCH_MAX_PLY];
 static char			sc_onPV;
+#endif
+
+#if SEARCH_ROOT_SCORES_ON
+// Compact previous-iteration root scores.  64 entries is well above a
+// typical root list; the tail keeps ordinary ordering.
+#define SEARCH_ROOT_HIST	64
+static char			st_rootFrom[SEARCH_ROOT_HIST];
+static char			st_rootTo[SEARCH_ROOT_HIST];
+static char			st_rootFlags[SEARCH_ROOT_HIST];
+static int			st_rootScore[SEARCH_ROOT_HIST];
+static char			sc_rootStored;
+static char			sc_rootWork;
 #endif
 
 // Opening randomiser state.  Zero means "never seeded", which is how every
@@ -382,6 +395,63 @@ static void promotePV(t_engMove *moves, char count, char ply)
 			return;
 		}
 	}
+}
+#endif
+
+#if SEARCH_ROOT_SCORES_ON
+/*-----------------------------------------------------------------------*/
+// Rank previously searched root moves by last iteration's score.  The
+// winner is already 255; everyone else gets 254, 253, ... so they stay
+// above captures and keep last iteration's relative order.
+static void promoteRootScores(t_engMove *moves, char count)
+{
+	char i, j, better;
+
+	if(!SEARCH_ROOT_SCORES || !sc_rootStored)
+		return;
+
+	for(i = 0; i < count; ++i)
+	{
+		int prev = 0;
+		char found = 0;
+
+		if(moves[i].m_score == (char)255)
+			continue;
+
+		for(j = 0; j < sc_rootStored; ++j)
+		{
+			if(moves[i].m_from == st_rootFrom[j] &&
+			   moves[i].m_to == st_rootTo[j] &&
+			   moves[i].m_flags == st_rootFlags[j])
+			{
+				prev = st_rootScore[j];
+				found = 1;
+				break;
+			}
+		}
+		if(!found)
+			continue;
+
+		better = 0;
+		for(j = 0; j < sc_rootStored; ++j)
+			if(st_rootScore[j] > prev)
+				++better;
+		if(better > 54)
+			better = 54;
+		moves[i].m_score = (char)(254 - better);
+	}
+}
+
+/*-----------------------------------------------------------------------*/
+static void storeRootScore(const t_engMove *move, int score)
+{
+	if(!SEARCH_ROOT_SCORES || sc_rootWork >= SEARCH_ROOT_HIST)
+		return;
+	st_rootFrom[sc_rootWork] = move->m_from;
+	st_rootTo[sc_rootWork] = move->m_to;
+	st_rootFlags[sc_rootWork] = move->m_flags;
+	st_rootScore[sc_rootWork] = score;
+	++sc_rootWork;
 }
 #endif
 
@@ -813,6 +883,9 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 	int alpha = -EVAL_INFINITY, score;
 	unsigned int arenaSave = si_arenaTop;
 
+#if SEARCH_ROOT_SCORES_ON
+	sc_rootWork = 0;
+#endif
 	moves = &st_arena[si_arenaTop];
 
 #ifdef SEARCH_PROFILE
@@ -872,6 +945,9 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 				moves[i].m_score = 255;
 				break;
 			}
+#if SEARCH_ROOT_SCORES_ON
+	promoteRootScores(moves, count);
+#endif
 
 #if ENGINE_FAST_LEGAL
 	wasInCheck = eng_InCheck(side);
@@ -951,6 +1027,9 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 				recordPV(0, &moves[i]);
 #endif
 		}
+#if SEARCH_ROOT_SCORES_ON
+		storeRootScore(&moves[i], score);
+#endif
 		++legal;
 	}
 
@@ -980,6 +1059,10 @@ void search_Best(char side, char maxDepth, unsigned int nodeBudget, t_searchResu
 	sc_onPV = 0;
 	if(SEARCH_FOLLOW_PV)
 		sc_triLen[0] = 0;
+#endif
+#if SEARCH_ROOT_SCORES_ON
+	sc_rootStored = 0;
+	sc_rootWork = 0;
 #endif
 #if SEARCH_RESTORE_UNMAKE
 	eng_RestoreEnable(1);
@@ -1045,6 +1128,10 @@ void search_Best(char side, char maxDepth, unsigned int nodeBudget, t_searchResu
 			sc_onPV = sc_prevPVLen > 0;
 		}
 #endif
+#if SEARCH_ROOT_SCORES_ON
+		if(SEARCH_ROOT_SCORES)
+			sc_rootStored = sc_rootWork;
+#endif
 
 		// no point searching deeper once a forced mate is found
 		if(score >= EVAL_MATE_IN(SEARCH_MAX_PLY) || score <= -EVAL_MATE_IN(SEARCH_MAX_PLY))
@@ -1081,6 +1168,16 @@ char search_TestPVLength(void)
 {
 #if SEARCH_FOLLOW_PV_ON
 	return sc_prevPVLen;
+#else
+	return 0;
+#endif
+}
+
+/*-----------------------------------------------------------------------*/
+char search_TestRootStored(void)
+{
+#if SEARCH_ROOT_SCORES_ON
+	return sc_rootStored;
 #else
 	return 0;
 #endif

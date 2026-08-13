@@ -31,12 +31,12 @@ The short version of this note is:
 | C exact work | C1–C3 rejected; C4/C5 deferred | no survivors |
 | D combine / buy nodes | **done** — L1/L2 bank time; L3 18k; L4 65k | L3 ladder up; L4 noise |
 | E chess | E1/E4/E5/E3 rejected; E6 instrument; E2 null | no strength terms landed |
-| F ordering screens | F1 rejected; F2–F5 open | no survivors yet |
+| F ordering screens | F1/F2 rejected; F3–F5 open | no survivors yet |
 | §10 Atari undo RAM | **kept** — ring at `$AF00–$B2FF` | Atari +1,024 BSS below `$9100` |
 
 Shipping search is Phase B plus the Phase D budgets. Candidates retained default-off:
 `EVAL_PAWNSTRUCT_ON`, `EVAL_KBN_ON`, `EVAL_DEV_ON`, `SEARCH_CHECK_EXT`,
-`SEARCH_FOLLOW_PV`, plus the Phase C speed switches.
+`SEARCH_FOLLOW_PV`, `SEARCH_ROOT_SCORES`, plus the Phase C speed switches.
 
 ---
 
@@ -684,9 +684,21 @@ candidate, one screen; stop.
 
 ### F2. Preserve all previous root scores
 
-The previous winner gets score 255 and every other root move falls back to ordinary ordering.
-Retaining the previous iteration's root order can improve the windows of later root children.
-Keep the representation compact and deterministic.
+**Phase 39 F2 result: rejected.**  Dual switch `SEARCH_ROOT_SCORES` / `geSearchRootScores`,
+default off. After ordinary scoring the previous winner is still 255; every other
+previously searched root move is ranked 254, 253, … from last iteration's scores.
+64 compact entries are 322 bytes of BSS. Switch-off is exact (1,024 searches).
+
+| level | nodes | saving | deeper / shallower | moves |
+|---|---:|---:|---:|---:|
+| 1 | 63,224 / 63,833 | **−0.96%** | 2 / 2 | 2 |
+| 2 | 290,234 / 290,399 | −0.06% | 3 / 4 | 0 |
+| 3 | 2,983,451 / 2,990,987 | −0.25% | 2 / 0 | 3 |
+| 4 | 14,912,657 / 14,877,532 | +0.24% | 11 / 6 | 9 |
+
+Three levels spend more nodes. Not a speed candidate. Compiling on grows CODE
+by 562 and BSS by 322, takes Atari `DLIST` `$7D00` → `$8000`, and leaves Apple
+II MAIN 290 bytes (was 852). Shipping maps unchanged. Stop.
 
 ### F3. Compact history heuristic
 
@@ -813,10 +825,10 @@ They are listed so "leave no idea behind" does not become "forget why it failed.
 | `optspeed` on selected targets | violates uniformity and does not fit Atari |
 | timing on host or perft | wrong instrument for 6502 search cost |
 
-Full PV (F1) is tried and rejected. History, root-score ordering, aspiration and the
-move-only cache are still untried, not endorsed. Check extension is tried and rejected
-(E5). They stay behind work with a higher expected ceiling only as cheap screens
-(F2–F5), not as the next strength bet.
+Full PV (F1) and root-score ordering (F2) are tried and rejected. History,
+aspiration and the move-only cache are still untried, not endorsed. Check
+extension is tried and rejected (E5). They stay behind work with a higher
+expected ceiling only as cheap screens (F3–F5), not as the next strength bet.
 
 ---
 
@@ -867,6 +879,8 @@ plausible feature whose gates were skipped.
 8. ~~Phase D budgets~~ — 400 / 1,200 / 18,000 / 65,000 (Phase 34).
 9. ~~**E2** value tuning~~ — existing family already at the constrained minimum (Phase 35).
 10. ~~**E3** queen before minors~~ — rejected (Phase 36).
+11. ~~**F1** full PV follow~~ — rejected (Phase 38).
+12. ~~**F2** previous root scores~~ — rejected (Phase 39).
 
 ### Still open, in cheap order
 
@@ -875,7 +889,7 @@ plausible feature whose gates were skipped.
 3. ~~**E3** opening interaction~~ — rejected; 16 short of +2σ, 48 worse (Phase 36).
 4. **§10** undo-ring *pack* / arena high-water — only if a slim KBN/ca65 needs another 256–512.
    The Atari upper-RAM claim is done: undo ring at `$AF00–$B2FF`, 1,387 free below `$9100`.
-5. **F1–F5** as cheap whole-book screens — **F1 rejected** (Phase 38).
+5. **F1–F5** as cheap whole-book screens — **F1/F2 rejected** (Phases 38–39).
 6. Reopen a full TT only through §9.
 7. Reopen E1/E4 only with a free or near-free mechanism (true incremental that fits; ca65 KBN
    under ~300 CODE; or a measured memory reclaim that funds them).

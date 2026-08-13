@@ -273,6 +273,58 @@ int test_RunSearchFollowPV(int verbose)
 }
 
 /*-----------------------------------------------------------------------*/
+int test_RunSearchRootScores(int verbose)
+{
+	t_searchResult off1, on, off2;
+	char saved = geSearchRootScores;
+	char side;
+	int failures = 0;
+
+	printf("root-scores live switch\n");
+	side = test_EngineSetFEN(
+		"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+
+	geSearchRootScores = 0;
+	search_Best(side, 4, 1200, &off1);
+
+	geSearchRootScores = 1;
+	search_Best(side, 4, 1200, &on);
+	if(search_TestRootStored() < 2)
+	{
+		++failures;
+		printf("  on: stored %d root scores, want at least 2\n",
+		       (int)search_TestRootStored());
+	}
+	else if(verbose)
+		printf("  on: stored %d root scores\n", (int)search_TestRootStored());
+
+	geSearchRootScores = 0;
+	search_Best(side, 4, 1200, &off2);
+	geSearchRootScores = saved;
+
+	if(off1.m_haveMove != off2.m_haveMove ||
+	   off1.m_move.m_from != off2.m_move.m_from ||
+	   off1.m_move.m_to != off2.m_move.m_to ||
+	   off1.m_move.m_flags != off2.m_move.m_flags ||
+	   off1.m_score != off2.m_score ||
+	   off1.m_depth != off2.m_depth ||
+	   off1.m_nodes != off2.m_nodes)
+	{
+		++failures;
+		printf("  off after on differs from first off\n");
+	}
+
+	if(search_TestRootStored() != 0)
+	{
+		++failures;
+		printf("  off left %d stored scores\n", (int)search_TestRootStored());
+	}
+
+	printf("  -> %d failing\n", failures);
+	return failures;
+}
+
+/*-----------------------------------------------------------------------*/
 int test_RunSearchMateInOne(int verbose)
 {
 	static const struct { const char *fen; const char *mate; } sc_mates[] =

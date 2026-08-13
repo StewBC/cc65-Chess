@@ -3055,6 +3055,43 @@ Branch: `grok/next-engine-phase-f-ordering`.
 
 ---
 
+## Phase 39 - previous root scores (F2)
+
+The previous winner was already 255; every other root move fell back to
+MVV-LVA. F2 ranks the rest 254, 253, … from last iteration's scores so later
+root children inherit that order. Dual switch `SEARCH_ROOT_SCORES` /
+`geSearchRootScores`, default 0; UCI `RootScores`. 64 compact entries
+(from/to/flags + 16-bit score) are 322 bytes of BSS. The suite live-switch
+stores at least two scores with the flag on and reproduces the off search.
+
+```
+cd tests && make -B test
+./nodecompare.py --baseline ./uci --candidate ./uci-tuning \
+    --candidate-option RootScores=false --exact
+./nodecompare.py --baseline ./uci --candidate ./uci-tuning \
+    --candidate-option RootScores=true --report-only
+```
+
+Switch-off: all 1,024 searches identical.
+
+| level | baseline | candidate | saving | depth b/c | deeper | shallower | moves |
+|---|---:|---:|---:|---|---:|---:|---:|
+| 1 | 63,224 | 63,833 | −0.96% | 486/486 | 2 | 2 | 2 |
+| 2 | 290,234 | 290,399 | −0.06% | 516/515 | 3 | 4 | 0 |
+| 3 | 2,983,451 | 2,990,987 | −0.25% | 1000/1002 | 2 | 0 | 3 |
+| 4 | 14,912,657 | 14,877,532 | +0.24% | 1124/1129 | 11 | 6 | 9 |
+
+Three levels spend more. Nine L4 moves change. Not a speed candidate and
+not a chess change with a 20% node floor.
+
+Compiling on (`-DSEARCH_ROOT_SCORES=1`): CODE +562, BSS +322. Atari `DLIST`
+`$7D00` → `$8000`. Apple II `__MAIN_LAST__` `$B3AC` → `$B5DE` (290 free).
+Shipping (default off) maps unchanged. Stop.
+
+Branch: `grok/next-engine-phase-f-ordering`.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.
