@@ -31,12 +31,14 @@ The short version of this note is:
 | C exact work | C1–C3 rejected; C4/C5 deferred | no survivors |
 | D combine / buy nodes | **done** — L1/L2 bank time; L3 18k; L4 65k | L3 ladder up; L4 noise |
 | E chess | E1/E4/E5/E3 rejected; E6 instrument; E2 null | no strength terms landed |
-| F ordering screens | F1–F4 rejected; F5 open | no survivors yet |
+| F ordering screens | **F1–F5 rejected** | no survivors |
 | §10 Atari undo RAM | **kept** — ring at `$AF00–$B2FF` | Atari +1,024 BSS below `$9100` |
 
 Shipping search is Phase B plus the Phase D budgets. Candidates retained default-off:
 `EVAL_PAWNSTRUCT_ON`, `EVAL_KBN_ON`, `EVAL_DEV_ON`, `SEARCH_CHECK_EXT`,
-`SEARCH_FOLLOW_PV`, `SEARCH_ROOT_SCORES`, `SEARCH_HISTORY`, plus the Phase C speed switches.
+`SEARCH_FOLLOW_PV`, `SEARCH_ROOT_SCORES`, `SEARCH_HISTORY`,
+`SEARCH_ASPIRATION`, plus the Phase C speed switches. `SEARCH_MOVE_CACHE`
+is host-only and defaults 0.
 
 ---
 
@@ -757,9 +759,28 @@ table. `SEARCH_MOVE_CACHE` stays 0.
 
 ### F5. Aspiration windows
 
-Use the prior iteration score, and repeat with the full window on either failure. A completed
-iteration must return the baseline result. PVS's 5–6% ceiling is a reason for low expectations,
-not permission to skip the cheap screen.
+**Phase 42 F5 result: rejected.**  Window 50 around the previous iteration
+score; full window on fail-low or fail-high. Mate scores keep the full
+window. Dual switch `SEARCH_ASPIRATION` / `geSearchAspiration`, default off.
+Switch-off is exact (1,024 searches).
+
+Same-depth completed iterations match baseline move and score in every
+position (225 / 250 / 242 / 183). The completed-iteration rule holds. All
+move changes are from completing a different depth.
+
+| level | nodes | saving | deeper / shallower | moves |
+|---|---:|---:|---:|---:|
+| 1 | 63,224 / 77,366 | **−22.37%** | 3 / 28 | 2 |
+| 2 | 290,234 / 275,339 | +5.13% | 4 / 2 | 0 |
+| 3 | 2,983,451 / 3,027,451 | −1.47% | 5 / 9 | 5 |
+| 4 | 14,912,657 / 13,403,040 | +10.12% | 68 / 5 | 13 |
+
+L1 pays research; L4's 10% is PVS's shape again and below the 20% floor.
+Compiling on grows CODE by 331, BSS unchanged, Atari `DLIST` `$7D00` →
+`$7F00`. Shipping maps unchanged. One window, one screen; stop.
+
+**Phase F is closed.** Five cheap screens, no survivors. Nothing here
+reopens PVS, null move, or a score TT.
 
 ---
 
@@ -854,14 +875,18 @@ They are listed so "leave no idea behind" does not become "forget why it failed.
 | incremental doubled/isolated (E1) | board-scan fits Atari when on; equal nodes +0.9σ; equal time −2.5σ at host 1.38×; rejected |
 | KBN colour corner drive (E4) | L4 can convert when on; L1–3 0/8; Atari overflow; rejected |
 | one-ply check extension (E5) | L1 mate-in-one 11/12→10/12; Atari page; rejected |
+| F1 full PV follow | L4 +1.36%, 2 moves; ON overflows Atari/Apple II |
+| F2 previous root scores | L1–L3 spend more; L4 +0.24% / 9 moves |
+| F3 compact history | best +3.55% L3; 10 L4 moves |
+| F4 16-bit move cache | useful hits, no node saving at 32/64/128; no target code |
+| F5 aspiration (window 50) | L1 −22%; L4 +10%; same-depth ≡ baseline; below floor |
 | per-target optimization or table sizes | violates same-engine rule |
 | `optspeed` on selected targets | violates uniformity and does not fit Atari |
 | timing on host or perft | wrong instrument for 6502 search cost |
 
-Full PV (F1), root-score ordering (F2), compact history (F3) and the 16-bit
-move cache (F4, host instrument) are tried and rejected. Aspiration is still
-untried, not endorsed. Check extension is tried and rejected (E5). F5 is the
-last cheap screen, not the next strength bet.
+F1–F5 are all tried and rejected (Phases 38–42). Check extension is tried
+and rejected (E5). The ordering portfolio is closed empty. A full score TT
+still goes only through §9.
 
 ---
 
@@ -916,6 +941,7 @@ plausible feature whose gates were skipped.
 12. ~~**F2** previous root scores~~ — rejected (Phase 39).
 13. ~~**F3** compact history~~ — rejected (Phase 40).
 14. ~~**F4** 16-bit move cache~~ — rejected at host instrument (Phase 41).
+15. ~~**F5** aspiration windows~~ — rejected (Phase 42). Phase F closed empty.
 
 ### Still open, in cheap order
 
@@ -924,7 +950,7 @@ plausible feature whose gates were skipped.
 3. ~~**E3** opening interaction~~ — rejected; 16 short of +2σ, 48 worse (Phase 36).
 4. **§10** undo-ring *pack* / arena high-water — only if a slim KBN/ca65 needs another 256–512.
    The Atari upper-RAM claim is done: undo ring at `$AF00–$B2FF`, 1,387 free below `$9100`.
-5. **F1–F5** as cheap whole-book screens — **F1–F4 rejected** (Phases 38–41).
+5. ~~**F1–F5** cheap whole-book screens~~ — all rejected (Phases 38–42).
 6. Reopen a full TT only through §9.
 7. Reopen E1/E4 only with a free or near-free mechanism (true incremental that fits; ca65 KBN
    under ~300 CODE; or a measured memory reclaim that funds them).

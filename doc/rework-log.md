@@ -3182,6 +3182,51 @@ Branch: `grok/next-engine-phase-f-ordering`.
 
 ---
 
+## Phase 42 - aspiration windows (F5)
+
+Window 50 around the previous completed iteration's score; full window on
+fail-low or fail-high. Mate scores stay on the full window. Dual switch
+`SEARCH_ASPIRATION` / `geSearchAspiration`, default 0; UCI `Aspiration`.
+A failed aspiration is discarded; an abort during research keeps the
+previous completed iteration.
+
+```
+cd tests && make -B test
+./nodecompare.py --baseline ./uci --candidate ./uci-tuning \
+    --candidate-option Aspiration=false --exact
+./nodecompare.py --baseline ./uci --candidate ./uci-tuning \
+    --candidate-option Aspiration=true --report-only
+```
+
+Switch-off: all 1,024 searches identical.
+
+| level | baseline | candidate | saving | depth b/c | deeper | shallower | moves |
+|---|---:|---:|---:|---|---:|---:|---:|
+| 1 | 63,224 | 77,366 | −22.37% | 486/461 | 3 | 28 | 2 |
+| 2 | 290,234 | 275,339 | +5.13% | 516/518 | 4 | 2 | 0 |
+| 3 | 2,983,451 | 3,027,451 | −1.47% | 1000/996 | 5 | 9 | 5 |
+| 4 | 14,912,657 | 13,403,040 | +10.12% | 1124/1187 | 68 | 5 | 13 |
+
+Same-depth completed iterations: move and score match in 225 / 250 / 242 /
+183 positions (every same-depth pair). The "completed iteration ≡
+baseline" rule holds. Every move change is a different completed depth.
+
+L1 spends 22% more and completes less depth — research cost at a budget
+that barely finishes depth 2. L4's 10% is the PVS shape again (5–6% then,
+worse at 1–2) and is below the 20% floor. Not a speed candidate (depths
+and some moves change) and not a chess change worth a gauntlet.
+
+Compiling on: CODE +331, BSS unchanged, Atari `DLIST` `$7D00` → `$7F00`,
+Apple II MAIN 521 free. Shipping maps unchanged. One window, one screen.
+
+**Phase F is closed empty.** F1–F5 were cheap exact-ordering screens. None
+cleared the floor. Nothing here reopens PVS, null move, delta, LMR,
+futility, razoring, SEE-for-pruning, or a score TT.
+
+Branch: `grok/next-engine-phase-f-ordering`.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

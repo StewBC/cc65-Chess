@@ -81,6 +81,8 @@ int main(int argc, char **argv)
 		printf("\n");
 		failures += test_RunSearchHistory(verbose);
 		printf("\n");
+		failures += test_RunSearchAspiration(verbose);
+		printf("\n");
 		failures += test_RunSearchMateInOne(verbose);
 		printf("\n");
 		failures += test_RunSearchConversion(verbose);

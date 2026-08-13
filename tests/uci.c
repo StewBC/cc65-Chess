@@ -377,6 +377,8 @@ static void cmdSetOption(char *args)
 		geSearchRootScores = (char)(0 == strcmp(value, "true") || atoi(value));
 	else if(0 == strcmp(name, "History"))
 		geSearchHistory = (char)(0 == strcmp(value, "true") || atoi(value));
+	else if(0 == strcmp(name, "Aspiration"))
+		geSearchAspiration = (char)(0 == strcmp(value, "true") || atoi(value));
 #endif
 }
 
@@ -408,6 +410,7 @@ static void cmdUci(void)
 	printf("option name FollowPV type check default false\n");
 	printf("option name RootScores type check default false\n");
 	printf("option name History type check default false\n");
+	printf("option name Aspiration type check default false\n");
 #endif
 	say("uciok");
 }

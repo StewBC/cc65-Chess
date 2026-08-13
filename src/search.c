@@ -115,6 +115,7 @@ char geSearchCheckEvasion = 1;
 char geSearchFollowPV = 0;
 char geSearchRootScores = 0;
 char geSearchHistory = 0;
+char geSearchAspiration = 0;
 #endif
 
 #if SEARCH_FOLLOW_PV_ON
@@ -1023,7 +1024,7 @@ char search_Outcome(char side)
 }
 
 /*-----------------------------------------------------------------------*/
-static int searchRoot(char side, char depth, t_searchResult *result)
+static int searchRoot(char side, char depth, int alpha, int beta, t_searchResult *result)
 {
 	t_engMove *moves;
 	t_engUndo undo;
@@ -1034,7 +1035,7 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 #if SEARCH_FOLLOW_PV_ON
 	char wasOnPV;
 #endif
-	int alpha = -EVAL_INFINITY, score;
+	int score;
 	unsigned int arenaSave = si_arenaTop;
 
 #if SEARCH_ROOT_SCORES_ON
@@ -1164,7 +1165,7 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 			                 moves[i].m_to == st_prevPV[0].m_to &&
 			                 moves[i].m_flags == st_prevPV[0].m_flags);
 #endif
-		score = -negamax(1 - side, depth - 1, -EVAL_INFINITY, -alpha, 1);
+		score = -negamax(1 - side, depth - 1, -beta, -alpha, 1);
 #if SEARCH_FOLLOW_PV_ON
 		sc_onPV = wasOnPV;
 #endif
@@ -1173,6 +1174,17 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 
 		if(sc_abort)
 			break;
+
+		if(score >= beta)
+		{
+			result->m_move = moves[i];
+			result->m_haveMove = 1;
+#if SEARCH_MOVE_CACHE
+			mcStore(&moves[i]);
+#endif
+			si_arenaTop = arenaSave;
+			return beta;
+		}
 
 		if(!legal || score > alpha)
 		{
@@ -1269,6 +1281,8 @@ void search_Best(char side, char maxDepth, unsigned int nodeBudget, t_searchResu
 	for(depth = 1; depth <= maxDepth; ++depth)
 	{
 		int score;
+		int alpha = -EVAL_INFINITY;
+		int beta = EVAL_INFINITY;
 
 		// Do not start an iteration there is no hope of finishing.  An
 		// abandoned iteration is pure cost - its work is thrown away and the
@@ -1285,7 +1299,30 @@ void search_Best(char side, char maxDepth, unsigned int nodeBudget, t_searchResu
 		if(depth > 1 && si_nodes > (si_budget / 3))
 			break;
 
-		score = searchRoot(side, depth, &working);
+#if SEARCH_ASPIRATION_ON
+		if(SEARCH_ASPIRATION && depth > 1 &&
+		   result->m_score < EVAL_MATE - SEARCH_MAX_PLY &&
+		   result->m_score > -(EVAL_MATE - SEARCH_MAX_PLY))
+		{
+			alpha = result->m_score - SEARCH_ASPIRATION_WINDOW;
+			beta = result->m_score + SEARCH_ASPIRATION_WINDOW;
+		}
+#endif
+		working = *result;
+		score = searchRoot(side, depth, alpha, beta, &working);
+
+#if SEARCH_ASPIRATION_ON
+		// fail low or fail high: throw this attempt away and search
+		// the full window.  a completed iteration after this must
+		// match the baseline; an abort keeps the previous completed
+		if(SEARCH_ASPIRATION && !sc_abort && depth > 1 &&
+		   (score <= alpha || score >= beta))
+		{
+			working = *result;
+			score = searchRoot(side, depth, -EVAL_INFINITY, EVAL_INFINITY,
+			                   &working);
+		}
+#endif
 
 		// an aborted iteration is incomplete, so keep the last one that
 		// finished

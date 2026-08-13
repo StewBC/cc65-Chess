@@ -135,6 +135,24 @@ extern char geSearchHistory;
 #endif
 
 /*-----------------------------------------------------------------------*/
+// F5: aspiration from the previous iteration score; full window on either
+// failure.  A completed iteration must return the baseline result.  Default off.
+#ifdef EVAL_TUNING
+extern char geSearchAspiration;
+#define SEARCH_ASPIRATION	geSearchAspiration
+#define SEARCH_ASPIRATION_ON	1
+#elif !defined(SEARCH_ASPIRATION)
+#define SEARCH_ASPIRATION	0
+#define SEARCH_ASPIRATION_ON	0
+#else
+#define SEARCH_ASPIRATION_ON	SEARCH_ASPIRATION
+#endif
+
+#ifndef SEARCH_ASPIRATION_WINDOW
+#define SEARCH_ASPIRATION_WINDOW	50
+#endif
+
+/*-----------------------------------------------------------------------*/
 // Opening randomisation, switchable the same way.  Note the direction: unlike
 // every other switch here this one is a *feature* of the shipped game rather
 // than a term being measured, so the 8-bit build has it permanently on and the
