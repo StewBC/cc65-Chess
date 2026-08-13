@@ -375,6 +375,8 @@ static void cmdSetOption(char *args)
 		geSearchFollowPV = (char)(0 == strcmp(value, "true") || atoi(value));
 	else if(0 == strcmp(name, "RootScores"))
 		geSearchRootScores = (char)(0 == strcmp(value, "true") || atoi(value));
+	else if(0 == strcmp(name, "History"))
+		geSearchHistory = (char)(0 == strcmp(value, "true") || atoi(value));
 #endif
 }
 
@@ -405,6 +407,7 @@ static void cmdUci(void)
 	printf("option name QueenOut type check default false\n");
 	printf("option name FollowPV type check default false\n");
 	printf("option name RootScores type check default false\n");
+	printf("option name History type check default false\n");
 #endif
 	say("uciok");
 }

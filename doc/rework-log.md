@@ -3092,6 +3092,42 @@ Branch: `grok/next-engine-phase-f-ordering`.
 
 ---
 
+## Phase 40 - compact history heuristic (F3)
+
+A 64×64 from-to table is out of scale. F3 is a saturating 6×64
+piece-to-destination table, cleared at every `search_Best`. Quiet beta
+cutoffs add remaining depth and cap at 99 so history cannot outrank a
+killer. Dual switch `SEARCH_HISTORY` / `geSearchHistory`, default 0; UCI
+`History`. The suite live-switch writes at least one cell with the flag
+on and reproduces the off search.
+
+```
+cd tests && make -B test
+./nodecompare.py --baseline ./uci --candidate ./uci-tuning \
+    --candidate-option History=false --exact
+./nodecompare.py --baseline ./uci --candidate ./uci-tuning \
+    --candidate-option History=true --report-only
+```
+
+Switch-off: all 1,024 searches identical.
+
+| level | baseline | candidate | saving | depth b/c | deeper | shallower | moves |
+|---|---:|---:|---:|---|---:|---:|---:|
+| 1 | 63,224 | 63,222 | +0.00% | 486/486 | 0 | 0 | 0 |
+| 2 | 290,234 | 290,236 | −0.00% | 516/516 | 0 | 0 | 0 |
+| 3 | 2,983,451 | 2,877,493 | +3.55% | 1000/1004 | 4 | 0 | 3 |
+| 4 | 14,912,657 | 14,541,118 | +2.49% | 1124/1144 | 22 | 2 | 10 |
+
+Best saving is 3.55%. Ordering already tries about 2.28 moves a cutoff, so
+there was little left. Not a speed candidate (moves change, well below the
+20% floor). Compiling on: CODE +579, BSS +384, Atari `DLIST` `$7D00` →
+`$8000`, Apple II MAIN 273 free. Shipping maps unchanged. One candidate,
+one screen; no stronger dose.
+
+Branch: `grok/next-engine-phase-f-ordering`.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

@@ -114,6 +114,7 @@ char geSearchRandomOpening = 1;
 char geSearchCheckEvasion = 1;
 char geSearchFollowPV = 0;
 char geSearchRootScores = 0;
+char geSearchHistory = 0;
 #endif
 
 #if SEARCH_FOLLOW_PV_ON
@@ -136,6 +137,11 @@ static char			st_rootFlags[SEARCH_ROOT_HIST];
 static int			st_rootScore[SEARCH_ROOT_HIST];
 static char			sc_rootStored;
 static char			sc_rootWork;
+#endif
+
+#if SEARCH_HISTORY_ON
+// piece kind (ROOK..PAWN) × destination tile.  Saturates below killers.
+static char			st_history[6][64];
 #endif
 
 // Opening randomiser state.  Zero means "never seeded", which is how every
@@ -287,6 +293,9 @@ static void scoreMoves(t_engMove *moves, char count, char ply
 	{
 		char promote = moves[i].m_flags & ENG_MF_PROMO;
 		char victim = geBoard[moves[i].m_to] & PIECE_DATA;
+#if SEARCH_HISTORY_ON
+		char piece;
+#endif
 
 		if(promote)
 		{
@@ -307,7 +316,17 @@ static void scoreMoves(t_engMove *moves, char count, char ply
 		          moves[i].m_to == st_killers[ply][1].m_to)))
 			moves[i].m_score = 100;
 		else
+		{
 			moves[i].m_score = 0;
+#if SEARCH_HISTORY_ON
+			if(SEARCH_HISTORY)
+			{
+				piece = geBoard[moves[i].m_from] & PIECE_DATA;
+				if(piece >= ROOK && piece <= PAWN)
+					moves[i].m_score = st_history[piece - 1][ENG_TO_TILE(moves[i].m_to)];
+			}
+#endif
+		}
 
 #if SEARCH_SCORE_FIRST
 		if(placeFirst && moves[i].m_score > moves[best].m_score)
@@ -357,6 +376,31 @@ static void recordKiller(const t_engMove *move, char ply)
 	st_killers[ply][1] = st_killers[ply][0];
 	st_killers[ply][0] = *move;
 }
+
+#if SEARCH_HISTORY_ON
+/*-----------------------------------------------------------------------*/
+// Saturating increment on a quiet cutoff.  Cap at 99 so history cannot
+// outrank a killer.
+static void recordHistory(const t_engMove *move, char depth)
+{
+	char piece, tile, bonus, cur;
+
+#ifdef EVAL_TUNING
+	if(!SEARCH_HISTORY)
+		return;
+#endif
+	piece = geBoard[move->m_from] & PIECE_DATA;
+	if(piece < ROOK || piece > PAWN)
+		return;
+	tile = ENG_TO_TILE(move->m_to);
+	bonus = depth ? depth : 1;
+	cur = st_history[piece - 1][tile];
+	if(cur < 99 - bonus)
+		st_history[piece - 1][tile] = (char)(cur + bonus);
+	else
+		st_history[piece - 1][tile] = 99;
+}
+#endif
 
 #if SEARCH_FOLLOW_PV_ON
 /*-----------------------------------------------------------------------*/
@@ -786,7 +830,12 @@ static int negamax(char side, char depth, int alpha, int beta, char ply)
 			// a quiet move good enough to cut off here is worth trying first
 			// in the sibling positions
 			if(!isCapture(&moves[i]))
+			{
 				recordKiller(&moves[i], ply);
+#if SEARCH_HISTORY_ON
+				recordHistory(&moves[i], depth);
+#endif
+			}
 			si_arenaTop = arenaSave;
 			return beta;
 		}
@@ -1064,6 +1113,17 @@ void search_Best(char side, char maxDepth, unsigned int nodeBudget, t_searchResu
 	sc_rootStored = 0;
 	sc_rootWork = 0;
 #endif
+#if SEARCH_HISTORY_ON
+	{
+		char hp, ht;
+
+		// wipe even when the flag is off so a live switch cannot
+		// inherit another search's table
+		for(hp = 0; hp < 6; ++hp)
+			for(ht = 0; ht < 64; ++ht)
+				st_history[hp][ht] = 0;
+	}
+#endif
 #if SEARCH_RESTORE_UNMAKE
 	eng_RestoreEnable(1);
 #endif
@@ -1178,6 +1238,23 @@ char search_TestRootStored(void)
 {
 #if SEARCH_ROOT_SCORES_ON
 	return sc_rootStored;
+#else
+	return 0;
+#endif
+}
+
+/*-----------------------------------------------------------------------*/
+unsigned int search_TestHistoryUsed(void)
+{
+#if SEARCH_HISTORY_ON
+	unsigned int n = 0;
+	char hp, ht;
+
+	for(hp = 0; hp < 6; ++hp)
+		for(ht = 0; ht < 64; ++ht)
+			if(st_history[hp][ht])
+				++n;
+	return n;
 #else
 	return 0;
 #endif

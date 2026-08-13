@@ -113,6 +113,20 @@ extern char geSearchRootScores;
 #endif
 
 /*-----------------------------------------------------------------------*/
+// F3: saturating piece-to-destination history, 6×64 bytes.  Cleared at
+// every search_Best so a prior game cannot affect determinism.  Default off.
+#ifdef EVAL_TUNING
+extern char geSearchHistory;
+#define SEARCH_HISTORY	geSearchHistory
+#define SEARCH_HISTORY_ON	1
+#elif !defined(SEARCH_HISTORY)
+#define SEARCH_HISTORY	0
+#define SEARCH_HISTORY_ON	0
+#else
+#define SEARCH_HISTORY_ON	SEARCH_HISTORY
+#endif
+
+/*-----------------------------------------------------------------------*/
 // Opening randomisation, switchable the same way.  Note the direction: unlike
 // every other switch here this one is a *feature* of the shipped game rather
 // than a term being measured, so the 8-bit build has it permanently on and the
@@ -207,6 +221,9 @@ char search_TestPVLength(void);
 // How many previous-iteration root scores are stored.  Zero when RootScores
 // is off or only one iteration finished.
 char search_TestRootStored(void);
+
+// Non-zero history entries after the last search.  Zero when History is off.
+unsigned int search_TestHistoryUsed(void);
 #endif
 
 #endif //_SEARCH_H_

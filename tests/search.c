@@ -325,6 +325,52 @@ int test_RunSearchRootScores(int verbose)
 }
 
 /*-----------------------------------------------------------------------*/
+int test_RunSearchHistory(int verbose)
+{
+	t_searchResult off1, on, off2;
+	char saved = geSearchHistory;
+	char side;
+	int failures = 0;
+
+	printf("history live switch\n");
+	side = test_EngineSetFEN(
+		"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+
+	geSearchHistory = 0;
+	search_Best(side, 4, 1200, &off1);
+
+	geSearchHistory = 1;
+	search_Best(side, 4, 1200, &on);
+	if(search_TestHistoryUsed() < 1)
+	{
+		++failures;
+		printf("  on: history used %u, want at least 1\n",
+		       search_TestHistoryUsed());
+	}
+	else if(verbose)
+		printf("  on: history used %u\n", search_TestHistoryUsed());
+
+	geSearchHistory = 0;
+	search_Best(side, 4, 1200, &off2);
+	geSearchHistory = saved;
+
+	if(off1.m_haveMove != off2.m_haveMove ||
+	   off1.m_move.m_from != off2.m_move.m_from ||
+	   off1.m_move.m_to != off2.m_move.m_to ||
+	   off1.m_move.m_flags != off2.m_move.m_flags ||
+	   off1.m_score != off2.m_score ||
+	   off1.m_depth != off2.m_depth ||
+	   off1.m_nodes != off2.m_nodes)
+	{
+		++failures;
+		printf("  off after on differs from first off\n");
+	}
+
+	printf("  -> %d failing\n", failures);
+	return failures;
+}
+
+/*-----------------------------------------------------------------------*/
 int test_RunSearchMateInOne(int verbose)
 {
 	static const struct { const char *fen; const char *mate; } sc_mates[] =
