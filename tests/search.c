@@ -219,6 +219,60 @@ int test_RunSearchOrder(int verbose)
 }
 
 /*-----------------------------------------------------------------------*/
+// FollowPV off must be the shipping search.  FollowPV on must actually
+// collect a line, or the switch is wired to nothing.
+int test_RunSearchFollowPV(int verbose)
+{
+	t_searchResult off1, on, off2;
+	char saved = geSearchFollowPV;
+	char side;
+	int failures = 0;
+
+	printf("follow-pv live switch\n");
+	side = test_EngineSetFEN(
+		"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+
+	geSearchFollowPV = 0;
+	search_Best(side, 4, 1200, &off1);
+
+	geSearchFollowPV = 1;
+	search_Best(side, 4, 1200, &on);
+	if(search_TestPVLength() < 2)
+	{
+		++failures;
+		printf("  on: PV length %d, want at least 2\n",
+		       (int)search_TestPVLength());
+	}
+	else if(verbose)
+		printf("  on: PV length %d\n", (int)search_TestPVLength());
+
+	geSearchFollowPV = 0;
+	search_Best(side, 4, 1200, &off2);
+	geSearchFollowPV = saved;
+
+	if(off1.m_haveMove != off2.m_haveMove ||
+	   off1.m_move.m_from != off2.m_move.m_from ||
+	   off1.m_move.m_to != off2.m_move.m_to ||
+	   off1.m_move.m_flags != off2.m_move.m_flags ||
+	   off1.m_score != off2.m_score ||
+	   off1.m_depth != off2.m_depth ||
+	   off1.m_nodes != off2.m_nodes)
+	{
+		++failures;
+		printf("  off after on differs from first off\n");
+	}
+
+	if(search_TestPVLength() != 0)
+	{
+		++failures;
+		printf("  off left PV length %d\n", (int)search_TestPVLength());
+	}
+
+	printf("  -> %d failing\n", failures);
+	return failures;
+}
+
+/*-----------------------------------------------------------------------*/
 int test_RunSearchMateInOne(int verbose)
 {
 	static const struct { const char *fen; const char *mate; } sc_mates[] =

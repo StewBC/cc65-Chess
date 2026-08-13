@@ -82,6 +82,22 @@ extern char geSearchCheckEvasion;
 #endif
 
 /*-----------------------------------------------------------------------*/
+// F1: try the previous iteration's full PV first while the new search stays
+// on that line.  Today only the previous root move is promoted.  Twelve
+// collected moves are 48 bytes; the triangular used to gather them is
+// SEARCH_MAX_PLY^2 entries.  Default off until the whole-book screen.
+#ifdef EVAL_TUNING
+extern char geSearchFollowPV;
+#define SEARCH_FOLLOW_PV	geSearchFollowPV
+#define SEARCH_FOLLOW_PV_ON	1
+#elif !defined(SEARCH_FOLLOW_PV)
+#define SEARCH_FOLLOW_PV	0
+#define SEARCH_FOLLOW_PV_ON	0
+#else
+#define SEARCH_FOLLOW_PV_ON	SEARCH_FOLLOW_PV
+#endif
+
+/*-----------------------------------------------------------------------*/
 // Opening randomisation, switchable the same way.  Note the direction: unlike
 // every other switch here this one is a *feature* of the shipped game rather
 // than a term being measured, so the 8-bit build has it permanently on and the
@@ -168,6 +184,10 @@ char search_TestQuiesceState(char side, unsigned int budget, char exhaustArena);
 // Full selection-order equivalence: fused score+first-place matches classic
 // score-then-pickBest for every index, including a planted killer.
 char search_TestOrderSequence(char side, char capturesOnly);
+
+// Length of the PV collected by the last completed iteration.  Zero when
+// FollowPV is off or the last search never finished a depth.
+char search_TestPVLength(void);
 #endif
 
 #endif //_SEARCH_H_

@@ -112,6 +112,17 @@ static t_engMove st_profileMoves[127];
 char geSearchRepetition = 1;
 char geSearchRandomOpening = 1;
 char geSearchCheckEvasion = 1;
+char geSearchFollowPV = 0;
+#endif
+
+#if SEARCH_FOLLOW_PV_ON
+// Previous iteration's principal line, and the triangular used to collect the
+// next one.  Twelve moves are 48 bytes; the triangle is 12*12*4 = 576.
+static t_engMove	st_prevPV[SEARCH_MAX_PLY];
+static char			sc_prevPVLen;
+static t_engMove	st_triPV[SEARCH_MAX_PLY][SEARCH_MAX_PLY];
+static char			sc_triLen[SEARCH_MAX_PLY];
+static char			sc_onPV;
 #endif
 
 // Opening randomiser state.  Zero means "never seeded", which is how every
@@ -334,6 +345,46 @@ static void recordKiller(const t_engMove *move, char ply)
 	st_killers[ply][0] = *move;
 }
 
+#if SEARCH_FOLLOW_PV_ON
+/*-----------------------------------------------------------------------*/
+// Copy this move plus the child's recorded continuation into this ply's
+// triangular slot.  Called only when the move improved alpha.
+static void recordPV(char ply, const t_engMove *move)
+{
+	char n, k;
+
+	st_triPV[ply][0] = *move;
+	n = 0;
+	if(ply + 1 < SEARCH_MAX_PLY)
+		n = sc_triLen[ply + 1];
+	for(k = 0; k < n && (k + 1) < SEARCH_MAX_PLY; ++k)
+		st_triPV[ply][k + 1] = st_triPV[ply + 1][k];
+	sc_triLen[ply] = (char)(1 + k);
+}
+
+/*-----------------------------------------------------------------------*/
+// While the path from the root still matches the previous PV, try the next
+// move on that line first.  255 sits above captures and killers.
+static void promotePV(t_engMove *moves, char count, char ply)
+{
+	char i;
+
+	if(!SEARCH_FOLLOW_PV || !sc_onPV || ply >= sc_prevPVLen)
+		return;
+
+	for(i = 0; i < count; ++i)
+	{
+		if(moves[i].m_from == st_prevPV[ply].m_from &&
+		   moves[i].m_to == st_prevPV[ply].m_to &&
+		   moves[i].m_flags == st_prevPV[ply].m_flags)
+		{
+			moves[i].m_score = 255;
+			return;
+		}
+	}
+}
+#endif
+
 /*-----------------------------------------------------------------------*/
 // Search on past the horizon, but only through captures, until the position
 // stops being violent.  "Stand pat" is the score for declining to capture at
@@ -497,6 +548,9 @@ static int negamax(char side, char depth, int alpha, int beta, char ply)
 	t_engMove *moves;
 	t_engUndo undo;
 	char count, i, legal = 0, inCheck;
+#if SEARCH_FOLLOW_PV_ON
+	char wasOnPV;
+#endif
 	int score;
 	unsigned int arenaSave;
 
@@ -506,6 +560,13 @@ static int negamax(char side, char depth, int alpha, int beta, char ply)
 		return 0;
 	}
 	++si_nodes;
+
+#if SEARCH_FOLLOW_PV_ON
+	// a stale continuation from an earlier visit to this ply would be
+	// copied if this node never improves; start empty
+	if(SEARCH_FOLLOW_PV && ply < SEARCH_MAX_PLY)
+		sc_triLen[ply] = 0;
+#endif
 
 	// A position already seen is a draw, and one repeat is enough to say so
 	// here rather than the three a real game needs.  If a line comes back to
@@ -566,6 +627,9 @@ static int negamax(char side, char depth, int alpha, int beta, char ply)
 #else
 	scoreMoves(moves, count, ply);
 #endif
+#if SEARCH_FOLLOW_PV_ON
+	promotePV(moves, count, ply);
+#endif
 
 #ifdef SEARCH_PROFILE
 	if(PROFILE_SCORE == geSearchProfile)
@@ -613,6 +677,14 @@ static int negamax(char side, char depth, int alpha, int beta, char ply)
 		}
 		++legal;
 
+#if SEARCH_FOLLOW_PV_ON
+		wasOnPV = sc_onPV;
+		if(sc_onPV)
+			sc_onPV = (char)(ply < sc_prevPVLen &&
+			                 moves[i].m_from == st_prevPV[ply].m_from &&
+			                 moves[i].m_to == st_prevPV[ply].m_to &&
+			                 moves[i].m_flags == st_prevPV[ply].m_flags);
+#endif
 #if SEARCH_CHECK_EXT
 		{
 			char nextDepth = (char)(depth - 1);
@@ -626,6 +698,9 @@ static int negamax(char side, char depth, int alpha, int beta, char ply)
 		}
 #else
 		score = -negamax(1 - side, depth - 1, -beta, -alpha, ply + 1);
+#endif
+#if SEARCH_FOLLOW_PV_ON
+		sc_onPV = wasOnPV;
 #endif
 		eng_Unmake(&moves[i], &undo);
 		restoreState(ply);
@@ -646,7 +721,13 @@ static int negamax(char side, char depth, int alpha, int beta, char ply)
 			return beta;
 		}
 		if(score > alpha)
+		{
 			alpha = score;
+#if SEARCH_FOLLOW_PV_ON
+			if(SEARCH_FOLLOW_PV)
+				recordPV(ply, &moves[i]);
+#endif
+		}
 	}
 
 	si_arenaTop = arenaSave;
@@ -725,6 +806,9 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 	char count, i, legal = 0;
 #if ENGINE_FAST_LEGAL
 	char wasInCheck;
+#endif
+#if SEARCH_FOLLOW_PV_ON
+	char wasOnPV;
 #endif
 	int alpha = -EVAL_INFINITY, score;
 	unsigned int arenaSave = si_arenaTop;
@@ -839,7 +923,18 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 			result->m_haveMove = 1;
 		}
 
+#if SEARCH_FOLLOW_PV_ON
+		wasOnPV = sc_onPV;
+		if(sc_onPV)
+			sc_onPV = (char)(0 < sc_prevPVLen &&
+			                 moves[i].m_from == st_prevPV[0].m_from &&
+			                 moves[i].m_to == st_prevPV[0].m_to &&
+			                 moves[i].m_flags == st_prevPV[0].m_flags);
+#endif
 		score = -negamax(1 - side, depth - 1, -EVAL_INFINITY, -alpha, 1);
+#if SEARCH_FOLLOW_PV_ON
+		sc_onPV = wasOnPV;
+#endif
 		eng_Unmake(&moves[i], &undo);
 		restoreState(0);
 
@@ -851,6 +946,10 @@ static int searchRoot(char side, char depth, t_searchResult *result)
 			alpha = score;
 			result->m_move = moves[i];
 			result->m_haveMove = 1;
+#if SEARCH_FOLLOW_PV_ON
+			if(SEARCH_FOLLOW_PV)
+				recordPV(0, &moves[i]);
+#endif
 		}
 		++legal;
 	}
@@ -876,6 +975,12 @@ void search_Best(char side, char maxDepth, unsigned int nodeBudget, t_searchResu
 	si_budget = nodeBudget;
 	si_arenaTop = 0;
 	sc_abort = 0;
+#if SEARCH_FOLLOW_PV_ON
+	sc_prevPVLen = 0;
+	sc_onPV = 0;
+	if(SEARCH_FOLLOW_PV)
+		sc_triLen[0] = 0;
+#endif
 #if SEARCH_RESTORE_UNMAKE
 	eng_RestoreEnable(1);
 #endif
@@ -929,6 +1034,18 @@ void search_Best(char side, char maxDepth, unsigned int nodeBudget, t_searchResu
 		result->m_score = score;
 		result->m_depth = depth;
 
+#if SEARCH_FOLLOW_PV_ON
+		if(SEARCH_FOLLOW_PV)
+		{
+			char n;
+
+			sc_prevPVLen = sc_triLen[0];
+			for(n = 0; n < sc_prevPVLen; ++n)
+				st_prevPV[n] = st_triPV[0][n];
+			sc_onPV = sc_prevPVLen > 0;
+		}
+#endif
+
 		// no point searching deeper once a forced mate is found
 		if(score >= EVAL_MATE_IN(SEARCH_MAX_PLY) || score <= -EVAL_MATE_IN(SEARCH_MAX_PLY))
 			break;
@@ -959,6 +1076,16 @@ void search_Best(char side, char maxDepth, unsigned int nodeBudget, t_searchResu
 }
 
 #ifdef EVAL_TUNING
+/*-----------------------------------------------------------------------*/
+char search_TestPVLength(void)
+{
+#if SEARCH_FOLLOW_PV_ON
+	return sc_prevPVLen;
+#else
+	return 0;
+#endif
+}
+
 /*-----------------------------------------------------------------------*/
 // Classic scoring without first placement - the baseline pickBest starts from.
 static void scoreMovesClassic(t_engMove *moves, char count, char ply)

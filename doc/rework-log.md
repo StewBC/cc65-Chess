@@ -3007,6 +3007,54 @@ redo fuzzer. Branch: `atari/undo-upper-ram`.
 
 ---
 
+## Phase 38 - previous-iteration full PV (F1)
+
+Only the previous root move was promoted between iterations (`m_score = 255`).
+F1 stores the previous iteration's principal line and tries that move first at
+every ply while the new search is still on the line. Dual switch
+`SEARCH_FOLLOW_PV` / `geSearchFollowPV`, default 0; UCI `FollowPV`. The suite
+live-switch collects a PV of length ≥ 2 with the flag on and reproduces the
+off search after toggling back.
+
+Twelve PV moves are 48 bytes. Collecting them uses a `SEARCH_MAX_PLY`²
+triangular, 576 bytes, plus 12 length bytes. That is the map price below.
+
+```
+cd tests && make -B test
+./nodecompare.py --baseline ./uci --candidate ./uci-tuning \
+    --candidate-option FollowPV=false --exact
+./nodecompare.py --baseline ./uci --candidate ./uci-tuning \
+    --candidate-option FollowPV=true --report-only
+```
+
+Switch-off: all 1,024 searches identical.
+
+| level | baseline | candidate | saving | depth b/c | deeper | shallower | moves |
+|---|---:|---:|---:|---|---:|---:|---:|
+| 1 | 63,224 | 63,224 | +0.00% | 486/486 | 0 | 0 | 0 |
+| 2 | 290,234 | 290,234 | +0.00% | 516/516 | 0 | 0 | 0 |
+| 3 | 2,983,451 | 2,995,804 | −0.41% | 1000/1002 | 2 | 0 | 1 |
+| 4 | 14,912,657 | 14,709,118 | +1.36% | 1124/1133 | 10 | 1 | 2 |
+
+Single-digit, L3 spends more, two move changes at L4. Stop.
+
+Shipping (compiled out) maps match HEAD: Atari `DATA` `$7CFB`, `DLIST` `$7D00`,
+BSS `$8B94`; Apple II `__MAIN_LAST__` `$B3AC` (852 free), BSS 2,025 free.
+Compiling the candidate on (`-DSEARCH_FOLLOW_PV=1`):
+
+| | CODE | BSS | link |
+|---|---|---|---|
+| atari | +1,012 | +638 | **overflow MAIN by 275**; `DLIST` `$7D00` → `$8100` |
+| apple2 | +1,012 | +638 | **overflow MAIN by 160** |
+
+Not a speed candidate (moves change, savings are noise) and the ON
+configuration does not fit the tight targets. Default off; code kept so the
+live-switch test cannot go stale. One candidate, one screen.
+
+Branch: `grok/next-engine-phase-f-ordering`.
+
+---
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.

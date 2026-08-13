@@ -31,11 +31,12 @@ The short version of this note is:
 | C exact work | C1–C3 rejected; C4/C5 deferred | no survivors |
 | D combine / buy nodes | **done** — L1/L2 bank time; L3 18k; L4 65k | L3 ladder up; L4 noise |
 | E chess | E1/E4/E5/E3 rejected; E6 instrument; E2 null | no strength terms landed |
-| F ordering screens | not started | — |
+| F ordering screens | F1 rejected; F2–F5 open | no survivors yet |
 | §10 Atari undo RAM | **kept** — ring at `$AF00–$B2FF` | Atari +1,024 BSS below `$9100` |
 
 Shipping search is Phase B plus the Phase D budgets. Candidates retained default-off:
-`EVAL_PAWNSTRUCT_ON`, `EVAL_KBN_ON`, `EVAL_DEV_ON`, `SEARCH_CHECK_EXT`, plus the Phase C speed switches.
+`EVAL_PAWNSTRUCT_ON`, `EVAL_KBN_ON`, `EVAL_DEV_ON`, `SEARCH_CHECK_EXT`,
+`SEARCH_FOLLOW_PV`, plus the Phase C speed switches.
 
 ---
 
@@ -662,9 +663,24 @@ search on an assumption. Use the whole-book screen before any target work.
 
 ### F1. Carry the previous full PV
 
-Only the previous root move is currently promoted between iterations. Store the previous
-iteration's principal line and try it first while the new search remains on that line. Twelve
-moves are 48 bytes; a triangular construction costs more and needs its map price stated.
+**Phase 38 F1 result: rejected.**  Previous-iteration full PV, tried first while the new
+search stays on that line. Dual switch `SEARCH_FOLLOW_PV` / `geSearchFollowPV`, default off.
+Switch-off is exact (1,024 searches). Whole-book with the switch on:
+
+| level | nodes | saving | deeper / shallower | moves |
+|---|---:|---:|---:|---:|
+| 1 | 63,224 / 63,224 | 0.00% | 0 / 0 | 0 |
+| 2 | 290,234 / 290,234 | 0.00% | 0 / 0 | 0 |
+| 3 | 2,983,451 / 2,995,804 | **−0.41%** | 2 / 0 | 1 |
+| 4 | 14,912,657 / 14,709,118 | +1.36% | 10 / 1 | 2 |
+
+Single-digit, one level spends more, a handful of move changes. Not a speed candidate
+and not a chess change worth a gauntlet. The previous PV itself is 48 bytes; the
+triangular that collects it is 576 plus 12 length bytes. Compiling the candidate on
+grows CODE by 1,012 bytes and BSS by 638, overflows Atari MAIN by 275 and Apple II
+MAIN by 160, and walks `DLIST` `$7D00` → `$8100`. Shipping (default off) maps are
+unchanged: Atari `DATA` `$7CFB` / `DLIST` `$7D00`, Apple II MAIN 852 free. One
+candidate, one screen; stop.
 
 ### F2. Preserve all previous root scores
 
@@ -797,9 +813,10 @@ They are listed so "leave no idea behind" does not become "forget why it failed.
 | `optspeed` on selected targets | violates uniformity and does not fit Atari |
 | timing on host or perft | wrong instrument for 6502 search cost |
 
-History, full PV, root ordering, aspiration and the move-only cache are still untried, not
-endorsed. Check extension is tried and rejected (E5). They stay behind work with a higher
-expected ceiling only as cheap screens (F1–F5), not as the next strength bet.
+Full PV (F1) is tried and rejected. History, root-score ordering, aspiration and the
+move-only cache are still untried, not endorsed. Check extension is tried and rejected
+(E5). They stay behind work with a higher expected ceiling only as cheap screens
+(F2–F5), not as the next strength bet.
 
 ---
 
@@ -858,7 +875,7 @@ plausible feature whose gates were skipped.
 3. ~~**E3** opening interaction~~ — rejected; 16 short of +2σ, 48 worse (Phase 36).
 4. **§10** undo-ring *pack* / arena high-water — only if a slim KBN/ca65 needs another 256–512.
    The Atari upper-RAM claim is done: undo ring at `$AF00–$B2FF`, 1,387 free below `$9100`.
-5. **F1–F5** as cheap whole-book screens.
+5. **F1–F5** as cheap whole-book screens — **F1 rejected** (Phase 38).
 6. Reopen a full TT only through §9.
 7. Reopen E1/E4 only with a free or near-free mechanism (true incremental that fits; ca65 KBN
    under ~300 CODE; or a measured memory reclaim that funds them).

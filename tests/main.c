@@ -75,6 +75,8 @@ int main(int argc, char **argv)
 		printf("\n");
 		failures += test_RunSearchOrder(verbose);
 		printf("\n");
+		failures += test_RunSearchFollowPV(verbose);
+		printf("\n");
 		failures += test_RunSearchMateInOne(verbose);
 		printf("\n");
 		failures += test_RunSearchConversion(verbose);
