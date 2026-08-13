@@ -52,6 +52,25 @@ three times as long.
 **Against Sargon II**, a 1978 program running on an Apple II, Harder scored 57% at Sargon's
 level 4. That is a screen, not a rating; see §4.5.
 
+**What the bottom rung is aimed at.** ~1240 is a deliberate floor, not the weakest thing that
+would still run. Level 1 should beat a rank amateur — someone who knows how the pieces move and
+takes what is offered — and lose to a seasoned beginner, meaning the first player who has
+acquired the habit of asking what the opponent threatens before choosing a move. That is a
+strange line to draw until you notice it is the engine's own horizon. At 400 nodes level 1
+rarely starts a second iteration (`engine.md` §6.8), so it plays a **one-ply** move, and the
+second ply is precisely what buys sight of the reply. Quiescence still runs at the leaf, so it
+does not drop pieces to a plain capture and it delivers mate in one 55 times in 60; what it
+cannot see is anything that needs a quiet move to arrange — including a mate in one against
+itself. So the floor punishes blunders sharply and walks into attacks blind. That asymmetry is
+the point. It is a recognisable human failure mode rather than a random mover wearing a
+difficulty label, which is what makes losing to it instructive and beating it earned.
+
+The floor is also where the *time* is least defensible, and for an unrelated reason: 400 nodes
+is 11 seconds a move on a stock C64, and it is the fastest setting on the menu. "Very Easy"
+reads as *quick* to most players and it is not. The budget cannot simply be cut — at 300 the
+engine shuffles won endings into fifty-move draws (`engine.md` §6.8) — so the label is honest
+about strength and optimistic about patience.
+
 ---
 
 # Part I — What is being measured, and why it is hard
