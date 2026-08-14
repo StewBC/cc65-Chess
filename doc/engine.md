@@ -1391,7 +1391,13 @@ byte. Each port reads a counter that is already running, all of them named in cc
 | apple2 | `RNDL`/`RNDH`, $4E/$4F | cc65's own `cgetc` increments them once per poll while waiting |
 | atmos | `TIMER3`, $0276 | maintained by the ROM IRQ that `cgetc` waits on |
 | atari | POKEY `RANDOM`, $D20A | a hardware polynomial counter; needs nothing to be running |
+| rp6502 | RIA `VSYNC`, $FFE3 | a 60Hz frame counter in the RIA, running because the port put a mode on the VGA |
 | term | constant zero | development plays against this build and wants its games repeatable |
+
+The Picocomputer is the one that could have done better and deliberately does not: `RIA_ATTR_LRAND`
+is a true hardware RNG, one OS call away. The bar this function sets is a register read that
+cannot fail visibly, a frame counter clears it, and by the time it is asked the human has already
+walked the menu — so the extra call would buy nothing the moment of reading does not already give.
 
 The Apple II is the interesting one. It has no clock, and `$4E/$4F` is not a clock either —
 it is a counter cc65's keyboard poll increments while it waits, so what it holds is *how long

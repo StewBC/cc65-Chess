@@ -1,8 +1,8 @@
 # cc65 Chess
 
 A chess program for 1 MHz 8-bit machines — Commodore 64, Apple II, Oric, Plus/4, Atari,
-Commander X16 — written in C and built with [cc65](https://cc65.github.io/). There is also a
-terminal build for development.
+Commander X16, Picocomputer 6502 — written in C and built with [cc65](https://cc65.github.io/).
+There is also a terminal build for development.
 
 It is also, now, a guided tour of how a chess engine works. The engine was rewritten from
 scratch, the old one is still in the history, and both are documented in full — including a
@@ -37,7 +37,8 @@ what the numbers mean, what they do not mean, and how to reproduce them.
 
 Emulator speed-up is a free multiplier: strength is measured in positions searched, not
 seconds, so an accelerated machine plays the same game sooner. Roughly 60 rating points per
-doubling of thinking time.
+doubling of thinking time — which the Picocomputer collects in hardware, since its 65C02 runs
+at up to 8 MHz.
 
 ## Playing it
 
@@ -65,23 +66,27 @@ make OPTIONS=optsize                    # every target
 make OPTIONS=optsize TARGETS=c64        # or just one
 ```
 
-The full target list is `apple2 atari atmos c64 c64.chr plus4 cx16`, and a bare `make` builds
-all of them. Every one is built at the same optimisation setting, `optsize` — the Atari does
+The full target list is `apple2 atari atmos c64 c64.chr plus4 cx16 rp6502`, and a bare `make`
+builds all of them. Every one is built at the same optimisation setting, `optsize` — the Atari does
 not fit at `optspeed`, and a port built differently is a port that behaves differently.
 
 Most platforms have a second step to produce a disk, tape or program image — `d64`, `po`,
-`atr`, `tap`, `prg`, `cprg`, `cxprg`. The binaries have to exist first, so build them in
-the same invocation:
+`atr`, `tap`, `prg`, `cprg`, `cxprg`, `rom`. The binaries have to exist first, so build them
+in the same invocation:
 
 ```bash
-make OPTIONS=optsize all d64 po atr tap prg cprg cxprg
+make OPTIONS=optsize all d64 po atr tap prg cprg cxprg rom
 ```
 
-'d64' needs C1541, `po` needs `cadius` and `atr` needs `dir2atr`; the rest need nothing
-extra.
+'d64' needs C1541, `po` needs `cadius` and `atr` needs `dir2atr`; `rom` needs Python, and the
+tool it runs is in `rp6502/`. The rest need nothing extra.
 
 `cx16` needs a reasonably current cc65: it uses `c_sp` in inline assembly, which older
 versions called `sp`.
+
+`rp6502` needs the [Picocomputer fork of cc65](https://github.com/picocomputer/cc65), which is
+where the `rp6502` target lives. `make rom` wraps the binary into a `cc65-Chess-rp6502.rp6502`
+ROM, which `rp6502-emu` boots and `rp6502/rp6502.py run` sends to a real machine.
 
 **The terminal build**, which is what development happens against:
 

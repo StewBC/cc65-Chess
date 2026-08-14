@@ -13,6 +13,9 @@
 /sargon/*.po
 /atari.atr/
 
+# rp6502.py is a script, not a module, but anything that imports it drops one
+/rp6502/__pycache__/
+
 # native test binaries and their debug info
 /tests/chesstest
 /tests/uci

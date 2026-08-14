@@ -1,7 +1,7 @@
 # Working on cc65 Chess
 
-A chess program for 1 MHz 8-bit machines — c64, apple2, atmos, plus4, atari, cx16 — plus a
-terminal build used for development. C, compiled with cc65.
+A chess program for 1 MHz 8-bit machines — c64, apple2, atmos, plus4, atari, cx16, rp6502 —
+plus a terminal build used for development. C, compiled with cc65.
 
 `doc/engine.md` explains how the engine works and is the right thing to read first. This
 file is the short list of constraints that are easy to violate by accident.
@@ -23,7 +23,7 @@ because every machine has a free-running counter, cc65's own `asminc` names all 
 the implementation is three lines a port that reads a register and cannot fail visibly — a
 wrong address gives repeating openings, which is what the engine did anyway. Anything asking
 to be added here should be held to that: no writes to hardware on a port that cannot be run,
-and a failure mode nobody has to debug. Note there are **eight** platform files, not six —
+and a failure mode nobody has to debug. Note there are **nine** platform files, not seven —
 `c64.chr` is a separate port and `term` is the one that must return a constant.
 
 **The frozen interface is wider than `plat.h`.** Every port also reads four globals
@@ -44,6 +44,13 @@ says so.** The Apple II's HGR page 1 at `$2000` and the Atari's GR.8 framebuffer
 hard-coded `$9100` in `hiresAtari.s`. A clean `ld65` run proves nothing about either: the
 Atari linked "inside its budget" for months while drawing BSS onto the top of the screen.
 Both cfgs now cap the program below the framebuffer, so an overrun is a link error.
+
+**`rp6502` is the one target with no framebuffer to collide with at all** — its video memory
+is XRAM on the VGA co-processor, off the 6502 bus, reached through `RIA.addr0`/`RIA.rw0`. But
+a clean `ld65` still does not prove everything there either: stock `rp6502.cfg` runs its RAM
+area to `$F6FF` and `crt0.s` then starts the 2K C stack at `$F700` growing *down* into it, so
+the real ceiling is `$EF00` and the last 2K of the linker's own area is not free. With 26K
+spare that is a note, not a risk.
 
 **Every target is built at the same optimisation setting, and that setting is `optsize`.**
 Uniformity is the point - a port that is built differently is a port that behaves
@@ -66,7 +73,7 @@ while the Apple II lost the 302, 132 and 253 the code actually costs.
 `ld65 -m` map rather than reading the free-space number on its own; the two tell different
 stories and only one of them predicts what the next change will cost. Free space is
 *ceiling − first unused* (`__MAIN_LAST__` on the Apple II, map End+1 elsewhere). The
-full picture, all seven targets, measured rather than remembered — free space to the
+full picture, all eight targets, measured rather than remembered — free space to the
 *real* ceiling, which on three of them is a framebuffer the linker cannot see:
 
 | target | ceiling | free |
@@ -78,6 +85,7 @@ full picture, all seven targets, measured rather than remembered — free space 
 | cx16 | HIMEM `$9F00` less stack | 3024 — the framebuffer is in VERA and costs nothing here |
 | c64.chr | BSS ends `$C400` | 8178 |
 | c64 | `$C000` bitmap less stack | 10366 |
+| rp6502 | `$F700` c_sp less the 2K stack | **26430** — video memory is XRAM and costs the 6502 nothing |
 
 Regenerate these with `cl65 -t <target> -C <cfg> --mapfile ...` against `obj/<target>/*.o`;
 the numbers above are from a clean build and will drift with the next change.
@@ -103,6 +111,13 @@ monitor for the Plus/4 — so a change to either can be verified instead of argu
 `doc/measuring.md`). `atari` runs here too now, under AltirraSDL's JSON bridge — see
 `recipes/altirra-bridge-usage.md`, which is how the framebuffer collision was found and the
 fix confirmed. Emulator how-tos for the targets that run here live in `recipes/`.
+
+**`rp6502` runs here better than any of them, and there is no excuse for guessing about it.**
+`rp6502-emu --script` drives the HID keyboard, waits on console output, dumps RAM and XRAM,
+checks a canvas CRC and writes a PNG, all headless and all exiting non-zero on a failed check.
+Every screenshot in `recipes/rp6502-emulator.md` was produced that way. Note the one thing the
+script cannot be replaced by: `--input` feeds `RIA.rx` and leaves the HID bitmap clear, and
+this port reads the bitmap — so `press`/`release` are what move the cursor, not `type`.
 
 **Compiling a target says nothing about whether it runs.** The plus4 build linked inside its
 budget throughout the rework and was broken end to end — by a **cc65 bug**, not ours: in
@@ -233,8 +248,8 @@ conservative one — after eight moves nothing has been traded and the lines are
 middlegame is about 25% slower per node. Anything that has to hold at the board gets
 measured over a real game.
 
-Emulator how-tos for the targets that run here — Apple II, Plus/4, Atari, C64 — are in
-`recipes/`. Generated match output stays in `scratch/`.
+Emulator how-tos for the targets that run here — Apple II, Plus/4, Atari, C64, Picocomputer —
+are in `recipes/`. Generated match output stays in `scratch/`.
 
 ## Building and testing
 
@@ -242,6 +257,7 @@ Emulator how-tos for the targets that run here — Apple II, Plus/4, Atari, C64 
 make OPTIONS=optspeed TARGETS=c64
 make TARGETS=apple2 && make po      # bootable chess.po, needs cadius
 make TARGETS=atari  && make atr     # bootable cc65-Chess.atr, needs dir2atr
+make TARGETS=rp6502 && make rom     # cc65-Chess-rp6502.rp6502, needs python3
 ```
 
 The image step is a **second `make`**. `TARGETS=` sets the suffix `$(PROGRAM)` already

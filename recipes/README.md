@@ -9,6 +9,7 @@ and other generated artifacts still go under `scratch/`, which is gitignored.
 | [plus4-debugging.md](plus4-debugging.md) | Plus/4 under VICE `xplus4` |
 | [altirra-bridge-usage.md](altirra-bridge-usage.md) | Atari under AltirraSDL / AltirraBridge |
 | [using-c64m.md](using-c64m.md) | C64 under `../c64m` (control port) |
+| [rp6502-emulator.md](rp6502-emulator.md) | Picocomputer under `rp6502-emu` (headless, scripted) |
 | [build-a2m-profile.sh](build-a2m-profile.sh) | Bootable Apple II profile image |
 | [vice/](vice/) | Plus/4 binary-monitor helpers used by the Plus/4 note |
 

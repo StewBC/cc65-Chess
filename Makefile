@@ -9,7 +9,7 @@
 
 # Space or comma separated list of cc65 supported target platforms to build for.
 # Default: c64 (lowercase!)
-TARGETS := apple2 atari atmos c64 c64.chr plus4 cx16
+TARGETS := apple2 atari atmos c64 c64.chr plus4 cx16 rp6502
 
 # Name of the final, single-file executable.
 # Default: name of the current dir with target name appended
@@ -68,6 +68,9 @@ CX16_HOME :=
 AWIN_HOME := 
 ORIC_HOME := 
 ATARI_HOME :=
+# rp6502-emu is not usually on the PATH - it is built alongside the firmware,
+# in rp6502/build/emulator/release/
+RP6502_HOME :=
 
 # Options state file name. You should not need to change this, but for those
 # rare cases when you feel you really need to name it differently - here you are
@@ -162,6 +165,10 @@ atari_EMUCMD := $(ATARI_HOME)Altirra64 /defprofile:800 /disk cc65-Chess.atr
 cx16_EMUCMD := $(CX16_HOME)x16emu -run -prg
 apple2_EMUCMD := $(AWIN_HOME)AppleWin.exe -d1 
 atmos_EMUCMD := $(ORIC_HOME)Oricutron.exe -t 
+# rp6502-emu boots a .rp6502 ROM, not the raw binary, so name the ROM here and
+# let the trailing $< land after the -- as an argv word the game ignores.
+# 'make rom' has to have run - see Makefile-rom.mk
+rp6502_EMUCMD := $(RP6502_HOME)rp6502-emu cc65-Chess-rp6502.rp6502 --tmpdrive --
 
 ifeq ($(EMUCMD),)
   EMUCMD = $($(CC65TARGET)_EMUCMD)
