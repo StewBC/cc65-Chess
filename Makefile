@@ -9,7 +9,10 @@
 
 # Space or comma separated list of cc65 supported target platforms to build for.
 # Default: c64 (lowercase!)
-TARGETS := apple2 atari atmos c64 c64.chr plus4 cx16 rp6502
+TARGETS := apple2 atari atmos c64 c64.chr plus4 cx16 
+# add rp6502 to the targets list if you want to build for rp6502
+# or run make TARGETS=rp6502
+# Excluded from default as it needs a special cc65
 
 # Name of the final, single-file executable.
 # Default: name of the current dir with target name appended
