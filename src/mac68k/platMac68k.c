@@ -208,6 +208,20 @@ static void draw_ntext(short x, short y, const char *s, char n, char color)
 }
 
 /*-----------------------------------------------------------------------*/
+/* centred on cx.  trailing spaces are measured out first: gszAbout carries
+ * four of them because it doubles as the menu scroller, and counting them
+ * pushes the visible text half a pad to the left.  the font has to be set
+ * before this - TextWidth asks the current port */
+static void draw_text_centred(short cx, short y, const char *s, char color)
+{
+	short n = (short)strlen(s);
+
+	while(n && s[n - 1] == ' ')
+		--n;
+	draw_ntext((short)(cx - TextWidth(s, 0, n) / 2), y, s, (char)n, color);
+}
+
+/*-----------------------------------------------------------------------*/
 static char hexdigit(char n)
 {
 	n &= 0x0F;
@@ -351,14 +365,23 @@ static void paint_splash(void)
 	set_port();
 	paint_chrome();
 
+	/* the two kings sit either side of the text block, and the gaps have
+	 * to match or the black one reads as floating.  draw_text's y is a
+	 * baseline, so the block is about 109..138 for Monaco 10 at 118/136:
+	 * 48+32=80 leaves 29 above it and 168 leaves 30 below */
 	cx = (short)(BOARD_LEFT + 3 * SQUARE + 16);
-	blit_piece(cx, (short)(BOARD_TOP + 24), KING, 0);
+	blit_piece(cx, (short)(BOARD_TOP + 48), KING, 0);
 	blit_piece(cx, (short)(BOARD_TOP + 168), KING, 1);
 
+	/* both lines centre on the kings' own centre, so the stack cannot
+	 * drift apart.  the client is dated, not the engine - a later cc65
+	 * Chess does not make this port a later year */
 	TextFont(FONT_MONACO);
 	TextSize(10);
-	draw_text(BOARD_LEFT + 8, BOARD_TOP + 118, gszAbout, COL_YELLOW);
-	draw_text(BOARD_LEFT + 8, BOARD_TOP + 136, "Macintosh 68k.  press a key.", COL_WHITE);
+	draw_text_centred((short)(cx + SQUARE / 2), (short)(BOARD_TOP + 118),
+		gszAbout, COL_YELLOW);
+	draw_text_centred((short)(cx + SQUARE / 2), (short)(BOARD_TOP + 136),
+		"Macintosh 68k version, 2026.", COL_WHITE);
 }
 
 /*-----------------------------------------------------------------------*/

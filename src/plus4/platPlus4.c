@@ -101,10 +101,12 @@ void plat_Init()
     memset((char*)COLOR_ADDERSS, BCOLOR_WHITE<<4 | BCOLOR_GREEN, 0x400);
 
     // Show the welcome text
-    strcpy(textStr, "Commodore 64 graphics version, 2020.");
+    strcpy(textStr, "Commodore Plus/4 version, 2023.");
+    // gszAbout is 36 of the 40 columns, so x=2 centres it.  the port line
+    // is 31, so it needs x=4 - and the colour pass has to move with it
     plat_showStrXY(2,SCREEN_HEIGHT/2-1, gszAbout);
-    plat_showStrXY(2,SCREEN_HEIGHT/2+1,textStr);
-    plat_colorStringXY(COLOR_BLACK<<4|COLOR_GREEN,2,SCREEN_HEIGHT/2+1,textStr);
+    plat_showStrXY(4,SCREEN_HEIGHT/2+1,textStr);
+    plat_colorStringXY(COLOR_BLACK<<4|COLOR_GREEN,4,SCREEN_HEIGHT/2+1,textStr);
 
     // Set the color for the black king
     plat_colorFill(COLOR_BLACK<<4|COLOR_GREEN ,SCREEN_WIDTH/2 - 1, SCREEN_HEIGHT/2 - 6, 4, 3);
@@ -557,7 +559,7 @@ int plat_ReadKeys(char blocking)
         //    s[6] = (key%10)+'0';
         //    plat_ShowMessage(s,COLOR_RED);
         // }
-        break;
+        // break;
     }
     
     return keyMask;

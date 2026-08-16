@@ -517,7 +517,7 @@ int plat_ReadKeys(char blocking)
 		//	s[6] = (key%10)+'0';
 		//	plat_ShowMessage(s,COLOR_RED);
 		// }
-		break;
+		// break;
 	}
 	
 	return keyMask;
