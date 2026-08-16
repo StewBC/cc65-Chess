@@ -506,13 +506,10 @@ the curses build under a pty and reads the screen back, with canned scripts for 
 AI-vs-AI, the attack overlay, and a human move followed by an undo.
 
 ```bash
-cc -Isrc -lcurses -funsigned-char src/globals.c src/engine.c src/eval.c src/search.c \
-   src/board.c src/undo.c src/cpu.c src/human.c src/frontend.c src/main.c \
-   src/term/platTerm.c -o /tmp/chessterm
-
-python3 tests/driveterm.py            # start up, show the first screen
-python3 tests/driveterm.py aivsai
-python3 tests/driveterm.py humanmove  # e2-e4 as white, then undo
+make term
+CHESSTERM=build/term/chessterm python3 tests/driveterm.py            # first screen
+CHESSTERM=build/term/chessterm python3 tests/driveterm.py aivsai
+CHESSTERM=build/term/chessterm python3 tests/driveterm.py humanmove  # e2-e4, then undo
 ```
 
 The unit tests cover the engine; this covers whether the game is a game. Read it as evidence
@@ -527,9 +524,9 @@ same way — except that here the machine really is the machine, so it also catc
 terminal build cannot: character sets, video modes, firmware entry points.
 
 ```bash
-make TARGETS=apple2 && make po      # the image step is a second make
+make apple2 po                      # → build/apple2/cc65-Chess.po
 cd ../a2m-v2 && ./build/a2m-v2 --noini \
-    --hd s7d0=<absolute-path>/chess.po --control-port 6510
+    --hd s7d0=<absolute-path>/build/apple2/cc65-Chess.po --control-port 6510
 ```
 
 Run it **windowed**; `--headless` removes the human from the loop. `--model plus` gives a
@@ -550,7 +547,7 @@ its **binary** monitor. The wire protocol and its traps are documented in
 `../c64m/agents/vice-oracle.md`; a minimal Python client lives in `recipes/vice/`.
 
 ```bash
-xplus4 -TEDdsize -autostart-delay 40 -autostart cc65-Chess.plus4 \
+xplus4 -TEDdsize -autostart-delay 40 -autostart build/plus4/cc65-Chess \
        -binarymonitor -binarymonitoraddress ip4://127.0.0.1:6502
 ```
 

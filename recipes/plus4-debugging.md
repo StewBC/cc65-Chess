@@ -24,7 +24,7 @@ source, for reading what the Kernal actually does, is at
 `/Users/swessels/Develop/svm/vice-emu-code/vice`.
 
 ```bash
-xplus4 -TEDdsize -autostart cc65-Chess.plus4 \
+xplus4 -TEDdsize -autostart build/plus4/cc65-Chess \
        -binarymonitor -binarymonitoraddress ip4://127.0.0.1:6502
 ```
 

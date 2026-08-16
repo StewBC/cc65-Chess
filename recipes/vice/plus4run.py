@@ -9,6 +9,7 @@ we write the program into RAM ourselves and hand BASIC a clean "RUN".
 One connection for the whole run: closing the socket resumes emulation, so a
 script that reconnects has already let the machine run unobserved.
 """
+import os
 import subprocess
 import sys
 import time
@@ -16,8 +17,9 @@ import time
 from vicebin import Vice, mem_set
 from shot import shot
 
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 X = '/Applications/vice-arm64-gtk3-3.10/bin/xplus4'
-PRG = '/Users/swessels/Develop/github/personal/cc65-Chess/cc65-Chess.plus4'
+PRG = os.path.join(ROOT, 'build', 'plus4', 'cc65-Chess')
 ENTRY = 0x100D
 PORT = 6502
 

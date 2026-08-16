@@ -4,7 +4,7 @@ Written 2026-08-07, after chasing a menu that rendered `1 Human player` as
 `1 H5-!. 0,!9%2`. This is a note to whoever hits the next Apple II rendering bug.
 
 `apple2` can be built, booted, driven and measured on this machine, and this
-document is how. `atari` builds here too (`make TARGETS=atari atr`, `dir2atr` is
+document is how. `atari` builds here too (`make atari atr`, `dir2atr` is
 installed) and now runs here under AltirraSDL's JSON bridge. `cx16` builds here
 but is not run here; that remains the one target requiring the Windows machine.
 
@@ -17,9 +17,9 @@ which is the part that matters: you can read the machine's memory and its
 rendered frames from Python while it runs.
 
 ```bash
-make TARGETS=apple2 && make po        # needs cadius; it is at /usr/local/bin
+make apple2 po                        # needs cadius; it is at /usr/local/bin
 cd ../a2m-v2
-./build-release/a2m-v2 --noini --hd s7d0=<absolute-path>/chess.po --control-port 6510
+./build-release/a2m-v2 --noini --hd s7d0=<absolute-path>/build/apple2/cc65-Chess.po --control-port 6510
 ```
 
 **Run it windowed. Do not pass `--headless`.** Stefan watches the window while

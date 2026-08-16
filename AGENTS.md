@@ -87,7 +87,7 @@ full picture, all eight targets, measured rather than remembered — free space 
 | c64 | `$C000` bitmap less stack | 10366 |
 | rp6502 | `$F700` c_sp less the 2K stack | **26430** — video memory is XRAM and costs the 6502 nothing |
 
-Regenerate these with `cl65 -t <target> -C <cfg> --mapfile ...` against `obj/<target>/*.o`;
+Regenerate these with `cl65 -t <target> -C <cfg> --mapfile ...` against `build/obj/<target>/*.o`;
 the numbers above are from a clean build and will drift with the next change.
 
 `Makefile.options` defaults to `optsize` and that is why. Raising it would mean raising it
@@ -254,20 +254,20 @@ are in `recipes/`. Generated match output stays in `scratch/`.
 ## Building and testing
 
 ```bash
-make OPTIONS=optspeed TARGETS=c64
-make TARGETS=apple2 && make po      # bootable chess.po, needs cadius
-make TARGETS=atari  && make atr     # bootable cc65-Chess.atr, needs dir2atr
-make TARGETS=rp6502 && make rom     # cc65-Chess-rp6502.rp6502, needs python3
+make OPTIONS=optspeed c64
+make apple2 po              # bootable build/apple2/cc65-Chess.po, needs cadius
+make atari atr              # bootable build/atari/cc65-Chess.atr, needs dir2atr
+make rp6502 rom             # build/rp6502/cc65-Chess.rp6502, needs python3
+make spectrum               # z88dk → build/spectrum/chess.tap
+make term                   # host curses → build/term/chessterm
 ```
 
-The image step is a **second `make`**. `TARGETS=` sets the suffix `$(PROGRAM)` already
-carries, so `make TARGETS=apple2 po` asks for `cc65-Chess.apple2.apple2` and fails, and a
-bare `make po` has no rule to build the binary it needs.
+Products land in `build/<port>/`. A port name selects that port, so `make apple2 po` is
+one invocation — the old two-step `TARGETS=` / suffix collision is gone. `TARGETS=c64`
+still works. `make list` shows which compilers this machine has.
 
 ```bash
-cc -Isrc -lcurses -funsigned-char src/globals.c src/engine.c src/eval.c src/search.c \
-   src/board.c src/undo.c src/cpu.c src/human.c src/frontend.c src/main.c \
-   src/term/platTerm.c -o /tmp/chessterm
+make term
 ```
 
 ```bash

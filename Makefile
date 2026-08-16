@@ -1,355 +1,162 @@
-###############################################################################
-### Generic Makefile for cc65 projects - full version with abstract options ###
-### V1.3.0(w) 2010 - 2013 Oliver Schmidt & Patryk "Silver Dream !" Łogiewa  ###
-###############################################################################
-
-###############################################################################
-### In order to override defaults - values can be assigned to the variables ###
-###############################################################################
-
-# Space or comma separated list of cc65 supported target platforms to build for.
-# Default: c64 (lowercase!)
-TARGETS := apple2 atari atmos c64 c64.chr plus4 cx16 
-# add rp6502 to the targets list if you want to build for rp6502
-# or run make TARGETS=rp6502
-# Excluded from default as it needs a special cc65
-
-# Name of the final, single-file executable.
-# Default: name of the current dir with target name appended
-PROGRAM :=
-
-# Path(s) to additional libraries required for linking the program
-# Use only if you don't want to place copies of the libraries in SRCDIR
-# Default: none
-LIBS    :=
-
-# Custom linker configuration file
-# Use only if you don't want to place it in SRCDIR
-# Default: none
-CONFIG  :=
-
-# Additional C compiler flags and options.
-# Default: none
-CFLAGS  =
-
-# Additional assembler flags and options.
-# Default: none
-ASFLAGS =
-
-# Additional linker flags and options.
-# Default: none
-LDFLAGS =
-cc65-Chess.apple2: LDFLAGS += --start-addr 0x4000 -Wl -D -Wl __HIMEM__=0xBF00
-
-# Path to the directory containing C and ASM sources.
-# Default: src
-SRCDIR :=
-
-# Path to the directory where object files are to be stored (inside respective target subdirectories).
-# Default: obj
-OBJDIR :=
-
-# Command used to run the emulator.
-# Default: depending on target platform. For default (c64) target: x64 -kernal kernal -VICIIdsize -autoload
-EMUCMD :=
-
-# Optional commands used before starting the emulation process, and after finishing it.
-# Default: none
-#PREEMUCMD := osascript -e "tell application /"System Events/" to set isRunning to (name of processes) contains /"X11.bin/"" -e "if isRunning is true then tell application /"X11/" to activate"
-#PREEMUCMD := osascript -e "tell application /"X11/" to activate"
-#POSTEMUCMD := osascript -e "tell application /"System Events/" to tell process /"X11/" to set visible to false"
-#POSTEMUCMD := osascript -e "tell application /"Terminal/" to activate"
-PREEMUCMD :=
-POSTEMUCMD :=
-
-# On Windows machines VICE emulators may not be available in the PATH by default.
-# In such case, please set the variable below to point to directory containing
-# VICE emulators.
-#VICE_HOME := "C:/Program Files/WinVICE-2.2-x86/"
-VICE_HOME := 
-CX16_HOME := 
-AWIN_HOME := 
-ORIC_HOME := 
-ATARI_HOME :=
-# rp6502-emu is not usually on the PATH - it is built alongside the firmware,
-# in rp6502/build/emulator/release/
-RP6502_HOME :=
-
-# Options state file name. You should not need to change this, but for those
-# rare cases when you feel you really need to name it differently - here you are
-STATEFILE := Makefile.options
-
-###################################################################################
-####  DO NOT EDIT BELOW THIS LINE, UNLESS YOU REALLY KNOW WHAT YOU ARE DOING!  ####
-###################################################################################
-
-###################################################################################
-### Mapping abstract options to the actual compiler, assembler and linker flags ###
-### Predefined compiler, assembler and linker flags, used with abstract options ###
-### valid for 2.14.x. Consult the documentation of your cc65 version before use ###
-###################################################################################
-
-# Compiler flags used to tell the compiler to optimise for SPEED
-define _optspeed_
-  CFLAGS += -Oris
-endef
-
-# Compiler flags used to tell the compiler to optimise for SIZE
-define _optsize_
-  CFLAGS += -Or
-endef
-
-# Compiler and assembler flags for generating listings
-define _listing_
-  CFLAGS += --listing $$(@:.o=.lst)
-  ASFLAGS += --listing $$(@:.o=.lst)
-  REMOVES += $(addsuffix .lst,$(basename $(OBJECTS)))
-endef
-
-# Linker flags for generating map file
-define _mapfile_
-  LDFLAGS += --mapfile $$@.map
-  REMOVES += $(PROGRAM).map
-endef
-
-# Linker flags for generating VICE label file
-define _labelfile_
-  LDFLAGS += -Ln $$@.lbl
-  REMOVES += $(PROGRAM).lbl
-endef
-
-# Linker flags for generating a debug file
-define _debugfile_
-  LDFLAGS += -Wl --dbgfile,$$@.dbg
-  REMOVES += $(PROGRAM).dbg
-endef
-
-###############################################################################
-###  Defaults to be used if nothing defined in the editable sections above  ###
-###############################################################################
-
-# Presume the C64 target like the cl65 compile & link utility does.
-# Set TARGETS to override.
-ifeq ($(TARGETS),)
-  TARGETS := c64
-endif
-
-# Presume we're in a project directory so name the program like the current
-# directory. Set PROGRAM to override.
-ifeq ($(PROGRAM),)
-  PROGRAM := $(notdir $(CURDIR))
-endif
-
-# Presume the C and asm source files to be located in the subdirectory 'src'.
-# Set SRCDIR to override.
-ifeq ($(SRCDIR),)
-  SRCDIR := src
-endif
-
-# Presume the object and dependency files to be located in the subdirectory
-# 'obj' (which will be created). Set OBJDIR to override.
-ifeq ($(OBJDIR),)
-  OBJDIR := obj
-endif
-TARGETOBJDIR := $(OBJDIR)/$(TARGETS)
-
-# Default emulator commands and options for particular targets.
-# Set EMUCMD to override.
-c64_EMUCMD := $(VICE_HOME)x64sc -kernal kernal -VICIIdsize -autostart
-c128_EMUCMD := $(VICE_HOME)x128 -kernal kernal -VICIIdsize -autoload
-vic20_EMUCMD := $(VICE_HOME)xvic -kernal kernal -VICdsize -autoload
-pet_EMUCMD := $(VICE_HOME)xpet -Crtcdsize -autoload
-plus4_EMUCMD := $(VICE_HOME)xplus4 -TEDdsize -autostart
-# So far there is no x16 emulator in VICE (why??) so we have to use xplus4 with -memsize option
-c16_EMUCMD := $(VICE_HOME)xplus4 -ramsize 16 -TEDdsize -autoload
-cbm510_EMUCMD := $(VICE_HOME)xcbm2 -model 510 -VICIIdsize -autoload
-cbm610_EMUCMD := $(VICE_HOME)xcbm2 -model 610 -Crtcdsize -autoload
-atari_EMUCMD := $(ATARI_HOME)Altirra64 /defprofile:800 /disk cc65-Chess.atr
-cx16_EMUCMD := $(CX16_HOME)x16emu -run -prg
-apple2_EMUCMD := $(AWIN_HOME)AppleWin.exe -d1 
-atmos_EMUCMD := $(ORIC_HOME)Oricutron.exe -t 
-# rp6502-emu boots a .rp6502 ROM, not the raw binary, so name the ROM here and
-# let the trailing $< land after the -- as an argv word the game ignores.
-# 'make rom' has to have run - see Makefile-rom.mk
-rp6502_EMUCMD := $(RP6502_HOME)rp6502-emu cc65-Chess-rp6502.rp6502 --tmpdrive --
-
-ifeq ($(EMUCMD),)
-  EMUCMD = $($(CC65TARGET)_EMUCMD)
-endif
-
-###############################################################################
-### The magic begins                                                        ###
-###############################################################################
-
-# The "Native Win32" GNU Make contains quite some workarounds to get along with
-# cmd.exe as shell. However it does not provide means to determine that it does
-# actually activate those workarounds. Especially $(SHELL) does NOT contain the
-# value 'cmd.exe'. So the usual way to determine if cmd.exe is being used is to
-# execute the command 'echo' without any parameters. Only cmd.exe will return a
-# non-empty string - saying 'ECHO is on/off'.
+# cc65 Chess — one dispatcher, many ports, more than one compiler.
 #
-# Many "Native Win32" programs accept '/' as directory delimiter just fine. How-
-# ever the internal commands of cmd.exe generally require '\' to be used.
+#   make              every default port whose compiler is on PATH
+#   make list         available vs skipped
+#   make c64          one port
+#   make apple2 po    binary + disk image
+#   make spectrum     z88dk
+#   make spectrum test
+#   make term         host curses → build/term/chessterm
+#   make check        native suite in tests/
 #
-# cmd.exe has an internal command 'mkdir' that doesn't understand nor require a
-# '-p' to create parent directories as needed.
+# products land in build/<port>/.  objects in build/obj/<port>/.
+# a new compiler is a toolchain file plus a thin port file — see make/.
 #
-# cmd.exe has an internal command 'del' that reports a syntax error if executed
-# without any file so make sure to call it only if there's an actual argument.
-ifeq ($(shell echo),)
-  MKDIR = mkdir -p $1
-  RMDIR = rmdir $1
-  RMFILES = $(RM) $1
+# the cc65 compile rules are descended from oliver schmidt's generic makefile
+# (v1.3.0, with patryk łogiewa).  the abstraction is now "port", not "cl65 -t".
+
+include make/common.mk
+include $(sort $(wildcard make/ports/*.mk))
+
+# --- availability --------------------------------------------------------
+
+apple2_AVAILABLE   := $(HAVE_CL65)
+atari_AVAILABLE    := $(HAVE_CL65)
+atmos_AVAILABLE    := $(HAVE_CL65)
+c64_AVAILABLE      := $(HAVE_CL65)
+c64.chr_AVAILABLE  := $(HAVE_CL65)
+plus4_AVAILABLE    := $(HAVE_CL65)
+cx16_AVAILABLE     := $(HAVE_CL65)
+rp6502_AVAILABLE   := $(HAVE_RP6502)
+spectrum_AVAILABLE := $(HAVE_ZCC)
+term_AVAILABLE     := $(HAVE_CC)
+
+apple2_SKIP   := cl65 not on PATH
+atari_SKIP    := cl65 not on PATH
+atmos_SKIP    := cl65 not on PATH
+c64_SKIP      := cl65 not on PATH
+c64.chr_SKIP  := cl65 not on PATH
+plus4_SKIP    := cl65 not on PATH
+cx16_SKIP     := cl65 not on PATH
+rp6502_SKIP   := cl65 has no rp6502 target (needs the picocomputer fork)
+spectrum_SKIP := zcc not on PATH
+term_SKIP     := $(CC) not on PATH
+
+OPTIONAL_DEFAULTS := $(if $(HAVE_ZCC),spectrum)
+BUILD_PORTS := $(strip $(foreach p,$(DEFAULT_PORTS) $(OPTIONAL_DEFAULTS),$(if $($(p)_AVAILABLE),$(p))))
+
+# `make spectrum` (and `make spectrum test`) selects that port.  TARGETS= on
+# the command line still wins, so the recursive $(MAKE) TARGETS=$t keeps working.
+ifeq ($(origin TARGETS),command line)
+  TARGETLIST := $(subst $(COMMA),$(SPACE),$(TARGETS))
 else
-  MKDIR = mkdir $(subst /,\,$1)
-  RMDIR = rmdir $(subst /,\,$1)
-  RMFILES = $(if $1,del /f $(subst /,\,$1))
+  FIRSTGOAL := $(firstword $(MAKECMDGOALS))
+  ifneq ($(filter $(FIRSTGOAL),$(PORT_NAMES)),)
+    TARGETLIST := $(FIRSTGOAL)
+  else
+    TARGETLIST := $(BUILD_PORTS)
+  endif
 endif
-COMMA := ,
-SPACE := $(N/A) $(N/A)
-define NEWLINE
 
+include make/toolchains/cc65.mk
+include make/toolchains/z88dk.mk
+include make/toolchains/host.mk
 
-endef
-# Note: Do not remove any of the two empty lines above !
+# port files declare packaging first (po, atr, ...).  without this, a bare
+# `make TARGETS=c64` builds the first of those instead of the c64 binary.
+.DEFAULT_GOAL := all
 
-TARGETLIST := $(subst $(COMMA),$(SPACE),$(TARGETS))
+.PHONY: all test clean zap tidy love help list check $(PORT_NAMES)
+
+$(PORT_NAMES): all
+
+# --- single port vs many -------------------------------------------------
 
 ifeq ($(words $(TARGETLIST)),1)
 
-# Set PROGRAM to something like 'myprog.c64'.
-override PROGRAM := $(PROGRAM).$(TARGETLIST)
+ifeq ($($(TARGETLIST)_AVAILABLE),1)
 
-# Set SOURCES to something like 'src/foo.c src/bar.s'.
-# Use of assembler files with names ending differently than .s is deprecated!
-SOURCES := $(wildcard $(SRCDIR)/*.c)
-SOURCES += $(wildcard $(SRCDIR)/*.s)
-SOURCES += $(wildcard $(SRCDIR)/*.asm)
-SOURCES += $(wildcard $(SRCDIR)/*.a65)
-
-# Add to SOURCES something like 'src/c64/me.c src/c64/too.s'.
-# Use of assembler files with names ending differently than .s is deprecated!
-SOURCES += $(wildcard $(SRCDIR)/$(TARGETLIST)/*.c)
-SOURCES += $(wildcard $(SRCDIR)/$(TARGETLIST)/*.s)
-SOURCES += $(wildcard $(SRCDIR)/$(TARGETLIST)/*.asm)
-SOURCES += $(wildcard $(SRCDIR)/$(TARGETLIST)/*.a65)
-
-# Set OBJECTS to something like 'obj/c64/foo.o obj/c64/bar.o'.
-OBJECTS := $(addsuffix .o,$(basename $(addprefix $(TARGETOBJDIR)/,$(notdir $(SOURCES)))))
-
-# Set DEPENDS to something like 'obj/c64/foo.d obj/c64/bar.d'.
-DEPENDS := $(OBJECTS:.o=.d)
-
-# Add to LIBS something like 'src/foo.lib src/c64/bar.lib'.
-LIBS += $(wildcard $(SRCDIR)/*.lib)
-LIBS += $(wildcard $(SRCDIR)/$(TARGETLIST)/*.lib)
-
-# Add to CONFIG something like 'src/c64/bar.cfg src/foo.cfg'.
-CONFIG += $(wildcard $(SRCDIR)/$(TARGETLIST)/*.cfg)
-CONFIG += $(wildcard $(SRCDIR)/*.cfg)
-
-# Select CONFIG file to use. Target specific configs have higher priority.
-ifneq ($(word 2,$(CONFIG)),)
-  CONFIG := $(firstword $(CONFIG))
-  $(info Using config file $(CONFIG) for linking)
-endif
-
-.SUFFIXES:
-.PHONY: all test clean zap love
-
-all: $(PROGRAM)
-
--include $(DEPENDS)
--include $(STATEFILE)
-
-# If OPTIONS are given on the command line then save them to STATEFILE
-# if (and only if) they have actually changed. But if OPTIONS are not
-# given on the command line then load them from STATEFILE. Have object
-# files depend on STATEFILE only if it actually exists.
-ifeq ($(origin OPTIONS),command line)
-  ifneq ($(OPTIONS),$(_OPTIONS_))
-    ifeq ($(OPTIONS),)
-      $(info Removing OPTIONS)
-      $(shell $(RM) $(STATEFILE))
-      $(eval $(STATEFILE):)
-    else
-      $(info Saving OPTIONS=$(OPTIONS))
-      $(shell echo _OPTIONS_=$(OPTIONS) > $(STATEFILE))
-    endif
-    $(eval $(OBJECTS): $(STATEFILE))
-  endif
-else
-  ifeq ($(origin _OPTIONS_),file)
-    $(info Using saved OPTIONS=$(_OPTIONS_))
-    OPTIONS = $(_OPTIONS_)
-    $(eval $(OBJECTS): $(STATEFILE))
-  endif
-endif
-
-# Transform the abstract OPTIONS to the actual cc65 options.
-$(foreach o,$(subst $(COMMA),$(SPACE),$(OPTIONS)),$(eval $(_$o_)))
-
-# Strip potential variant suffix from the actual cc65 target.
-CC65TARGET := $(firstword $(subst .,$(SPACE),$(TARGETLIST)))
-
-# The remaining targets.
-$(TARGETOBJDIR):
-	$(call MKDIR,$@)
-
-vpath %.c $(SRCDIR)/$(TARGETLIST) $(SRCDIR)
-
-$(TARGETOBJDIR)/%.o: %.c | $(TARGETOBJDIR)
-	cl65 -t $(CC65TARGET) -c --create-dep $(@:.o=.d) $(CFLAGS) -o $@ $<
-
-vpath %.s $(SRCDIR)/$(TARGETLIST) $(SRCDIR)
-
-$(TARGETOBJDIR)/%.o: %.s | $(TARGETOBJDIR)
-	cl65 -t $(CC65TARGET) -c --create-dep $(@:.o=.d) $(ASFLAGS) -o $@ $<
-
-vpath %.asm $(SRCDIR)/$(TARGETLIST) $(SRCDIR)
-
-$(TARGETOBJDIR)/%.o: %.asm | $(TARGETOBJDIR)
-	cl65 -t $(CC65TARGET) -c --create-dep $(@:.o=.d) $(ASFLAGS) -o $@ $<
-
-vpath %.a65 $(SRCDIR)/$(TARGETLIST) $(SRCDIR)
-
-$(TARGETOBJDIR)/%.o: %.a65 | $(TARGETOBJDIR)
-	cl65 -t $(CC65TARGET) -c --create-dep $(@:.o=.d) $(ASFLAGS) -o $@ $<
-
-$(PROGRAM): $(CONFIG) $(OBJECTS) $(LIBS)
-	cl65 -t $(CC65TARGET) $(LDFLAGS) -o $@ $(patsubst %.cfg,-C %.cfg,$^)
-
-test: $(PROGRAM)
+test: all $($(TARGETLIST)_TEST_DEPS)
 	$(PREEMUCMD)
-	$(EMUCMD) $<
+	$($(TARGETLIST)_EMUCMD) $(if $(filter undefined,$(origin $(TARGETLIST)_TEST_ARG)),$(PROGRAM),$($(TARGETLIST)_TEST_ARG))
 	$(POSTEMUCMD)
 
+else
+
+all test:
+	@echo "port $(TARGETLIST): $($(TARGETLIST)_SKIP)" >&2
+	@false
+
 clean:
-	$(call RMFILES,$(OBJECTS))
-	$(call RMFILES,$(DEPENDS))
-	$(call RMFILES,$(REMOVES))
-	$(call RMFILES,$(PROGRAM))
+	@true
 
-else # $(words $(TARGETLIST)),1
+endif
 
-all test clean:
-	$(foreach t,$(TARGETLIST),$(MAKE) TARGETS=$t $@$(NEWLINE))
+else # many ports, or none
 
-endif # $(words $(TARGETLIST)),1
+all:
+ifeq ($(strip $(TARGETLIST)),)
+	@echo "no compilers found.  install cl65 and/or zcc, or run make list" >&2
+	@false
+else
+	$(foreach t,$(TARGETLIST),$(MAKE) TARGETS=$t all$(NEWLINE))
+endif
 
-OBJDIRLIST := $(wildcard $(OBJDIR)/*)
+test:
+	@echo "name a port:  make c64 test   or   make TARGETS=c64 test" >&2
+	@false
+
+clean:
+	$(foreach t,$(TARGETLIST),$(MAKE) TARGETS=$t clean$(NEWLINE))
+
+endif
+
+# --- always --------------------------------------------------------------
+
+help:
+	@echo "cc65 Chess"
+	@echo
+	@echo "  make                 default ports whose compiler is here"
+	@echo "  make list            available vs skipped, and why"
+	@echo "  make help            this text"
+	@echo "  make <port>          one port  (apple2 atari atmos c64 c64.chr"
+	@echo "                                  plus4 cx16 rp6502 spectrum term)"
+	@echo "  make apple2 po       Apple II + ProDOS image"
+	@echo "  make atari atr       Atari + ATR"
+	@echo "  make c64 d64         C64 + D64  (also: prg cprg cxprg tap rom dsk)"
+	@echo "  make spectrum        ZX Spectrum tap + sna (z88dk)"
+	@echo "  make spectrum test   build and run ZEsarUX"
+	@echo "  make term            host curses binary"
+	@echo "  make check           native suite (tests/)"
+	@echo "  make clean           this selection's products"
+	@echo "  make tidy            leftover binaries in the repo root"
+	@echo "  make zap             build/ and leftover root binaries"
+	@echo
+	@echo "products:  build/<port>/"
+	@echo "objects:   build/obj/<port>/"
+	@echo "cc65 options persist in build/.options  (default: optsize)"
+	@echo "new compiler: make/toolchains/<family>.mk + make/ports/<name>.mk"
+
+list:
+	@printf '%-10s %-8s %s\n' "port" "family" "status"
+	@$(foreach p,$(PORT_NAMES),printf '%-10s %-8s %s\n' \
+		'$(p)' '$($(p)_FAMILY)' \
+		'$(if $($(p)_AVAILABLE),available,skipped — $($(p)_SKIP))';)
+
+check:
+	$(MAKE) -C tests test
+
+tidy:
+	-$(call RMFILES,$(ROOT_LEFTOVERS))
+	-rm -rf obj atari.atr 2>/dev/null || true
 
 zap:
-	$(foreach o,$(OBJDIRLIST),-$(call RMFILES,$o/*.o $o/*.d $o/*.lst)$(NEWLINE))
-	$(foreach o,$(OBJDIRLIST),-$(call RMDIR,$o)$(NEWLINE))
-	-$(call RMDIR,$(OBJDIR))
-	-$(call RMFILES,$(basename $(PROGRAM)).* $(STATEFILE))
+	-$(call RMFILES,$(addprefix $(BUILDDIR)/,$(foreach p,$(PORT_NAMES),$(p)/*)))
+	-$(call RMFILES,$(addprefix $(OBJDIR)/,$(foreach p,$(PORT_NAMES),$(p)/*)))
+	-$(call RMFILES,$(STATEFILE))
+	-$(call RMFILES,$(ROOT_LEFTOVERS))
+	-$(call RMFILES,$(wildcard $(OBJDIR)/*/*))
+	-rm -rf $(BUILDDIR) obj atari.atr 2>/dev/null || true
 
 love:
 	@echo "Not war, eh?"
-
-###################################################################
-###  Place your additional targets in the additional Makefiles  ###
-### in the same directory - their names have to end with ".mk"! ###
-###################################################################
--include *.mk

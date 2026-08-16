@@ -7,29 +7,26 @@ still play" is a command, not an afternoon.
 ## Building the ROM
 
 ```bash
-make OPTIONS=optsize TARGETS=rp6502 && make rom
+make OPTIONS=optsize rp6502 rom
 ```
 
-Two invocations, for the reason `AGENTS.md` gives: `TARGETS=` puts the suffix on `$(PROGRAM)`,
-so `make TARGETS=rp6502 rom` asks for `cc65-Chess.rp6502.rp6502` and a bare `make rom` has no
-rule for the binary it needs. The output is `cc65-Chess-rp6502.rp6502`, which is not a ROM in
-the old sense — it is a file holding a memory image the RIA copies into RAM before it lets the
-6502 out of reset.
+The output is `build/rp6502/cc65-Chess.rp6502`, which is not a ROM in the old sense — it is
+a file holding a memory image the RIA copies into RAM before it lets the 6502 out of reset.
 
 ## The emulator
 
 Built alongside the firmware, at `../rp6502/build/emulator/release/rp6502-emu`. Set
-`RP6502_HOME` in the `Makefile` if you want `make TARGETS=rp6502 test` to find it, or call it
+`RP6502_HOME` in `make/common.mk` if you want `make rp6502 test` to find it, or call it
 directly. A window:
 
 ```bash
-../rp6502/build/emulator/release/rp6502-emu cc65-Chess-rp6502.rp6502 --scale 2
+../rp6502/build/emulator/release/rp6502-emu build/rp6502/cc65-Chess.rp6502 --scale 2
 ```
 
 One screenshot, no window, no sound, and a scratch drive so the ROM cannot touch anything:
 
 ```bash
-../rp6502/build/emulator/release/rp6502-emu cc65-Chess-rp6502.rp6502 \
+../rp6502/build/emulator/release/rp6502-emu build/rp6502/cc65-Chess.rp6502 \
     --screenshot scratch/title.png --frames 120 --tmpdrive --mute
 ```
 
@@ -111,7 +108,7 @@ dump xram:183 12
 ## Real hardware
 
 ```bash
-python3 rp6502/rp6502.py -c .rp6502 run cc65-Chess-rp6502.rp6502
+python3 rp6502/rp6502.py -c .rp6502 run build/rp6502/cc65-Chess.rp6502
 ```
 
 `-c` names a config holding the serial device or the telnet host and passkey; it is written on

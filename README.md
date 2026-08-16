@@ -62,38 +62,49 @@ friendly piece defending it. Attackers in cyan, defenders in red.
 ## Building
 
 ```bash
-make OPTIONS=optsize                    # every target
-make OPTIONS=optsize TARGETS=c64        # or just one
+make                        # every default port whose compiler is here
+make list                   # what can build, and why not
+make c64                    # one port
+make apple2 po              # Apple II + ProDOS image
+make spectrum               # ZX Spectrum (z88dk), tap + sna
+make term                   # host curses binary
 ```
 
-The full target list is `apple2 atari atmos c64 c64.chr plus4 cx16 rp6502`, and a bare `make`
-builds all of them. Every one is built at the same optimisation setting, `optsize` — the Atari does
-not fit at `optspeed`, and a port built differently is a port that behaves differently.
+Products land in `build/<port>/`. Objects land in `build/obj/<port>/`. `make help` is the
+full verb list; `make tidy` sweeps leftover binaries out of the repo root.
 
-Most platforms have a second step to produce a disk, tape or program image — `d64`, `po`,
-`atr`, `tap`, `prg`, `cprg`, `cxprg`, `rom`. The binaries have to exist first, so build them
-in the same invocation:
+The cc65 ports are `apple2 atari atmos c64 c64.chr plus4 cx16`, plus `rp6502` if you have
+the Picocomputer fork of cc65. A bare `make` builds those that `cl65` can, and adds
+`spectrum` when `zcc` is on `PATH`. Every cc65 port is built at the same optimisation
+setting, `optsize` — the Atari does not fit at `optspeed`, and a port built differently is
+a port that behaves differently.
+
+Disk / tape / program images are a second goal, not a second invocation:
 
 ```bash
-make OPTIONS=optsize all d64 po atr tap prg cprg cxprg rom
+make apple2 po
+make atari atr
+make c64 d64        # also: prg cprg cxprg tap rom dsk
 ```
 
-'d64' needs C1541, `po` needs `cadius` and `atr` needs `dir2atr`; `rom` needs Python, and the
-tool it runs is in `rp6502/`. The rest need nothing extra.
+`d64` needs C1541, `po` needs `cadius` and `atr` needs `dir2atr`; `rom` needs Python, and
+the tool it runs is in `rp6502/`. The rest need nothing extra.
 
 `cx16` needs a reasonably current cc65: it uses `c_sp` in inline assembly, which older
 versions called `sp`.
 
-`rp6502` needs the [Picocomputer fork of cc65](https://github.com/picocomputer/cc65), which is
-where the `rp6502` target lives. `make rom` wraps the binary into a `cc65-Chess-rp6502.rp6502`
-ROM, which `rp6502-emu` boots and `rp6502/rp6502.py run` sends to a real machine.
+`rp6502` needs the [Picocomputer fork of cc65](https://github.com/picocomputer/cc65), which
+is where the `rp6502` target lives. `make rp6502 rom` wraps the binary into
+`build/rp6502/cc65-Chess.rp6502`, which `rp6502-emu` boots and `rp6502/rp6502.py run` sends
+to a real machine.
+
+`spectrum` needs [z88dk](https://github.com/z88dk/z88dk) (`zcc` on `PATH`, `ZCCCFG` set).
+`make spectrum test` launches it in ZEsarUX via `recipes/run-spectrum.sh`.
 
 **The terminal build**, which is what development happens against:
 
 ```bash
-cc -Isrc -lcurses -funsigned-char src/globals.c src/engine.c src/eval.c src/search.c \
-   src/board.c src/undo.c src/cpu.c src/human.c src/frontend.c src/main.c \
-   src/term/platTerm.c -o /tmp/chessterm
+make term                   # → build/term/chessterm
 ```
 
 ## The documentation
@@ -113,7 +124,7 @@ easy to violate by accident, and the traps that have already caught someone.
 ## Tests
 
 ```bash
-cd tests && make test
+make check                  # or: cd tests && make test
 ```
 
 35 seconds, exits non-zero on failure. Move generation is verified against perft — the

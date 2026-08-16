@@ -7,7 +7,7 @@ Captured from a live session on macOS arm64 (2026-08-08) against:
 
 - Installed package: `~/.local/share/AltirraSDL` (AltirraSDL 4.50)
 - Source tree: `~/Develop/github/external/AltirraSDL`
-- Chess artifacts: `cc65-Chess.atr`, `cc65-Chess.atari`, `cc65-Chess.atari.map`
+- Chess artifacts: `build/atari/cc65-Chess.atr`, `build/atari/cc65-Chess`, `build/atari/cc65-Chess.map`
 
 **Do not modify the chess source tree while another agent owns that work.**
 The `.atr` / `.atari` binaries are safe to boot read-only.
@@ -53,9 +53,9 @@ SDK_PYTHON=$ALTIRRA/src/AltirraSDL/AltirraBridge/sdk/python
 
 # Chess binaries (read-only for boot)
 CHESS=~/Develop/github/personal/cc65-Chess
-ATR=$CHESS/cc65-Chess.atr
-XEX=$CHESS/cc65-Chess.atari
-MAP=$CHESS/cc65-Chess.atari.map
+ATR=$CHESS/build/atari/cc65-Chess.atr
+XEX=$CHESS/build/atari/cc65-Chess
+MAP=$CHESS/build/atari/cc65-Chess.map
 ```
 
 ### What the package contains vs does not
