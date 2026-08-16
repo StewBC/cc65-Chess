@@ -1,8 +1,10 @@
 # cc65 Chess
 
-A chess program for 1 MHz 8-bit machines — Commodore 64, Apple II, Oric, Plus/4, Atari,
-Commander X16, Picocomputer 6502, ZX Spectrum — written in C. Each port is built with
-whichever compiler that machine needs. There is also a terminal build for development.
+A chess program in C, originally for ~1 MHz 6502 machines — Commodore 64, Apple II, Oric,
+Plus/4, Atari. Faster 6502s came later: the Commander X16 and the Picocomputer, at up to
+8 MHz. Then ports that cc65 does not cover — ZX Spectrum, Macintosh 68k. Each port is
+built with whichever compiler that machine needs. There is also a terminal build for
+development.
 
 It used to be a cc65-only project, which is why it is called cc65 Chess. Newer ports
 target machines cc65 does not, but the name is what it is.
@@ -81,7 +83,8 @@ leftover binaries out of the repo root.
 
 The default ports are `apple2 atari atmos c64 c64.chr plus4 cx16`. `spectrum` joins that
 list when its compiler is on `PATH`. `rp6502` is built only when you ask for it — it needs
-the [Picocomputer fork of cc65](https://github.com/picocomputer/cc65). Every 6502 port that
+the [Picocomputer fork of cc65](https://github.com/picocomputer/cc65). `mac68k` is the same
+shape — `make mac68k`, and it needs [Retro68](https://github.com/autc04/Retro68). Every 6502 port that
 shares a compiler is built at the same optimisation setting, `optsize` — the Atari does
 not fit at `optspeed`, and a port built differently is a port that behaves differently.
 

@@ -1,7 +1,9 @@
 # Working on cc65 Chess
 
-A chess program for 1 MHz 8-bit machines — c64, apple2, atmos, plus4, atari, cx16, rp6502 —
-plus a terminal build used for development. C, compiled with cc65.
+A chess program in C, originally for ~1 MHz 6502 machines — c64, apple2, atmos, plus4,
+atari. Faster 6502s came later: cx16 and rp6502, at up to 8 MHz. Then ports that cc65
+does not cover — spectrum, mac68k — plus a terminal build used for development. Each
+port with whichever compiler that machine needs.
 
 `doc/engine.md` explains how the engine works and is the right thing to read first. This
 file is the short list of constraints that are easy to violate by accident.
@@ -23,8 +25,9 @@ because every machine has a free-running counter, cc65's own `asminc` names all 
 the implementation is three lines a port that reads a register and cannot fail visibly — a
 wrong address gives repeating openings, which is what the engine did anyway. Anything asking
 to be added here should be held to that: no writes to hardware on a port that cannot be run,
-and a failure mode nobody has to debug. Note there are **nine** platform files, not seven —
-`c64.chr` is a separate port and `term` is the one that must return a constant.
+and a failure mode nobody has to debug. Note there are **eleven** platform files, not seven —
+`c64.chr` is a separate port, `spectrum` and `mac68k` use other compilers, and `term` is
+the one that must return a constant.
 
 **The frozen interface is wider than `plat.h`.** Every port also reads four globals
 directly, and this was discovered the hard way:
@@ -248,8 +251,8 @@ conservative one — after eight moves nothing has been traded and the lines are
 middlegame is about 25% slower per node. Anything that has to hold at the board gets
 measured over a real game.
 
-Emulator how-tos for the targets that run here — Apple II, Plus/4, Atari, C64, Picocomputer —
-are in `recipes/`. Generated match output stays in `scratch/`.
+Emulator how-tos for the targets that run here — Apple II, Plus/4, Atari, C64, Picocomputer,
+ZX Spectrum, Macintosh 68k — are in `recipes/`. Generated match output stays in `scratch/`.
 
 ## Building and testing
 

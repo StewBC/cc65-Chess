@@ -1380,8 +1380,8 @@ and without this the reply would be identical every game.
 ### Where a 1 MHz machine finds entropy
 
 `plat_GetSeed()` is the only addition to `plat.h` since it was frozen, and it returns one
-byte. Each port reads a counter that is already running, all of them named in cc65's own
-`asminc`:
+byte. Each port reads a counter that is already running. The 6502 ports use names from
+cc65's own `asminc`:
 
 | Port | Source | Why it is live |
 |---|---|---|
@@ -1392,6 +1392,8 @@ byte. Each port reads a counter that is already running, all of them named in cc
 | atmos | `TIMER3`, $0276 | maintained by the ROM IRQ that `cgetc` waits on |
 | atari | POKEY `RANDOM`, $D20A | a hardware polynomial counter; needs nothing to be running |
 | rp6502 | RIA `VSYNC`, $FFE3 | a 60Hz frame counter in the RIA, running because the port put a mode on the VGA |
+| spectrum | `FRAMES` at 23672 | 50 Hz, the Spectrum's own frame counter |
+| mac68k | `TickCount()` | 60 Hz, System 7 |
 | term | constant zero | development plays against this build and wants its games repeatable |
 
 The Picocomputer is the one that could have done better and deliberately does not: `RIA_ATTR_LRAND`
