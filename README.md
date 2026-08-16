@@ -1,8 +1,11 @@
 # cc65 Chess
 
 A chess program for 1 MHz 8-bit machines — Commodore 64, Apple II, Oric, Plus/4, Atari,
-Commander X16, Picocomputer 6502 — written in C and built with [cc65](https://cc65.github.io/).
-There is also a terminal build for development.
+Commander X16, Picocomputer 6502, ZX Spectrum — written in C. Each port is built with
+whichever compiler that machine needs. There is also a terminal build for development.
+
+It used to be a cc65-only project, which is why it is called cc65 Chess. Newer ports
+target machines cc65 does not, but the name is what it is.
 
 It is also, now, a guided tour of how a chess engine works. The engine was rewritten from
 scratch, the old one is still in the history, and both are documented in full — including a
@@ -61,23 +64,26 @@ friendly piece defending it. Attackers in cyan, defenders in red.
 
 ## Building
 
+`make help` is the verb list. `make list` says which ports this machine can compile — a
+missing compiler is a skip, not an error.
+
 ```bash
 make                        # every default port whose compiler is here
-make list                   # what can build, and why not
 make c64                    # one port
 make apple2 po              # Apple II + ProDOS image
-make spectrum               # ZX Spectrum (z88dk), tap + sna
-make term                   # host curses binary
+make spectrum               # ZX Spectrum, tap + sna
+make spectrum test          # build and run it
+make term                   # host curses binary → build/term/chessterm
 ```
 
-Products land in `build/<port>/`. Objects land in `build/obj/<port>/`. `make help` is the
-full verb list; `make tidy` sweeps leftover binaries out of the repo root.
+Products land in `build/<port>/`. Objects land in `build/obj/<port>/`. `make tidy` sweeps
+leftover binaries out of the repo root.
 
-The cc65 ports are `apple2 atari atmos c64 c64.chr plus4 cx16`, plus `rp6502` if you have
-the Picocomputer fork of cc65. A bare `make` builds those that `cl65` can, and adds
-`spectrum` when `zcc` is on `PATH`. Every cc65 port is built at the same optimisation
-setting, `optsize` — the Atari does not fit at `optspeed`, and a port built differently is
-a port that behaves differently.
+The default ports are `apple2 atari atmos c64 c64.chr plus4 cx16`. `spectrum` joins that
+list when its compiler is on `PATH`. `rp6502` is built only when you ask for it — it needs
+the [Picocomputer fork of cc65](https://github.com/picocomputer/cc65). Every 6502 port that
+shares a compiler is built at the same optimisation setting, `optsize` — the Atari does
+not fit at `optspeed`, and a port built differently is a port that behaves differently.
 
 Disk / tape / program images are a second goal, not a second invocation:
 
@@ -85,27 +91,12 @@ Disk / tape / program images are a second goal, not a second invocation:
 make apple2 po
 make atari atr
 make c64 d64        # also: prg cprg cxprg tap rom dsk
+make rp6502 rom     # build/rp6502/cc65-Chess.rp6502
 ```
 
 `d64` needs C1541, `po` needs `cadius` and `atr` needs `dir2atr`; `rom` needs Python, and
-the tool it runs is in `rp6502/`. The rest need nothing extra.
-
-`cx16` needs a reasonably current cc65: it uses `c_sp` in inline assembly, which older
-versions called `sp`.
-
-`rp6502` needs the [Picocomputer fork of cc65](https://github.com/picocomputer/cc65), which
-is where the `rp6502` target lives. `make rp6502 rom` wraps the binary into
-`build/rp6502/cc65-Chess.rp6502`, which `rp6502-emu` boots and `rp6502/rp6502.py run` sends
-to a real machine.
-
-`spectrum` needs [z88dk](https://github.com/z88dk/z88dk) (`zcc` on `PATH`, `ZCCCFG` set).
-`make spectrum test` launches it in ZEsarUX via `recipes/run-spectrum.sh`.
-
-**The terminal build**, which is what development happens against:
-
-```bash
-make term                   # → build/term/chessterm
-```
+the tool it runs is in `rp6502/`. The rest need nothing extra. `cx16` needs a reasonably
+current cc65: it uses `c_sp` in inline assembly, which older versions called `sp`.
 
 ## The documentation
 
@@ -142,7 +133,9 @@ about an hour. The engine rewrite touched no platform file at all; the only addi
 interface since is `plat_GetSeed()`, three lines a port that read a free-running counter for
 the opening randomiser.
 
-If you port it somewhere new, please say so — that is the best part of putting this online.
+A new machine is a `plat.h` implementation plus a thin file in `make/ports/`. `make help`
+says how those files are laid out. If you port it somewhere new, please say so — that is
+the best part of putting this online.
 
 ## History and credits
 
@@ -152,10 +145,10 @@ the display, the menus, the undo stack, the attack visualizer, the ports — is 
 program.
 
 - **Stefan Wessels** — the program, and all of it before 2026.
-- **Oliver Schmidt** — the Apple II port, and the generic cc65 Makefile with Patryk
-  "Silver Dream !" Łogiewa.
+- **Oliver Schmidt** — the Apple II port, and the generic cc65 Makefile (with Patryk
+  "Silver Dream !" Łogiewa) this tree grew from.
 - **[raxiss]** — the Oric-1 / Atmos / Telestrat port.
-- **Ullrich von Bassewitz and the cc65 team** — the compiler that makes all of this possible.
+- **Ullrich von Bassewitz and the cc65 team** — the compiler the 6502 ports still use.
 
 The tag `v1-original-engine` marks the last commit before the engine rewrite, if you want to
 check out the original and compare.
