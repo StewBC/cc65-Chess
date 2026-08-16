@@ -226,17 +226,6 @@ char board_ApplyMove(const t_engMove *move, char side)
 	undo_AddMove(move, &undo, side, outcome);
 	board_SyncDisplay();
 
-	/* the log line the ports print.  undo_FindUndoLine writes the same
-	 * four globals; do it here too so a port that cannot walk the undo
-	 * ring (or whose ring was stepped on) still has the move just made */
-	gTile[0] = ENG_TO_TILE(move->m_from);
-	gTile[1] = ENG_TO_TILE(move->m_to);
-	gPiece[1] = undo.m_captured & PIECE_DATA;
-	if(move->m_flags & ENG_MF_ENPASSANT)
-		gPiece[1] = PAWN;
-	gColor[0] = side;
-	gOutcome = outcome;
-
 	return outcome;
 }
 

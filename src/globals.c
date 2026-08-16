@@ -23,7 +23,9 @@ char		gOutcome;									// Result of the last move, for the log
 char		gSkillLevel;								// 0..3, indexes gcSearchSkill
 char		gReturnToOS;								// =1 can quit game; =0 cannot quit game
 char		gCursorPos[2][2];							// Remember last cursor pos for human players
+#ifdef PLAT_CURSOR_JUMP
 char		gGotoTile = 255;							// 255 = none; Mac mouse jumps the cursor with this
+#endif
 char		gShowAttackBoard;							// Visibility toggle
 char		gShowAttacks[2];							// Visibility toggle per side
 char		gLogStrBuffer[7];							// String placeholder for the move log

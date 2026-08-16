@@ -40,7 +40,13 @@ extern char		gOutcome;									// Result of the last move, for the log
 extern char		gSkillLevel;								// 0..3, indexes gcSearchSkill
 extern char		gReturnToOS;								// =1 can quit game; =0 cannot quit game
 extern char		gCursorPos[2][2];							// Remember last cursor pos for human players
+#ifdef PLAT_CURSOR_JUMP
+// a pointing device is the only reason this exists - the cursor lives in a
+// file static in human.c, so a port with a mouse cannot reach it.  only the
+// port that needs it defines PLAT_CURSOR_JUMP, in its make/ports/*.mk, so
+// the machines with no pointer pay nothing for it
 extern char		gGotoTile;									// 255 = none; a port may set 0..63 to jump the cursor
+#endif
 extern char		gShowAttackBoard;							// Visibility toggle
 extern char		gShowAttacks[2];							// Visibility toggle per side
 extern char		gLogStrBuffer[7];							// String placeholder for the move log

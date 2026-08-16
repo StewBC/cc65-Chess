@@ -34,7 +34,12 @@ directly, and this was discovered the hard way:
 
 - `gChessBoard[y][x]` — pieces, for drawing
 - the attacker **count** for a tile and side — no port ever reads the attacker list
-- `gTile[0]`, `gTile[1]`, `gPiece[1]`, `gColor[0]` — the move log line
+- `gTile[0]`, `gTile[1]`, `gPiece[1]`, `gColor[0]` — the move log line, valid only inside a
+  `undo_FindUndoLine` walk; see the log contract below
+
+There is a fifth, and it is the shape a new one has to be: `gGotoTile` is *written* by a port
+to jump the cursor from a pointing device, and it is behind `PLAT_CURSOR_JUMP` so that the ten
+machines with no mouse do not compile it at all.
 
 **`cx16` builds here now but is still not *run* here.** The build failure that predated the
 engine work was cc65 renaming the software stack pointer: `platCX16.c` used `(sp)` in inline
@@ -63,16 +68,18 @@ Since the endgame tables it is also the only setting that fits:
 | | optsize | optspeed |
 |---|---|---|
 | atari | 874 free below the framebuffer | **does not link — 1942 bytes over** |
-| apple2 | 656 free in MAIN, 2024 in BSS | **does not link — 1035 bytes over** |
+| apple2 | 660 free in MAIN, 2024 in BSS | **does not link — 1031 bytes over** |
 
 **The Atari's headroom does not shrink smoothly, and the number above hides a cliff.** `DLIST`
 is page-aligned inside `MAIN`, so code growth is absorbed by the padding in front of it until
-the padding runs out and the display list jumps a page — 256 bytes, gone at once. That has now
+the padding runs out and the display list jumps a page — 256 bytes, gone at once. That has
 happened three times: the opening table crossed it, check evasions crossed it again, and the
 black reply table crossed it a third time, which is why the Atari lost 256 bytes each time
-while the Apple II lost the 302, 132 and 253 the code actually costs.
+while the Apple II lost the 302, 132 and 253 the code actually costs. It happened a fourth
+time and was **taken back** — see the port-tax rule below; the Atari is the reason that rule
+exists.
 
-**There are 38 bytes of padding left.** Check `DATA`'s end against `DLIST`'s start in an
+**There are 42 bytes of padding left.** Check `DATA`'s end against `DLIST`'s start in an
 `ld65 -m` map rather than reading the free-space number on its own; the two tell different
 stories and only one of them predicts what the next change will cost. Free space is
 *ceiling − first unused* (`__MAIN_LAST__` on the Apple II, map End+1 elsewhere). The
@@ -81,17 +88,51 @@ full picture, all eight targets, measured rather than remembered — free space 
 
 | target | ceiling | free |
 |---|---|---|
-| **apple2** | MAIN ends `$B700` | **656**, plus 2024 in BSS at `$0800–$1FFF` |
-| **atari** | `$9100` framebuffer | **874** — and 38 before the next `DLIST` page jump (`DATA` `$7ED9`, `DLIST` `$7F00`) |
-| atmos | RAMEND `$9900` less stack | 1875 |
-| plus4 | `$A000` bitmap | 2240 — **the cfg does not cap it**, so an overrun would draw BSS on the screen rather than fail to link, exactly as the Atari used to |
-| cx16 | HIMEM `$9F00` less stack | 3024 — the framebuffer is in VERA and costs nothing here |
-| c64.chr | BSS ends `$C400` | 8178 |
-| c64 | `$C000` bitmap less stack | 10366 |
-| rp6502 | `$F700` c_sp less the 2K stack | **26430** — video memory is XRAM and costs the 6502 nothing |
+| **apple2** | MAIN ends `$B700` | **660**, plus 2024 in BSS at `$0800–$1FFF` |
+| **atari** | `$9100` framebuffer | **874** — and 42 before the next `DLIST` page jump (`DATA` `$7ED5`, `DLIST` `$7F00`) |
+| atmos | RAMEND `$9900` less stack | 1879 |
+| plus4 | `$A000` bitmap | 2249 — **the cfg does not cap it**, so an overrun would draw BSS on the screen rather than fail to link, exactly as the Atari used to |
+| cx16 | HIMEM `$9F00` less stack | 3028 — the framebuffer is in VERA and costs nothing here |
+| c64.chr | BSS ends `$C400` | 8178 — BSS is pinned at `$9000`, so this row is the one that does *not* track code growth |
+| c64 | `$C000` bitmap less stack | 10370 |
+| rp6502 | `$F700` c_sp less the 2K stack | ~26434 — **not re-measured**, no rp6502 `cl65` on this machine. Video memory is XRAM and costs the 6502 nothing |
 
 Regenerate these with `cl65 -t <target> -C <cfg> --mapfile ...` against `build/obj/<target>/*.o`;
-the numbers above are from a clean build and will drift with the next change.
+the numbers above are from a clean build and will drift with the next change. `make TARGETS=<t>
+OPTIONS=optsize,mapfile all` writes `build/<t>/cc65-Chess.map` — note the saved-`OPTIONS` state
+file means a second target in the same loop will not relink on its own; delete the binary first.
+
+**A port may not add unconditional bytes to `src/`, and two ports did before anyone measured
+it.** Between them the ZX Spectrum and the Mac 68k put 137 bytes of shared code into the
+build for features neither of the other nine ports has — which cost the Atari a whole `DLIST`
+page, on a machine neither of those compilers can even target. Both are now off the 8-bit
+builds and the numbers above are back. A port that wants something from `src/` has three
+options and they are in order of preference:
+
+1. **Use what is already there.** The Spectrum needed the last move in `gTile` to append its
+   own log line, and made `board_ApplyMove` fill the log globals for everybody — 106 bytes.
+   But `undo_FindUndoLine(0)` returns exactly that at every point `plat_AddToLogWin` is
+   reached, which is what the other ten ports call anyway. The Spectrum calls it itself now,
+   in its own file, and pays in Z80.
+2. **Pay in your own platform file.** The Mac repaints its log from the undo ring like
+   everyone else, and saves and restores the globals around it because it repaints on window
+   events. That is the shape to copy.
+3. **A compile-time switch defined in your own `make/ports/*.mk`,** if the thing genuinely
+   cannot be reached from a port file. `gGotoTile` is the one that qualifies: a mouse has to
+   move the cursor, and the cursor is a file static in `human.c`. It is behind
+   `PLAT_CURSOR_JUMP`, defined only in `make/ports/mac68k.mk`, exactly as `SEARCH_ARENA` is
+   `#ifndef`'d for the Spectrum and `EVAL_TUNING` is compiled out of the shipping build.
+
+**And the log has a contract, which is where this went wrong.** `plat_AddToLogWin` walks the
+undo ring and rebuilds `gTile`/`gPiece`/`gColor`/`gOutcome` as a side effect — `cpu.c` says so
+in a comment and relies on it. The globals are **not** valid outside that walk. Pre-filling
+them in `board_ApplyMove` looked like a fix and was quietly worse: `undo_Redo` calls `eng_Make`
+directly and never goes through `board_ApplyMove`, so a redone move logged the *previous*
+move's globals. Ask the ring, at the moment you draw.
+
+**Measure a shared change on the Atari before committing it, not after.** 106 bytes is nothing
+on nine machines and a page on the tenth, and `make atari` still succeeds either way — the
+`DLIST` padding is the only number that shows it.
 
 `Makefile.options` defaults to `optsize` and that is why. Raising it would mean raising it
 everywhere, which the Atari cannot take - so treat `optsize` as fixed, and check anything
