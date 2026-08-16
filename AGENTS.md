@@ -254,7 +254,7 @@ are in `recipes/`. Generated match output stays in `scratch/`.
 ## Building and testing
 
 ```bash
-make OPTIONS=optspeed c64
+make c64
 make apple2 po              # bootable build/apple2/cc65-Chess.po, needs cadius
 make atari atr              # bootable build/atari/cc65-Chess.atr, needs dir2atr
 make rp6502 rom             # build/rp6502/cc65-Chess.rp6502, needs python3
@@ -265,10 +265,6 @@ make term                   # host curses → build/term/chessterm
 Products land in `build/<port>/`. A port name selects that port, so `make apple2 po` is
 one invocation — the old two-step `TARGETS=` / suffix collision is gone. `TARGETS=c64`
 still works. `make list` shows which compilers this machine has.
-
-```bash
-make term
-```
 
 ```bash
 cd tests && make test

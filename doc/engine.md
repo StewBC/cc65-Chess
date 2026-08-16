@@ -1607,7 +1607,7 @@ cc -Isrc -lcurses -funsigned-char src/globals.c src/engine.c src/eval.c src/sear
 ```
 
 ```bash
-make OPTIONS=optspeed TARGETS=c64
+make c64
 ```
 
 ## On measuring strength
