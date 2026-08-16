@@ -13,6 +13,7 @@ still go under `scratch/`, which is gitignored.
 | [using-c64m.md](using-c64m.md) | C64 under `../c64m` (control port) |
 | [rp6502-emulator.md](rp6502-emulator.md) | Picocomputer under `rp6502-emu` (headless, scripted) |
 | [spectrum-z88dk.md](spectrum-z88dk.md) | ZX Spectrum (`make spectrum`) |
+| [mac68k-retro68.md](mac68k-retro68.md) | Macintosh 68k (`make mac68k`), Basilisk II |
 | [run-spectrum.sh](run-spectrum.sh) | ZEsarUX 48K — also what `make spectrum test` runs |
 | [build-a2m-profile.sh](build-a2m-profile.sh) | Bootable Apple II profile image |
 | [vice/](vice/) | Plus/4 binary-monitor helpers used by the Plus/4 note |

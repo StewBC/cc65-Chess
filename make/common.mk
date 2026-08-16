@@ -6,7 +6,7 @@ BUILDDIR := build
 OBJDIR   := $(BUILDDIR)/obj
 
 # a port is a name, not a cc65 target.  toolchains and availability live elsewhere.
-PORT_NAMES := apple2 atari atmos c64 c64.chr plus4 cx16 rp6502 spectrum term
+PORT_NAMES := apple2 atari atmos c64 c64.chr plus4 cx16 rp6502 spectrum term mac68k
 
 # built by a bare `make` when the compiler is present.  rp6502 stays off this
 # list even if the picocomputer fork is installed — it was never a default.
@@ -66,9 +66,28 @@ CL65          := $(shell $(call WHICH,cl65))
 ZCC           := $(shell $(call WHICH,zcc))
 Z88DK_APPMAKE := $(shell $(call WHICH,z88dk-appmake))
 
-HAVE_CL65 := $(if $(CL65),1)
-HAVE_ZCC  := $(if $(ZCC),1)
-HAVE_CC   := $(if $(shell $(call WHICH,$(CC))),1)
+# Retro68 is usually not on PATH.  RETRO68 may be the toolchain prefix
+# (…/toolchain) or the CMake build tree that contains it.  both are
+# accepted
+RETRO68 ?= Retro68-build
+ifeq ($(wildcard $(RETRO68)/bin/m68k-apple-macos-gcc),)
+  ifneq ($(wildcard $(RETRO68)/toolchain/bin/m68k-apple-macos-gcc),)
+    RETRO68 := $(RETRO68)/toolchain
+  else
+    RETRO68_ON_PATH := $(shell $(call WHICH,m68k-apple-macos-gcc))
+    ifneq ($(RETRO68_ON_PATH),)
+      RETRO68 := $(patsubst %/bin/m68k-apple-macos-gcc,%,$(RETRO68_ON_PATH))
+    endif
+  endif
+endif
+RETRO68_CC     := $(RETRO68)/bin/m68k-apple-macos-gcc
+RETRO68_REZ    := $(RETRO68)/bin/Rez
+RETRO68_REZINC := $(RETRO68)/m68k-apple-macos/RIncludes
+
+HAVE_CL65    := $(if $(CL65),1)
+HAVE_ZCC     := $(if $(ZCC),1)
+HAVE_CC      := $(if $(shell $(call WHICH,$(CC))),1)
+HAVE_RETRO68 := $(if $(wildcard $(RETRO68)/bin/m68k-apple-macos-gcc),1)
 
 ifeq ($(HAVE_CL65),1)
   CL65_TARGET_PATH := $(shell $(CL65) --print-target-path 2>/dev/null)

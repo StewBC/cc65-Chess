@@ -7,6 +7,7 @@
 #   make spectrum     z88dk
 #   make spectrum test
 #   make term         host curses → build/term/chessterm
+#   make mac68k       Retro68 → build/mac68k/*.bin *.APPL *.dsk
 #   make check        native suite in tests/
 #
 # products land in build/<port>/.  objects in build/obj/<port>/.
@@ -30,6 +31,7 @@ cx16_AVAILABLE     := $(HAVE_CL65)
 rp6502_AVAILABLE   := $(HAVE_RP6502)
 spectrum_AVAILABLE := $(HAVE_ZCC)
 term_AVAILABLE     := $(HAVE_CC)
+mac68k_AVAILABLE   := $(HAVE_RETRO68)
 
 apple2_SKIP   := cl65 not on PATH
 atari_SKIP    := cl65 not on PATH
@@ -41,6 +43,7 @@ cx16_SKIP     := cl65 not on PATH
 rp6502_SKIP   := cl65 has no rp6502 target (needs the picocomputer fork)
 spectrum_SKIP := zcc not on PATH
 term_SKIP     := $(CC) not on PATH
+mac68k_SKIP   := Retro68 not found (set RETRO68= or put m68k-apple-macos-gcc on PATH)
 
 OPTIONAL_DEFAULTS := $(if $(HAVE_ZCC),spectrum)
 BUILD_PORTS := $(strip $(foreach p,$(DEFAULT_PORTS) $(OPTIONAL_DEFAULTS),$(if $($(p)_AVAILABLE),$(p))))
@@ -61,6 +64,7 @@ endif
 include make/toolchains/cc65.mk
 include make/toolchains/z88dk.mk
 include make/toolchains/host.mk
+include make/toolchains/retro68.mk
 
 # port files declare packaging first (po, atr, ...).  without this, a bare
 # `make TARGETS=c64` builds the first of those instead of the c64 binary.
@@ -120,13 +124,14 @@ help:
 	@echo "  make list            available vs skipped, and why"
 	@echo "  make help            this text"
 	@echo "  make <port>          one port  (apple2 atari atmos c64 c64.chr"
-	@echo "                                  plus4 cx16 rp6502 spectrum term)"
+	@echo "                                  plus4 cx16 rp6502 spectrum term mac68k)"
 	@echo "  make apple2 po       Apple II + ProDOS image"
 	@echo "  make atari atr       Atari + ATR"
 	@echo "  make c64 d64         C64 + D64  (also: prg cprg cxprg tap rom dsk)"
 	@echo "  make spectrum        ZX Spectrum tap + sna (z88dk)"
 	@echo "  make spectrum test   build and run ZEsarUX"
 	@echo "  make term            host curses binary"
+	@echo "  make mac68k          Macintosh 68k (Retro68) — .bin .APPL .dsk"
 	@echo "  make check           native suite (tests/)"
 	@echo "  make clean           this selection's products"
 	@echo "  make tidy            leftover binaries in the repo root"

@@ -40,6 +40,7 @@ extern char		gOutcome;									// Result of the last move, for the log
 extern char		gSkillLevel;								// 0..3, indexes gcSearchSkill
 extern char		gReturnToOS;								// =1 can quit game; =0 cannot quit game
 extern char		gCursorPos[2][2];							// Remember last cursor pos for human players
+extern char		gGotoTile;									// 255 = none; a port may set 0..63 to jump the cursor
 extern char		gShowAttackBoard;							// Visibility toggle
 extern char		gShowAttacks[2];							// Visibility toggle per side
 extern char		gLogStrBuffer[7];							// String placeholder for the move log

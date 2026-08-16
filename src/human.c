@@ -28,6 +28,14 @@ static char sc_cursorX, sc_cursorY;
 // Handle the cursor movement
 void human_ProcessInput(int keyMask)
 {
+	if(gGotoTile < 64)
+	{
+		sc_cursorX = gGotoTile & 7;
+		sc_cursorY = gGotoTile / 8;
+		gGotoTile = 255;
+		return;
+	}
+
 	switch(keyMask)
 	{
 		case INPUT_UP:
@@ -117,6 +125,7 @@ char human_Play(char side)
 	// get this sides' cursor
 	sc_cursorY = gCursorPos[side][0];
 	sc_cursorX = gCursorPos[side][1];
+	gGotoTile = 255;
 
 	do
 	{
