@@ -72,7 +72,11 @@ include make/toolchains/retro68.mk
 
 .PHONY: all test clean zap tidy love help list check $(PORT_NAMES)
 
+# a port name only selects the port — `all` does the work.  the empty recipe
+# is what stops make printing "Nothing to be done for `plus4'" in front of a
+# `make plus4 test` that is about to run perfectly well
 $(PORT_NAMES): all
+	@:
 
 # --- single port vs many -------------------------------------------------
 

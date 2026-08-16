@@ -1,8 +1,40 @@
 # ZX Spectrum with z88dk
 
-A `make` port on the z88dk toolchain, not cc65. `zcc` must be on `PATH` and
-`ZCCCFG` must point at its `lib/config`. On this machine that is
-`/Users/swessels/Downloads/z88dk`.
+A `make` port on the z88dk toolchain, not cc65.
+
+## Environment
+
+Two variables, and on this machine they are:
+
+```bash
+export PATH="$PATH:/Users/swessels/Downloads/z88dk/bin"
+export ZCCCFG=/Users/swessels/Downloads/z88dk/lib/config
+```
+
+`PATH` is what `make list` tests, so without it the port reports
+`skipped — zcc not on PATH` and a bare `make` leaves the Spectrum out.
+
+**`ZCCCFG` fails much later than you would expect, and the message points at
+the wrong thing.** `zcc` compiles and links the whole program without it —
+`build/spectrum/chess` and `chess.tap` both appear — and then the `.sna` step
+stops with
+
+```
+zx: Error: SNA prototype src/appmake/data/zx_48.sna not found
+```
+
+which reads like a broken z88dk install or a bad source change. The file is
+there; `z88dk-appmake` just resolves its own data directory relative to the
+root it derives from `ZCCCFG`, and with the variable unset it looks under the
+current directory. Set it and the same build finishes.
+
+If these live in an interactive shell profile only, anything non-interactive —
+an editor's build task, CI, an agent shell — will not see them. Pass them on
+the command line there:
+
+```bash
+ZCCCFG=/Users/swessels/Downloads/z88dk/lib/config make spectrum
+```
 
 `src/spectrum/platSpectrum.c` is a real `plat.h`: board, files and ranks,
 side to move, the move log, menus, B/A/D, and a flashing `Think`. Pieces are

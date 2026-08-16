@@ -18,6 +18,20 @@ available at every step.
 VICE's **binary** monitor is the usable interface; the text monitor is fragile
 about reconnects and cannot do half of this.
 
+That directory is not on `PATH`, so `make plus4 test` (and `make c64 test`)
+find it through `VICE_HOME`, which is a **prefix** and therefore needs its
+trailing slash:
+
+```bash
+export VICE_HOME=/Applications/vice-arm64-gtk3-3.10/bin/
+```
+
+Until 2026-08-16 exporting it did nothing: `make/common.mk` assigned the
+emulator homes with `:=`, and a makefile assignment beats the environment, so
+the recipe always ran a bare `xplus4` and reported `make: xplus4: No such file
+or directory`. They are `?=` now. The same applies to `CX16_HOME`,
+`AWIN_HOME`, `ORIC_HOME`, `ATARI_HOME` and `RP6502_HOME`.
+
 Read `../c64m/agents/vice-oracle.md` first. It is written for c64m-vs-VICE
 comparison, but its protocol section and its list of traps apply unchanged. VICE
 source, for reading what the Kernal actually does, is at

@@ -17,13 +17,18 @@ DEFAULT_PORTS := apple2 atari atmos c64 c64.chr plus4 cx16
 ENGINE_C := $(sort $(wildcard $(SRCDIR)/*.c))
 ENGINE_S := $(sort $(wildcard $(SRCDIR)/*.s))
 
-# emulator homes — prefix the binary if it is not on PATH.
-VICE_HOME   :=
-CX16_HOME   :=
-AWIN_HOME   :=
-ORIC_HOME   :=
-ATARI_HOME  :=
-RP6502_HOME :=
+# emulator homes — prefixed to the binary, so an emulator that is not on
+# PATH can be reached by exporting one of these.  `?=`, not `:=`: a plain
+# assignment here would win over the environment, which is exactly what it
+# used to do — `export VICE_HOME=...` was silently blanked and the recipe
+# fell back to a bare `xplus4`.  The value is a prefix, so it needs its
+# trailing slash: VICE_HOME=/Applications/vice-arm64-gtk3-3.10/bin/
+VICE_HOME   ?=
+CX16_HOME   ?=
+AWIN_HOME   ?=
+ORIC_HOME   ?=
+ATARI_HOME  ?=
+RP6502_HOME ?=
 
 PREEMUCMD  :=
 POSTEMUCMD :=

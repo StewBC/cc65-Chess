@@ -1,8 +1,35 @@
 # Macintosh 68k with Retro68
 
-A `make` port on Retro68, not cc65. `m68k-apple-macos-gcc` is usually not
-on `PATH`. The makefile accepts `RETRO68` as either the toolchain prefix
-(`…/toolchain`) or the CMake build tree that contains it
+A `make` port on Retro68, not cc65.
+
+## Environment
+
+`m68k-apple-macos-gcc` is usually not on `PATH`, so `RETRO68` is how the
+makefile finds it. On this machine:
+
+```bash
+export RETRO68=/Users/swessels/Develop/github/external/Retro68-build
+```
+
+It accepts either the toolchain prefix (`…/toolchain`) or the CMake build
+tree that contains it — the path above is the build tree, and
+`make/common.mk` appends `/toolchain` itself. `m68k-apple-macos-gcc` on
+`PATH` works too; the makefile derives the prefix back from it. The default
+when nothing is set is the relative `Retro68-build`, i.e. a build tree
+sitting inside the repo, which is not how it is installed here.
+
+Nothing else in the tree fails first — `make list` simply reports
+`skipped — Retro68 not found (set RETRO68= or put m68k-apple-macos-gcc on
+PATH)`, and a bare `make` builds every other port and exits 0 without the Mac. If the export lives in an
+interactive shell profile only, anything non-interactive — an editor's build
+task, CI, an agent shell — sees that skip and nothing else. Pass it on the
+command line there:
+
+```bash
+RETRO68=/Users/swessels/Develop/github/external/Retro68-build make mac68k
+```
+
+## Build
 
 ```bash
 make                        # includes mac68k when Retro68 is found
@@ -40,6 +67,23 @@ inside the emulated Finder:
   Folder (and on the chess floppy if they are there), then restart.
 - Copy `cc65-Chess` onto the hard disk; a first copy with the bundle bit
   set is what registers a new creator.
+
+## Quit the emulator before rebuilding
+
+`make mac68k` ends by reformatting `cc65-Chess.dsk` and copying the app back
+onto it. While Basilisk has that image mounted it holds an exclusive lock on
+the file, and the build stops with
+
+```
+hformat: .../build/mac68k/cc65-Chess.dsk: unable to obtain lock for medium
+	(Resource temporarily unavailable)
+make[1]: *** [build/mac68k/cc65-Chess.bin] Error 1
+```
+
+It reads like a broken toolchain and it is not — it is that one file being
+held open. It also fails a bare `make`, which builds this port last, so every
+other port succeeds and the run still exits non-zero. Eject the volume or
+quit Basilisk and build again; nothing needs cleaning up afterwards.
 
 ## Run
 

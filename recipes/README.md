@@ -5,6 +5,17 @@ the repo root — `make help` is the verb list, `make list` says what this
 machine can compile. Match output, profiles and other generated artifacts
 still go under `scratch/`, which is gitignored.
 
+Two ports need environment variables before `make list` will even admit they
+are available: `RETRO68` for mac68k and `PATH`/`ZCCCFG` for spectrum. Both
+notes below open with the exact settings. A shell that does not have them
+does not fail loudly — it silently builds the other nine ports and exits 0.
+
+*Running* uses a second set, one per emulator, prefixed to the binary so a
+`make <port> test` can reach an emulator that is not on `PATH`: `VICE_HOME`
+(c64, c64.chr, plus4), `CX16_HOME`, `AWIN_HOME`, `ORIC_HOME`, `ATARI_HOME`,
+`RP6502_HOME`. Each is a prefix, so it needs a **trailing slash**:
+`VICE_HOME=/Applications/vice-arm64-gtk3-3.10/bin/`.
+
 | File | Target |
 |---|---|
 | [apple2-debugging.md](apple2-debugging.md) | Apple II under `../a2m-v2` |
