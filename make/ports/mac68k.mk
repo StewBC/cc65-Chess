@@ -1,4 +1,4 @@
-# Retro68 / m68k-apple-macos-gcc.  not a default port — `make mac68k`.
+# Retro68 / m68k-apple-macos-gcc.  joins a bare `make` when Retro68 is found.
 mac68k_FAMILY := retro68
 
 MAC68K_CREATOR := Cchs

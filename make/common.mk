@@ -10,7 +10,8 @@ PORT_NAMES := apple2 atari atmos c64 c64.chr plus4 cx16 rp6502 spectrum term mac
 
 # built by a bare `make` when the compiler is present.  rp6502 stays off this
 # list even if the picocomputer fork is installed — it was never a default.
-# spectrum joins in when zcc is on PATH.  term is host-only: `make term`.
+# spectrum joins in when zcc is on PATH.  mac68k joins when Retro68 is found.
+# term is host-only: `make term`.
 DEFAULT_PORTS := apple2 atari atmos c64 c64.chr plus4 cx16
 
 ENGINE_C := $(sort $(wildcard $(SRCDIR)/*.c))

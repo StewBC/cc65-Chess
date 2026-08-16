@@ -5,10 +5,11 @@ on `PATH`. The makefile accepts `RETRO68` as either the toolchain prefix
 (`…/toolchain`) or the CMake build tree that contains it
 
 ```bash
+make                        # includes mac68k when Retro68 is found
 make mac68k
 ```
 
-Not a default port. Output is gitignored, under `build/mac68k/`:
+Output is gitignored, under `build/mac68k/`:
 
 | file | what |
 |---|---|

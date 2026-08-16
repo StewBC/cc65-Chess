@@ -82,9 +82,9 @@ Products land in `build/<port>/`. Objects land in `build/obj/<port>/`. `make tid
 leftover binaries out of the repo root.
 
 The default ports are `apple2 atari atmos c64 c64.chr plus4 cx16`. `spectrum` joins that
-list when its compiler is on `PATH`. `rp6502` is built only when you ask for it — it needs
-the [Picocomputer fork of cc65](https://github.com/picocomputer/cc65). `mac68k` is the same
-shape — `make mac68k`, and it needs [Retro68](https://github.com/autc04/Retro68). Every 6502 port that
+list when its compiler is on `PATH`. `mac68k` joins when [Retro68](https://github.com/autc04/Retro68)
+is found. `rp6502` is built only when you ask for it — it needs the
+[Picocomputer fork of cc65](https://github.com/picocomputer/cc65). Every 6502 port that
 shares a compiler is built at the same optimisation setting, `optsize` — the Atari does
 not fit at `optspeed`, and a port built differently is a port that behaves differently.
 

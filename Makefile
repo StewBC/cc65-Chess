@@ -45,7 +45,7 @@ spectrum_SKIP := zcc not on PATH
 term_SKIP     := $(CC) not on PATH
 mac68k_SKIP   := Retro68 not found (set RETRO68= or put m68k-apple-macos-gcc on PATH)
 
-OPTIONAL_DEFAULTS := $(if $(HAVE_ZCC),spectrum)
+OPTIONAL_DEFAULTS := $(if $(HAVE_ZCC),spectrum) $(if $(HAVE_RETRO68),mac68k)
 BUILD_PORTS := $(strip $(foreach p,$(DEFAULT_PORTS) $(OPTIONAL_DEFAULTS),$(if $($(p)_AVAILABLE),$(p))))
 
 # `make spectrum` (and `make spectrum test`) selects that port.  TARGETS= on
