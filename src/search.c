@@ -48,7 +48,9 @@
 // is a good deal harder to notice.  Re-measured after the depth caps went up:
 // 267 of 512, still never exhausted.  The headroom is worth keeping until a
 // target's RAM budget actually needs it
+#ifndef SEARCH_ARENA
 #define SEARCH_ARENA		512
+#endif
 
 static t_engMove	st_arena[SEARCH_ARENA];
 static unsigned int	si_arenaTop;
