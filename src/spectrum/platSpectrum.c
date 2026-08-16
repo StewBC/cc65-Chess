@@ -392,10 +392,24 @@ void plat_Init(void)
 	attr = MKATTR(INK_WHITE, PAPER_BLACK);
 	zx_cls(attr);
 
-	puts_xy(1, 10, gszAbout, MKATTR(INK_YELLOW, PAPER_BLACK) | ATTR_BRIGHT);
-	puts_xy(5, 12, "ZX Spectrum, 2026.", MKATTR(INK_CYAN, PAPER_BLACK));
-	fill_attr(14, 6, 3, 2, MKATTR(INK_WHITE, PAPER_GREEN));
-	draw_piece(14, 6, gfxTiles[KING - 1]);
+	/* 32 columns, and gszAbout is 36 visible characters - one row cannot
+	 * hold it.  putch clips at x>31 rather than wrapping, so drawn from
+	 * x=1 the year simply fell off the right edge and the splash read
+	 * "...S. Wessels,".  Split at the space after the version, both
+	 * halves centred */
+	attr = MKATTR(INK_YELLOW, PAPER_BLACK) | ATTR_BRIGHT;
+	put_span(8, 9, gszAbout, 15, attr);
+	puts_xy(6, 10, gszAbout + 16, attr);
+	puts_xy(3, 12, "ZX Spectrum version, 2026.", MKATTR(INK_CYAN, PAPER_BLACK));
+
+	/* two kings, black above the text and white below - the same welcome
+	 * every other port draws.  the text is rows 9..12, so 5-6 and 15-16
+	 * sit five rows either side of its centre.  attributes are the
+	 * board's: a white piece is bright white ink, a black one is not */
+	fill_attr(14, 5, 3, 2, MKATTR(INK_BLACK, PAPER_GREEN));
+	draw_piece(14, 5, gfxTiles[KING - 1]);
+	fill_attr(14, 15, 3, 2, MKATTR(INK_WHITE, PAPER_GREEN) | ATTR_BRIGHT);
+	draw_piece(14, 15, gfxTiles[KING - 1]);
 	puts_xy(10, 20, "Press ENTER", MKATTR(INK_WHITE, PAPER_BLACK) | ATTR_FLASH);
 
 	plat_ReadKeys(1);
@@ -672,33 +686,34 @@ static void plat_paintLog(void)
 void plat_AddToLogWin(void)
 {
 	char i;
-	char same;
 
-	/* frontend_LogMove is the only caller.  ApplyMove has just written
-	 * the move into gTile.  Do not invent a line from leftover gTile:
-	 * DrawBoard after the menu used to call this and that is the AH-AH
-	 * at the bottom of the log — no move had been played. */
+	/* frontend_LogMove is the only caller.  the other ports repaint the
+	 * whole column out of the undo ring and fill gTile as a side effect;
+	 * this one keeps its own scrollback, so it asks for the top entry
+	 * itself rather than making board_ApplyMove fill gTile for everybody.
+	 * (0) is the move just pushed - after a redo too, which ApplyMove
+	 * never sees.  Do not invent a line from leftover gTile: DrawBoard
+	 * after the menu used to call this and that is the AH-AH at the
+	 * bottom of the log - no move had been played.
+	 *
+	 * there is deliberately no "same as the line above" check.  one was
+	 * here to swallow the duplicate a redo used to produce off stale
+	 * globals; asking the ring makes each call a real move, and two
+	 * consecutive plies are by opposite sides so they cannot share a
+	 * from-to pair anyway */
+	if(!undo_FindUndoLine(0))
+		return;
 	frontend_FormatLogString();
-	same = 0;
-	if(sc_logN)
+
+	if(sc_logN < LOG_LINES)
+		++sc_logN;
+	for(i = (char)(sc_logN - 1); i > 0; --i)
 	{
-		same = 1;
-		for(i = 0; i < 5; ++i)
-			if(sc_logText[0][i] != gLogStrBuffer[i])
-				same = 0;
+		memcpy(sc_logText[i], sc_logText[i - 1], 7);
+		sc_logCol[i] = sc_logCol[i - 1];
 	}
-	if(!same)
-	{
-		if(sc_logN < LOG_LINES)
-			++sc_logN;
-		for(i = (char)(sc_logN - 1); i > 0; --i)
-		{
-			memcpy(sc_logText[i], sc_logText[i - 1], 7);
-			sc_logCol[i] = sc_logCol[i - 1];
-		}
-		memcpy(sc_logText[0], gLogStrBuffer, 7);
-		sc_logCol[0] = gColor[0];
-	}
+	memcpy(sc_logText[0], gLogStrBuffer, 7);
+	sc_logCol[0] = gColor[0];
 	plat_paintLog();
 }
 
