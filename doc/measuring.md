@@ -401,7 +401,7 @@ cl65 -t c64 -Oris -I../src -o c64search.prg \
 
 ### Under c64m, which is the easier rig
 
-`../c64m` has a control port very like `../a2m-v2`'s, and for these benchmarks it is less
+`../c64m` has a control port very like `../a2m`'s, and for these benchmarks it is less
 work than VICE. Four things had to be learned the hard way and are worth writing down:
 
 - **`load-prg` injects but does not start.** The program sits at the BASIC prompt until
@@ -463,7 +463,7 @@ cycles, and 8e9 wasted half the run.
 
 `tests/c64profile.c` now retains this instrument.  It is compile-time isolated behind
 `SEARCH_PROFILE`, replays six fixed middlegame positions, and checks nodes plus a digest of
-move, flags, score and depth before accepting a row.  `tests/profile-run-a2m.py` uses a2m-v2's
+move, flags, score and depth before accepting a row.  `tests/profile-run-a2m.py` uses a2m's
 exact emulated cycle counter for the full development profile; VICE remains the C64 landing
 instrument.  The commands and both sets of raw results are in `doc/rework-log.md`.
 
@@ -518,14 +518,15 @@ stale glyphs in its terminal model that a real terminal would not show.
 
 ### On the real Apple II
 
-Full notes are in `recipes/apple2-debugging.md`. `../a2m-v2` is an Apple II emulator with a
-scriptable control port, which makes `apple2` the one 8-bit target that can be driven the
-same way — except that here the machine really is the machine, so it also catches what the
-terminal build cannot: character sets, video modes, firmware entry points.
+Full notes are in `recipes/apple2-debugging.md`. `../a2m` (https://github.com/StewBC/a2m) is
+an Apple II emulator with a scriptable control port, which makes `apple2` the one 8-bit target
+that can be driven the same way — except that here the machine really is the machine, so it
+also catches what the terminal build cannot: character sets, video modes, firmware entry
+points.
 
 ```bash
 make apple2 po                      # → build/apple2/cc65-Chess.po
-cd ../a2m-v2 && ./build/a2m-v2 --noini \
+cd ../a2m && ./build/a2m --noini \
     --hd s7d0=<absolute-path>/build/apple2/cc65-Chess.po --control-port 6510
 ```
 

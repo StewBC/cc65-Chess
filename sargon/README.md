@@ -1,7 +1,7 @@
 # cc65-Chess versus Sargon II
 
 This directory contains the match harness and the operational notes for playing
-the native cc65-Chess engine against Apple II Sargon II under `a2m-v2`. The
+the native cc65-Chess engine against Apple II Sargon II under `a2m`. The
 emulator stays visible and runs at maximum turbo so a person can follow the
 games.
 
@@ -14,7 +14,7 @@ the harness, not a results archive.
 
 ## Files
 
-- `match.py` drives Sargon through the a2m-v2 control port, drives the exact
+- `match.py` drives Sargon through the a2m control port, drives the exact
   cc65-Chess engine through `tests/uci`, referees games with python-chess, and
   writes CSV, PGN, JSON summaries, and failure logs.
 - `levelcost.py` answers "how slow is each Sargon level" in six minutes, which
@@ -38,10 +38,13 @@ cc65-Chess/
   sargon/match.py
   sargon/Sargon-trimmed.dsk
   tests/uci
-../a2m-v2/
-  build/a2m-v2
+../a2m/
+  build/a2m
   tools/a2m_control_client.py
 ```
+
+a2m is at https://github.com/StewBC/a2m; build it Release with
+`cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j`.
 
 ### The disk image is not in this repository
 
@@ -74,7 +77,7 @@ above rather than trusting any particular download, since what is served under
 one name changes over time.
 
 Two things that image is not. The commonly circulated `Sargon.dsk` is 153,394
-bytes: the same 143,360-byte image followed by a 10,034-byte trailer, and a2m-v2
+bytes: the same 143,360-byte image followed by a 10,034-byte trailer, and a2m
 will not boot the oversized raw file — trimming it to the first 143,360 bytes
 produces the hash above. And do **not** substitute the protected
 `Sargon II.nib`; that image was observed announcing a false mate from the
@@ -101,7 +104,7 @@ make -C tests test
 The compilation disk is not directly bootable into the game. The reliable
 sequence is:
 
-1. Launch a2m-v2 with the trimmed disk and a control port. Do not use
+1. Launch a2m with the trimmed disk and a control port. Do not use
    `--headless`.
 2. Wait for the `SARGON ][` catalog/menu screen.
 3. Send uppercase `R`, then uppercase `H`, as individual keys. Do not send
@@ -116,13 +119,13 @@ sequence is:
 `R` and `H` must be uppercase. The distinction between the no-Return loader
 keys and the later choice-plus-Return prompts is important.
 
-After boot, send the control command `set-turbo max`. a2m-v2 does run at max,
+After boot, send the control command `set-turbo max`. a2m does run at max,
 but its window title currently does not update when speed is changed through
 the control port.
 
 ## Reset behavior
 
-The a2m-v2 `reset` control command returns this Sargon disk to the reusable
+The a2m `reset` control command returns this Sargon disk to the reusable
 `NEW GAME` state. This was verified both textually and graphically:
 
 - initial board frame SHA-256:
@@ -132,7 +135,7 @@ The a2m-v2 `reset` control command returns this Sargon disk to the reusable
 - after reset and starting another game, the frame returned byte-for-byte to
   the initial hash.
 
-Apple II snapshots are exposed by a2m-v2 but currently time out and are not
+Apple II snapshots are exposed by a2m but currently time out and are not
 usable. Reset is therefore the per-game restoration mechanism.
 
 ## cc65-Chess side
@@ -391,7 +394,7 @@ Three cautions:
 - **A per-game count is not a per-move cost.** Counting queen moves per game
   correlates with the result because a losing position invites queen moves.
 
-## Known a2m-v2 limitations and cautions
+## Known a2m limitations and cautions
 
 - Do not use `--headless`; the visible window is part of this study.
 - `set-turbo max` works, but the window title does not reflect the control-port

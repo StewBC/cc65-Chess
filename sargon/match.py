@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run cc65-Chess UCI against Apple II Sargon II under windowed a2m-v2.
+"""Run cc65-Chess UCI against Apple II Sargon II under windowed a2m.
 
 See sargon/README.md for the emulator choreography, screen-format quirks,
 calibration procedure, artifact layout, and recovery notes.
@@ -41,8 +41,8 @@ import chess.pgn
 
 
 REPO = Path(__file__).resolve().parents[1]
-A2M_REPO = REPO.parent / "a2m-v2"
-A2M_BIN = A2M_REPO / "build" / "a2m-v2"
+A2M_REPO = REPO.parent / "a2m"
+A2M_BIN = A2M_REPO / "build" / "a2m"
 A2M_TOOLS = A2M_REPO / "tools"
 UCI_BIN = REPO / "tests" / "uci"
 SARGON_DISK = Path(__file__).with_name("Sargon-trimmed.dsk")
@@ -234,14 +234,14 @@ class SargonEmulator:
 		deadline = time.monotonic() + 20
 		while time.monotonic() < deadline:
 			if self.proc.poll() is not None:
-				raise BridgeError(f"a2m-v2 exited during launch: {self.proc.returncode}")
+				raise BridgeError(f"a2m exited during launch: {self.proc.returncode}")
 			try:
 				self.ctl = Ctl(port=self.port, timeout=60)
 				break
 			except (ConnectionRefusedError, OSError):
 				time.sleep(0.1)
 		else:
-			raise BridgeError("timed out connecting to a2m-v2 control port")
+			raise BridgeError("timed out connecting to a2m control port")
 		self.wait_text("SARGON ][", SCREEN_TIMEOUT)
 		self.key("R")
 		time.sleep(0.15)
@@ -578,7 +578,7 @@ def append_pgn(
 	cc_name, nodes = CC65_SKILLS[cc_skill]
 	cc_player = f"cc65-Chess {cc_name} ({nodes} nodes)"
 	game.headers["Event"] = f"cc65-Chess vs Sargon II {batch}"
-	game.headers["Site"] = "a2m-v2"
+	game.headers["Site"] = "a2m"
 	game.headers["Date"] = time.strftime("%Y.%m.%d")
 	game.headers["Round"] = str(game_result.index + 1)
 	if game_result.cc_color == "white":
@@ -746,7 +746,7 @@ def main() -> int:
 	args.output.mkdir(parents=True, exist_ok=True)
 	prepare_disk()
 	if not A2M_BIN.is_file() or not UCI_BIN.is_file():
-		raise BridgeError("a2m-v2 or cc65 UCI binary is missing")
+		raise BridgeError("a2m or cc65 UCI binary is missing")
 
 	emulator = SargonEmulator(args.port)
 	MOVE_TIMEOUT = args.move_timeout

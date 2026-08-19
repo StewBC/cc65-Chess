@@ -150,7 +150,7 @@ below it — verified running, with a write watchpoint over the unused tail. Bef
 existed it had 460 bytes and repetition detection would not have linked.
 
 **`apple2`, `plus4` and `atari` all build here, and two of the three run here.**
-`apple2` and `plus4` also *run* here — `../a2m-v2` for the Apple II, VICE's `xplus4` binary
+`apple2` and `plus4` also *run* here — `../a2m` for the Apple II, VICE's `xplus4` binary
 monitor for the Plus/4 — so a change to either can be verified instead of argued (§7 of
 `doc/measuring.md`). `atari` runs here too now, under AltirraSDL's JSON bridge — see
 `recipes/altirra-bridge-usage.md`, which is how the framebuffer collision was found and the

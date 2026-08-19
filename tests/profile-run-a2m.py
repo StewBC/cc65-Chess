@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the search component profiler under windowed a2m-v2."""
+"""Run the search component profiler under windowed a2m."""
 
 import argparse
 import pathlib
@@ -33,7 +33,7 @@ def metadata(text):
 
 def process_error(process):
     message = process.stderr.read().decode("utf-8", "replace").strip()
-    return message or f"a2m-v2 exited with status {process.returncode}"
+    return message or f"a2m exited with status {process.returncode}"
 
 
 def connect(client_type, port, process, deadline):
@@ -47,7 +47,7 @@ def connect(client_type, port, process, deadline):
             )
         except ConnectionRefusedError:
             time.sleep(0.1)
-    raise TimeoutError("a2m-v2 control port did not open")
+    raise TimeoutError("a2m control port did not open")
 
 
 def main():
@@ -62,8 +62,8 @@ def main():
 
     tests_dir = pathlib.Path(__file__).resolve().parent
     repo_dir = tests_dir.parent
-    a2m_root = repo_dir.parent / "a2m-v2"
-    a2m = (args.a2m or (a2m_root / "build-release" / "a2m-v2")).resolve()
+    a2m_root = repo_dir.parent / "a2m"
+    a2m = (args.a2m or (a2m_root / "build" / "a2m")).resolve()
     image = args.image.resolve()
     sys.path.insert(0, str(a2m_root / "tools"))
     from a2m_control_client import Ctl
@@ -87,7 +87,7 @@ def main():
         client = connect(Ctl, args.port, process, deadline)
         identity = client.ok("hello")
         if "protocol=A2M/6" not in identity:
-            raise RuntimeError(f"unexpected a2m-v2 identity: {identity}")
+            raise RuntimeError(f"unexpected a2m identity: {identity}")
 
         base_cycles = [0] * (COMPONENTS + 1)
         profile_cycles = [0] * (COMPONENTS + 1)

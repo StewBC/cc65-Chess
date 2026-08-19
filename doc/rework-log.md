@@ -1040,7 +1040,7 @@ transposition table. *(Built in Phase 7, once Part V of `strength.md` put a numb
 
       Run, rather than argued about:
 
-      - **apple2**, under `../a2m-v2` with its control port. Boots, menus, hires board, move
+      - **apple2**, under `../a2m` with its control port. Boots, menus, hires board, move
         log, an AI-vs-AI game played through, and the `B` visualizer drawing attack counts.
         Done while verifying the relocated BSS in Phase 7.
       - **plus4**, under VICE's binary monitor — which is how the `cgetc` bug in the Kernal
@@ -1055,7 +1055,7 @@ transposition table. *(Built in Phase 7, once Part V of `strength.md` put a numb
       **Still unrun: c64, c64.chr, atmos, cx16.** And no target has been through the
       *whole* checklist — castling, en passant, promotion, undo/redo and all three toggles
       in one sitting. c64, c64.chr and plus4 are drivable headless through VICE's binary
-      monitor and apple2 through a2m-v2, so only atmos, atari and cx16 genuinely need
+      monitor and apple2 through a2m, so only atmos, atari and cx16 genuinely need
       another machine. This remains the largest gap between what is known and what is
       assumed.
 
@@ -1131,7 +1131,7 @@ addresses passed as link flags. A project `chessA2.cfg` moves BSS down into that
 note that stock `apple2.cfg` already defines a `LOW` area there, but sizes it `%S - $0800`,
 which with a `$4000` start runs straight through the graphics page.
 
-That was verified rather than argued, under `../a2m-v2` with its control port: boots, menus,
+That was verified rather than argued, under `../a2m` with its control port: boots, menus,
 board, move log, an AI-vs-AI game, and the B visualizer, with `geBoard` now at `$082D` — the
 first 200 bytes of the moved region, which is exactly where a stray ProDOS or loader buffer
 would land. A write watchpoint over the unused tail saw no writes in 150 seconds of play, which
@@ -2390,7 +2390,7 @@ flags, score, completed depth and node count before a timing is accepted.
 
 The rows are more separated than the old 42 / 19 / 18 / 14 profile:
 
-| # | doubled component | a2m-v2 exact cycles | Apple share | C64 jiffies | C64 share |
+| # | doubled component | a2m exact cycles | Apple share | C64 jiffies | C64 share |
 |---|---|---:|---:|---:|---:|
 | 1 | full move generation | 736,923,964 -> 805,232,556 | 9.27% | 46,453 -> 50,762 | **9.28%** |
 | 2 | capture/promotion generation | 736,595,804 -> 953,004,826 | 29.38% | 46,453 -> 60,051 | **29.27%** |
@@ -2405,11 +2405,11 @@ The rows are more separated than the old 42 / 19 / 18 / 14 profile:
 | 11 | `positionKey` and ring write | 739,289,628 -> 741,793,132 | 0.34% | 46,452 -> 46,714 | **0.56%** |
 | 12 | repetition scan | 739,726,652 -> 738,714,735 | -0.14% | 46,452 -> 46,525 | **0.16%** |
 
-The a2m-v2 numbers are the development instrument, not a substitute target.  cc65's Apple II
+The a2m numbers are the development instrument, not a substitute target.  cc65's Apple II
 runtime has no `clock()`, so the driver and `tests/profile-run-a2m.py` use a two-byte memory
 handshake: the program waits outside the measured interval, the controller pauses, reads the
 emulator's exact cycle counter, acknowledges and resumes.  No breakpoint is armed while the
-search runs, because a2m-v2 otherwise checks it at every instruction and loses its max-mode
+search runs, because a2m otherwise checks it at every instruction and loses its max-mode
 speed.  The Apple and C64 rankings agree closely; the C64 result remains the decision number.
 
 Reproduction, shipping `optsize` throughout:
@@ -2427,7 +2427,7 @@ cl65 -t c64 -Or -I../src -I. -DSEARCH_PROFILE -o /tmp/c64profile.prg \
 python3 -u profile-run-a2m.py /tmp/profile.po --marker 0x1544 --ack 0x1545
 ```
 
-The full VICE matrix took about 36 minutes on this host; a2m-v2 took about eleven.  Use a2m-v2
+The full VICE matrix took about 36 minutes on this host; a2m took about eleven.  Use a2m
 to develop and rank profile rows, then use a narrow candidate-specific C64 replay for landing
 evidence rather than paying this matrix price repeatedly.
 
@@ -2559,7 +2559,7 @@ records runs at 38,557 and keeps `DLIST` at `$7D00`: DATA ends `$7CF7`, BSS ends
 leaving 2,025.  The 256-byte Atari page is worth more than 0.8 percentage points of an already
 faster move.
 
-The final `chess.po` also booted in windowed a2m-v2, advanced through the menus, searched at the
+The final `chess.po` also booted in windowed a2m, advanced through the menus, searched at the
 default skill and played White's `e2-e4`; the rendered board and move log both updated.
 
 No budget changed.  This is banked fixed-budget time for Phase D.
@@ -2902,7 +2902,7 @@ did not reproduce Appendix A to the digit (tool drift); those rows were left alo
 
 Harder is a real granted-node gain, a bit above the 16 Elo formula. Very Hard is noise.
 
-Sargon II L4, 64 games, cc65 skill 3 at 18,000 nodes, windowed a2m-v2, OwnBook on:
+Sargon II L4, 64 games, cc65 skill 3 at 18,000 nodes, windowed a2m, OwnBook on:
 
 **22W-13L-29D = 57.0%**, 33 distinct six-ply openings, 0 fifty-move draws.
 Terminations: 35 checkmate, 22 threefold, 7 insufficient material. Mean 115 plies,

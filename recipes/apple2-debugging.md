@@ -12,14 +12,14 @@ but is not run here; that remains the one target requiring the Windows machine.
 
 ## 1. The instrument
 
-`../a2m-v2` is Stefan's own Apple II emulator. It has a scriptable control port,
-which is the part that matters: you can read the machine's memory and its
-rendered frames from Python while it runs.
+`../a2m` is Stefan's own Apple II emulator (https://github.com/StewBC/a2m). It has a
+scriptable control port, which is the part that matters: you can read the
+machine's memory and its rendered frames from Python while it runs.
 
 ```bash
 make apple2 po                        # needs cadius; it is at /usr/local/bin
-cd ../a2m-v2
-./build-release/a2m-v2 --noini --hd s7d0=<absolute-path>/build/apple2/cc65-Chess.po --control-port 6510
+cd ../a2m
+./build/a2m --noini --hd s7d0=<absolute-path>/build/apple2/cc65-Chess.po --control-port 6510
 ```
 
 **Run it windowed. Do not pass `--headless`.** Stefan watches the window while
@@ -27,8 +27,8 @@ you work, and a headless run silently removes him from the loop. `--model plus`
 gives a ][+; the default is an Enhanced //e. System ROMs are compiled into the
 binary, so `roms/` being empty is fine. The path to the `.po` must be absolute.
 
-`build-release/a2m-v2` is the fast binary used for profiling.  `build/a2m-v2` also works for
-interactive debugging, but is slower.  For the retained exact-cycle profile, build the image
+Build it Release (`cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j`); a
+debug build is too slow for profiling.  For the retained exact-cycle profile, build the image
 and print its current handshake addresses with `recipes/build-a2m-profile.sh`, then run
 the controller command it prints:
 
@@ -50,7 +50,7 @@ The title screen waits for a keypress before the game starts. Send it yourself
 rather than asking for it:
 
 ```python
-import sys; sys.path.insert(0, '<...>/a2m-v2/tools')
+import sys; sys.path.insert(0, '<...>/a2m/tools')
 from a2m_control_client import Ctl
 c = Ctl(port=6510)
 c.cmd('key 13')                       # ENTER past the title

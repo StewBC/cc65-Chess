@@ -58,7 +58,7 @@ static unsigned int su_digest;
 
 #ifdef PROFILE_EXTERNAL_CLOCK
 // The Apple II profiler has no cc65 clock().  It waits outside the measured
-// search at each marker while a2m-v2 pauses, reads its exact emulated cycle
+// search at each marker while a2m pauses, reads its exact emulated cycle
 // counter, clears the acknowledgement byte and resumes.
 volatile char gc_profileMarker;
 volatile char gc_profileAck;

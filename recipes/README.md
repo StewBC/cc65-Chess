@@ -18,7 +18,7 @@ does not fail loudly — it silently builds the other nine ports and exits 0.
 
 | File | Target |
 |---|---|
-| [apple2-debugging.md](apple2-debugging.md) | Apple II under `../a2m-v2` |
+| [apple2-debugging.md](apple2-debugging.md) | Apple II under `../a2m` |
 | [plus4-debugging.md](plus4-debugging.md) | Plus/4 under VICE `xplus4` |
 | [altirra-bridge-usage.md](altirra-bridge-usage.md) | Atari under AltirraSDL / AltirraBridge |
 | [using-c64m.md](using-c64m.md) | C64 under `../c64m` (control port) |
