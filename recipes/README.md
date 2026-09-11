@@ -26,6 +26,8 @@ does not fail loudly — it silently builds the other nine ports and exits 0.
 | [spectrum-z88dk.md](spectrum-z88dk.md) | ZX Spectrum (`make spectrum`) |
 | [mac68k-retro68.md](mac68k-retro68.md) | Macintosh 68k (`make mac68k`), Basilisk II |
 | [ti99-mame.md](ti99-mame.md) | TI-99/4A (`make ti99`), Homebrew MAME |
+| [coco3-cmoc.md](coco3-cmoc.md) | Color Computer 3 (`make coco3`), XRoar |
+| [run-coco3.sh](run-coco3.sh) | XRoar coco3 — also what `make coco3 test` runs |
 | [run-spectrum.sh](run-spectrum.sh) | ZEsarUX 48K — also what `make spectrum test` runs |
 | [build-a2m-profile.sh](build-a2m-profile.sh) | Bootable Apple II profile image |
 | [vice/](vice/) | Plus/4 binary-monitor helpers used by the Plus/4 note |

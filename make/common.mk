@@ -6,7 +6,7 @@ BUILDDIR := build
 OBJDIR   := $(BUILDDIR)/obj
 
 # a port is a name, not a cc65 target.  toolchains and availability live elsewhere.
-PORT_NAMES := apple2 atari atmos c64 c64.chr plus4 cx16 rp6502 spectrum term mac68k ti99
+PORT_NAMES := apple2 atari atmos c64 c64.chr plus4 cx16 rp6502 spectrum term mac68k ti99 coco3
 
 # built by a bare `make` when the compiler is present.  rp6502 stays off this
 # list even if the picocomputer fork is installed — it was never a default.
@@ -104,6 +104,16 @@ ifeq ($(TMS9900_GCC),)
   endif
 endif
 HAVE_TMS9900 := $(if $(TMS9900_GCC),1)
+
+# CMOC.  PATH first; otherwise the install this machine already has.
+CMOC := $(shell $(call WHICH,cmoc))
+ifeq ($(CMOC),)
+  CMOC_HOME ?= $(HOME)/.local/share/cmaoc-0.1.100
+  ifneq ($(wildcard $(CMOC_HOME)/bin/cmoc),)
+    CMOC := $(CMOC_HOME)/bin/cmoc
+  endif
+endif
+HAVE_CMOC := $(if $(CMOC),1)
 
 ifeq ($(HAVE_CL65),1)
   CL65_TARGET_PATH := $(shell $(CL65) --print-target-path 2>/dev/null)

@@ -33,6 +33,7 @@ spectrum_AVAILABLE := $(HAVE_ZCC)
 term_AVAILABLE     := $(HAVE_CC)
 mac68k_AVAILABLE   := $(HAVE_RETRO68)
 ti99_AVAILABLE     := $(HAVE_TMS9900)
+coco3_AVAILABLE    := $(HAVE_CMOC)
 
 apple2_SKIP   := cl65 not on PATH
 atari_SKIP    := cl65 not on PATH
@@ -46,8 +47,9 @@ spectrum_SKIP := zcc not on PATH
 term_SKIP     := $(CC) not on PATH
 mac68k_SKIP   := Retro68 not found (set RETRO68= or put m68k-apple-macos-gcc on PATH)
 ti99_SKIP     := tms9900-gcc not on PATH
+coco3_SKIP    := cmoc not on PATH
 
-OPTIONAL_DEFAULTS := $(if $(HAVE_ZCC),spectrum) $(if $(HAVE_RETRO68),mac68k) $(if $(HAVE_TMS9900),ti99)
+OPTIONAL_DEFAULTS := $(if $(HAVE_ZCC),spectrum) $(if $(HAVE_RETRO68),mac68k) $(if $(HAVE_TMS9900),ti99) $(if $(HAVE_CMOC),coco3)
 BUILD_PORTS := $(strip $(foreach p,$(DEFAULT_PORTS) $(OPTIONAL_DEFAULTS),$(if $($(p)_AVAILABLE),$(p))))
 
 # `make spectrum` (and `make spectrum test`) selects that port.  TARGETS= on
@@ -68,6 +70,7 @@ include make/toolchains/z88dk.mk
 include make/toolchains/host.mk
 include make/toolchains/retro68.mk
 include make/toolchains/tms9900.mk
+include make/toolchains/cmoc.mk
 
 # port files declare packaging first (po, atr, ...).  without this, a bare
 # `make TARGETS=c64` builds the first of those instead of the c64 binary.
@@ -131,7 +134,8 @@ help:
 	@echo "  make list            available vs skipped, and why"
 	@echo "  make help            this text"
 	@echo "  make <port>          one port  (apple2 atari atmos c64 c64.chr"
-	@echo "                                  plus4 cx16 rp6502 spectrum term mac68k ti99)"
+	@echo "                                  plus4 cx16 rp6502 spectrum term"
+	@echo "                                  mac68k ti99 coco3)"
 	@echo "  make apple2 po       Apple II + ProDOS image"
 	@echo "  make atari atr       Atari + ATR"
 	@echo "  make c64 d64         C64 + D64  (also: prg cprg cxprg tap rom dsk)"
@@ -141,6 +145,8 @@ help:
 	@echo "  make mac68k          Macintosh 68k (Retro68) — .bin .APPL .dsk"
 	@echo "  make ti99            TI-99/4A (tms9900-gcc) — .ea5 .rpk"
 	@echo "  make ti99 test       build and run Homebrew MAME with 32K"
+	@echo "  make coco3           Color Computer 3 (CMOC) — .bin .dsk"
+	@echo "  make coco3 test      build and run XRoar coco3"
 	@echo "  make check           native suite (tests/)"
 	@echo "  make clean           this selection's products"
 	@echo "  make tidy            leftover binaries in the repo root"
