@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<romset version="1.0">
+   <resources>
+      <rom id="romimage" file="chessC.bin"/>
+   </resources>
+   <configuration>
+      <pcb type="paged378">
+         <socket id="rom_socket" uses="romimage"/>
+      </pcb>
+   </configuration>
+</romset>
