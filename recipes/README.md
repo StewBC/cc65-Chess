@@ -14,7 +14,9 @@ does not fail loudly — it silently builds the other nine ports and exits 0.
 `make <port> test` can reach an emulator that is not on `PATH`: `VICE_HOME`
 (c64, c64.chr, plus4), `CX16_HOME`, `AWIN_HOME`, `ORIC_HOME`, `ATARI_HOME`,
 `RP6502_HOME`. Each is a prefix, so it needs a **trailing slash**:
-`VICE_HOME=/Applications/vice-arm64-gtk3-3.10/bin/`.
+`VICE_HOME=/Applications/vice-arm64-gtk3-3.10/bin/`.  Agon is the
+exception: `FAE_HOME` is the Fab Agon Emulator *install root*, not a
+prefix, because the emulator has to be launched from that directory.
 
 | File | Target |
 |---|---|
@@ -27,6 +29,8 @@ does not fail loudly — it silently builds the other nine ports and exits 0.
 | [mac68k-retro68.md](mac68k-retro68.md) | Macintosh 68k (`make mac68k`), Basilisk II |
 | [ti99-mame.md](ti99-mame.md) | TI-99/4A (`make ti99`), Homebrew MAME |
 | [coco3-cmoc.md](coco3-cmoc.md) | Color Computer 3 (`make coco3`), XRoar |
+| [agon-emulator.md](agon-emulator.md) | Agon Light (`make agon`), Fab Agon Emulator |
+| [run-agon.sh](run-agon.sh) | Fab Agon — also what `make agon test` runs |
 | [run-coco3.sh](run-coco3.sh) | XRoar coco3 — also what `make coco3 test` runs |
 | [run-spectrum.sh](run-spectrum.sh) | ZEsarUX 48K — also what `make spectrum test` runs |
 | [build-a2m-profile.sh](build-a2m-profile.sh) | Bootable Apple II profile image |

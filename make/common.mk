@@ -6,7 +6,7 @@ BUILDDIR := build
 OBJDIR   := $(BUILDDIR)/obj
 
 # a port is a name, not a cc65 target.  toolchains and availability live elsewhere.
-PORT_NAMES := apple2 atari atmos c64 c64.chr plus4 cx16 rp6502 spectrum term mac68k ti99 coco3
+PORT_NAMES := apple2 atari atmos c64 c64.chr plus4 cx16 rp6502 spectrum term mac68k ti99 coco3 agon
 
 # built by a bare `make` when the compiler is present.  rp6502 stays off this
 # list even if the picocomputer fork is installed — it was never a default.
@@ -114,6 +114,19 @@ ifeq ($(CMOC),)
   endif
 endif
 HAVE_CMOC := $(if $(CMOC),1)
+
+# agondev.  PATH first; otherwise the install this machine already has.
+AGONDEV_CONFIG := $(shell $(call WHICH,agondev-config))
+ifeq ($(AGONDEV_CONFIG),)
+  AGONDEV_HOME ?= /Volumes/EXTERNAL/ext-dev/agondev
+  ifneq ($(wildcard $(AGONDEV_HOME)/bin/agondev-config),)
+    AGONDEV_CONFIG := $(AGONDEV_HOME)/bin/agondev-config
+  endif
+endif
+HAVE_AGONDEV := $(if $(AGONDEV_CONFIG),1)
+
+# Fab Agon emulator.  FAE_HOME is the install root, not a PATH prefix.
+FAE_HOME ?= $(HOME)/.local/share/fab-agon-emulator-v1.2.5-macos-arm64
 
 ifeq ($(HAVE_CL65),1)
   CL65_TARGET_PATH := $(shell $(CL65) --print-target-path 2>/dev/null)

@@ -77,6 +77,7 @@ make spectrum               # ZX Spectrum, tap + sna
 make spectrum test          # build and run it
 make term                   # host curses binary → build/term/chessterm
 make coco3                  # Color Computer 3, CMOC → build/coco3/chess.bin
+make agon                   # Agon Light, agondev → build/agon/chess.bin
 ```
 
 Products land in `build/<port>/`. Objects land in `build/obj/<port>/`. `make tidy` sweeps
