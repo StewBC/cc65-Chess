@@ -58,8 +58,17 @@ HEADERS := $(wildcard $(SRCDIR)/*.h) testutil.h
 chesstest: $(ENGINE) $(HARNESS) $(HEADERS)
 	$(CC) $(CFLAGS) -o $@ $(ENGINE) $(HARNESS)
 
-test: chesstest
+ARCHIE_TEST_SRCS := archie.c $(SRCDIR)/archie/platArchie.c $(SRCDIR)/globals.c \
+	$(SRCDIR)/c64/dataC64.c $(SRCDIR)/coco3/font.c
+
+archiecheck: $(ARCHIE_TEST_SRCS) $(HEADERS) $(wildcard archie-stubs/*.h archie-stubs/archie/*.h)
+	$(CC) -Iarchie-stubs -I$(SRCDIR) -funsigned-char -DPLAT_CURSOR_JUMP \
+		-O2 -Wall -Wextra -Wno-char-subscripts -o $@ archie.c \
+		$(SRCDIR)/globals.c $(SRCDIR)/c64/dataC64.c $(SRCDIR)/coco3/font.c
+
+test: chesstest archiecheck
 	./chesstest all
+	./archiecheck
 
 # The UCI adapter, for playing other engines under a match runner.  Built
 # WITHOUT -DEVAL_TUNING on purpose: that switch exists for the tuning harness
@@ -119,7 +128,7 @@ gauntlet: uci genbook
 
 # note book.epd is not removed here: make clean must not delete a tracked file
 clean:
-	rm -f chesstest uci uci-tuning genbook collectpos \
+	rm -f chesstest archiecheck uci uci-tuning genbook collectpos \
 		movecache32 movecache64 movecache128 \
 		uci-mc32 uci-mc64 uci-mc128
 	rm -rf chesstest.dSYM uci.dSYM uci-tuning.dSYM genbook.dSYM

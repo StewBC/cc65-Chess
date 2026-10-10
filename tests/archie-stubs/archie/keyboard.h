@@ -1,0 +1,13 @@
+#define KEY_UP 57
+#define KEY_RIGHT 121
+#define KEY_DOWN 41
+#define KEY_LEFT 25
+#define KEY_ESC 112
+#define KEY_A 65
+#define KEY_B 100
+#define KEY_D 50
+#define KEY_RETURN 73
+#define KEY_M 101
+#define KEY_U 53
+#define KEY_R 51
+int k_checkKeypress(unsigned int);

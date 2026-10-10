@@ -19,6 +19,7 @@
 
 # native test binaries and their debug info
 /tests/chesstest
+/tests/archiecheck
 /tests/uci
 /tests/uci-tuning
 /tests/uci-tuning-48

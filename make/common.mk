@@ -6,7 +6,7 @@ BUILDDIR := build
 OBJDIR   := $(BUILDDIR)/obj
 
 # a port is a name, not a cc65 target.  toolchains and availability live elsewhere.
-PORT_NAMES := apple2 atari atmos c64 c64.chr plus4 cx16 rp6502 spectrum term mac68k ti99 coco3 agon
+PORT_NAMES := apple2 atari atmos c64 c64.chr plus4 cx16 rp6502 spectrum term mac68k ti99 coco3 agon archie
 
 # built by a bare `make` when the compiler is present.  rp6502 stays off this
 # list even if the picocomputer fork is installed — it was never a default.
@@ -124,6 +124,11 @@ ifeq ($(AGONDEV_CONFIG),)
   endif
 endif
 HAVE_AGONDEV := $(if $(AGONDEV_CONFIG),1)
+
+# ArchieSDK, the ARM2 / RISC OS toolchain also used by TimePilot-Archie.
+ARCHIESDK ?= $(HOME)/Develop/gitlab/archiesdk
+ARCHIE_CC := $(ARCHIESDK)/tools/bin/arm-archie-gcc
+HAVE_ARCHIE := $(if $(wildcard $(ARCHIE_CC)),1)
 
 # Fab Agon emulator.  FAE_HOME is the install root, not a PATH prefix.
 FAE_HOME ?= $(HOME)/.local/share/fab-agon-emulator-v1.2.5-macos-arm64

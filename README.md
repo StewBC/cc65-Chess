@@ -78,6 +78,8 @@ make spectrum test          # build and run it
 make term                   # host curses binary → build/term/chessterm
 make coco3                  # Color Computer 3, CMOC → build/coco3/chess.bin
 make agon                   # Agon Light, agondev → build/agon/chess.bin
+make archie                 # Acorn A3010, ArchieSDK → RISC OS app + ZIPs
+make archie test            # private Arculator copy under build/archie/
 ```
 
 Products land in `build/<port>/`. Objects land in `build/obj/<port>/`. `make tidy` sweeps
@@ -89,6 +91,12 @@ is found. `rp6502` is built only when you ask for it — it needs the
 [Picocomputer fork of cc65](https://github.com/picocomputer/cc65). Every 6502 port that
 shares a compiler is built at the same optimisation setting, `optsize` — the Atari does
 not fit at `optspeed`, and a port built differently is a port that behaves differently.
+
+`archie` joins the default build when ArchieSDK is found. Set `ARCHIESDK` to its
+installation directory. The port targets an A3010 with 2 MB RAM and RISC OS 3.11,
+with the C64 board and colours in fullscreen Mode 9. Mouse hover and left click work
+alongside the original keys. Build, packaging and emulator instructions are in
+[recipes/archie-archiesdk.md](recipes/archie-archiesdk.md).
 
 Disk / tape / program images are a second goal, not a second invocation:
 

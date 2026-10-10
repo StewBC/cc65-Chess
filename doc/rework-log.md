@@ -3229,6 +3229,48 @@ Branch: `grok/next-engine-phase-f-ordering`.
 
 ---
 
+## Archimedes port — October 2026
+
+Added an ArchieSDK port for the A3010 with 2 MB and RISC OS 3.11, using
+TimePilot-Archie's toolchain and RISC OS packaging approach. Mode 9's
+320x256, 16-colour framebuffer carries the original C64 320x200 layout
+between 28-row green margins. The C64 piece data is compiled unchanged;
+the existing 8x8 public-domain font supplies the text. Mouse selection
+uses `PLAT_CURSOR_JUMP`; no engine or frozen interface change, no bytes
+added to the other ports.
+
+Arculator v2.2, A3010/4 MB/RISC OS 3.11: all four skills played, including
+search moves at Very Hard and both sides castling at Very Easy. Checked
+two-human e2-e4, undo/redo and its log entry, B/A/D, mouse menu selection,
+M/Escape interruption, quit and restart. Mode switching initially hid the
+pointer; selecting it after the mode switch fixed that. Repainting the
+whole menu every VSync visibly flickered; redraw on selection changes
+and scroller ticks instead.
+
+The native suite and added platform contract checks pass. The latter
+cover framebuffer bounds, repaint preservation of log globals, mouse
+jump-before-select, button edges, nested menu clicks, key repeat and
+cleanup. HostFS and native ZIPs validate, including file types and sprite
+headers. Recipes are in `recipes/archie-archiesdk.md`. No strength change
+is claimed or intended.
+
+Follow-up play exposed two repaint problems. Full board redraws cleared the
+coordinate margins on the visible framebuffer, then restored their labels only
+after drawing every square. The original test checked the finished image and
+missed that gap. Full repaints now compose in a 40 KB software buffer and copy
+after VSync; a test checks the visible screen stays unchanged until presentation.
+The user confirmed the visual improvement. This is software staging, not hardware
+page flipping; smaller updates still draw directly.
+
+Changing the menu selection also blanked and redrew every item. It now overwrites
+only the old and new selected rows, without the blanking pass. That follow-up
+build and native platform checks pass; visual confirmation is still pending.
+Right click now returns the same input as Escape, including back/menu behaviour
+and search interruption, with a rising edge and pending square selection cleared.
+The platform checks cover that behaviour too. The 256 KB application slot still
+accommodates the additional repaint buffer. Hardware and 2 MB runtime testing
+remain outstanding; the emulator checks above used 4 MB.
+
 ## Decisions on record
 
 Kept here so they do not get relitigated.
