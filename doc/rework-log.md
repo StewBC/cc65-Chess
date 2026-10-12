@@ -3332,6 +3332,28 @@ Physical MEGA65 confirmation and an A3010 timing comparison remain unmeasured.
 
 ---
 
+# A3010 / MEGA65 comparison — 2026-10-12
+
+The same six middlegames and four budgets were straightforward to run in
+Arculator v2.2's A3010/ARM250 configuration (4 MB, RISC OS 3.11, normal 100%
+speed). `ARCHIE_BENCH` adds a test-only OS_ReadMonotonicTime adapter to the
+shared benchmark. GCC 8.5.0 uses ARM2 instructions, unsigned char and -Os,
+matching the shipping game. No engine or platform changes.
+
+All four node counts/checksums match the host and native MEGA65 to the digit.
+A3010 totals: 1290 / 4800 / 36360 / 224320 ms. Native MEGA65 totals:
+707 / 2648 / 20102 / 124357 ms. The MEGA65 is 1.80-1.82x faster, consistently
+across levels. Average A3010 searches: 0.215 / 0.800 / 6.060 / 37.387 seconds;
+MEGA65: 0.118 / 0.441 / 3.350 / 20.726. These are guest-clock emulator results,
+not physical-machine timings, and they exclude repaint and input-poll costs.
+The 40.5/12 MHz ratio alone cannot predict the measured speed-up.
+
+The measured CLI run mirrored result rows into its private HostFS text file;
+that I/O was outside the timed sections. ARM binaries and raw output remain
+in scratch/ and build/. `recipes/archie-archiesdk.md` records reproduction.
+
+---
+
 # Closed portfolios
 
 The two working notes that drove Phases 14–42 (`doc/next-search.md`, then

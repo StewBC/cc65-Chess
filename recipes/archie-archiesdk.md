@@ -95,6 +95,68 @@ blanking them first. Other menu items stay untouched; the scroller updates separ
 Shutdown restores the prior screen mode and pointer selection, clears Escape and
 discards queued gameplay characters.
 
+## Search benchmark
+
+The shared six-position benchmark also builds for ARM2 with the same `-Os`
+setting as the game. `ARCHIE_BENCH` selects RISC OS `OS_ReadMonotonicTime`
+(centiseconds), rather than the MEGA65/C64 CIA clock. Search results are printed
+at each of the four actual budgets. Compare nodes and checksums to the
+[MEGA65 reference](mega65-llvm-mos.md#verification-2026-10-12) before reading
+any timing ratio. A centisecond clock limits precision on the easiest level.
+
+```sh
+mkdir -p scratch/archie-bench
+"$ARCHIESDK/tools/bin/arm-archie-gcc" \
+  -mcpu=arm2 -msoft-float -mno-thumb-interwork -Os \
+  -funsigned-char -std=gnu89 -DARCHIE_BENCH -Isrc \
+  -isystem "$ARCHIESDK/SDK/include" \
+  src/engine.c src/eval.c src/search.c tests/mega65bench.c \
+  -o scratch/archie-bench/bench.elf \
+  -L"$ARCHIESDK/tools/lib" -lOSLib32
+"$ARCHIESDK/tools/bin/arm-archie-objcopy" -O binary \
+  scratch/archie-bench/bench.elf scratch/archie-bench/bench,ff8
+```
+
+After starting the private Arculator copy with `make archie test`, copy
+`bench,ff8` into `build/archie/arculator/hostfs/`. In the guest CLI (F12):
+
+```text
+WimpSlot -min 256K
+Run HostFS:$.bench
+```
+
+The emulator should show its normal 100% speed while running. Time comes from
+the guest clock, not a stopwatch around the emulator. This benchmark excludes
+board repainting and platform keyboard polling, matching the MEGA65 harness.
+
+## A3010 comparison, 2026-10-12
+
+Arculator v2.2, A3010/ARM250 configuration, 4 MB RAM, RISC OS 3.11,
+normal 100% emulator speed. GCC 8.5.0, `-mcpu=arm2 -Os -funsigned-char`,
+the same size optimisation as the shipping Archie game. The RISC OS
+centisecond clock supplied guest time. All four node totals and checksums
+match the MEGA65 and host reference exactly.
+
+| Skill | A3010, Arculator | Native MEGA65, Xemu | MEGA65 speed-up |
+|---|---:|---:|---:|
+| Very Easy | 0.215 s | 0.118 s | 1.82x |
+| Easy | 0.800 s | 0.441 s | 1.81x |
+| Harder | 6.060 s | 3.350 s | 1.81x |
+| Very Hard | 37.387 s | 20.726 s | 1.80x |
+
+Six-position A3010 totals were 1290 / 4800 / 36360 / 224320 milliseconds;
+the MEGA65 totals were 707 / 2648 / 20102 / 124357. This puts the MEGA65
+about 1.8x ahead across every skill. The roughly 3.4x clock-rate ratio does
+not translate directly into chess throughput: this comparison also changes
+instruction set, memory system, integer width and compiler. Those factors
+have not been isolated.
+
+This is an emulator comparison of engine search time, excluding rendering
+and normal platform input polling. Physical A3010 and MEGA65 timing remain
+unverified. Generated ARM binaries and raw HostFS output stay in scratch/ or
+build/. The measured run additionally mirrored each row to a private HostFS
+text file; that I/O was outside the timed search.
+
 ## Verification
 
 ```sh

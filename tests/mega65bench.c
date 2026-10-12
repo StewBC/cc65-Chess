@@ -1,11 +1,16 @@
-/* identical middlegames and real skill budgets on MEGA65, C64 and host.
+/* identical middlegames and real skill budgets on MEGA65, C64, ARM2 and host.
  * native/C64 ticks use cascaded CIA2 timers; test-only ownership.
  * milliseconds assume 1 MHz; correct for the NTSC C64 CIA clock.
  * sums are milliseconds so level 4 cannot wrap a 32-bit microsecond total.
+ * ARCHIE_BENCH uses RISC OS centiseconds instead of CIA timers.
  * records stay in RAM for the emulator monitor.  no shipping engine changes. */
 #include "types.h"
 #include "engine.h"
 #include "search.h"
+#ifdef ARCHIE_BENCH
+#include <kernel.h>
+#include <swis.h>
+#endif
 #if defined(__MEGA65__)
 #include <mega65.h>
 #elif !defined(__CC65__)
@@ -44,6 +49,13 @@ static unsigned long ticks(void)
 		hi2 = TIMER[6] | ((unsigned int)TIMER[7] << 8);
 	} while(hi != hi2);
 	return ~(((unsigned long)hi << 16) | lo);
+}
+#elif defined(ARCHIE_BENCH)
+static unsigned long ticks(void)
+{
+	_kernel_swi_regs r;
+	if(_kernel_swi(OS_ReadMonotonicTime, &r, &r)) return 0;
+	return (unsigned long)r.r[0] * 10000UL;
 }
 #else
 static unsigned long ticks(void) { return 0; }
@@ -97,8 +109,8 @@ int main(void)
 			side = 1 - side;
 		}
 #if !defined(__MEGA65__) && !defined(__CC65__)
-		printf("level %u nodes %lu digest %04x\n", level + 1,
-			bench[level].nodes, bench[level].digest);
+		printf("level %u nodes %lu ms %lu digest %04x\r\n", level + 1,
+			bench[level].nodes, bench[level].millis, bench[level].digest);
 #endif
 	}
 	benchDone = 1;

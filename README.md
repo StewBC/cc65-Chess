@@ -106,8 +106,9 @@ with the same engine and budgets, compiled for the 45GS02 with size optimisation
 Xemu measurements average 0.12 / 0.44 / 3.35 / 20.7 seconds per search at the
 four levels over six fixed middlegames. The completed C64 comparison at levels
 1/2 is about 121x slower; both sides return identical nodes and results. These
-are emulator figures, combining CPU and compiler effects; physical MEGA65
-timing and an A3010 comparison have not been measured. Details and instructions are in
+are emulator figures, combining CPU and compiler effects. An A3010 Arculator
+comparison matches all four levels and is about 1.8x slower than native Xemu;
+physical-machine timing has not been measured. Details and instructions are in
 [recipes/mega65-llvm-mos.md](recipes/mega65-llvm-mos.md).
 
 Disk / tape / program images are a second goal, not a second invocation:

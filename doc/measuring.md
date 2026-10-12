@@ -413,8 +413,12 @@ time. The 32-bit elapsed count for each search is converted to nominal
 milliseconds before summing, avoiding a C64 level-4 aggregate overflow.
 Correct the nominal 1 MHz divisor for the NTSC C64's approximately 1.023 MHz
 CIA clock. The comparison changes both CPU and compiler, so it does not isolate
-the clock-rate gain or LLVM-MOS's contribution. Real MEGA65 confirmation and
-an A3010 comparison remain unmeasured.
+the clock-rate gain or LLVM-MOS's contribution. `ARCHIE_BENCH` selects the
+RISC OS centisecond clock in the same harness. The
+A3010 Arculator comparison matches all four levels and is about 1.8x slower
+than native Xemu; neither physical machine has been timed.
+[The Archie recipe](../recipes/archie-archiesdk.md#search-benchmark) gives the
+ARM build/run commands and raw totals.
 
 [The native MEGA65 recipe](../recipes/mega65-llvm-mos.md) records tool versions,
 commands, exact counts/checksums, average move times and verification scope.

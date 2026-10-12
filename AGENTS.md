@@ -180,8 +180,9 @@ the SDK's default exit restores mapping, then spins instead of returning.
 The port has been played in Xemu, including undo/redo, B/A/D and Quit back to
 BASIC. It has not been verified on the owner's physical MEGA65. Timings are
 emulator measurements, with exact result/node parity at all four budgets
-against the host. The completed C64 comparison covers levels 1/2 only; no
-A3010 comparison has been measured. Build, memory and reproduction details:
+against the host. The completed C64 comparison covers levels 1/2 only; the A3010 emulator comparison
+also matches all four levels and is about 1.8x slower than native Xemu. Neither
+physical machine has been timed. Build, memory and reproduction details:
 `recipes/mega65-llvm-mos.md`.
 
 **Compiling a target says nothing about whether it runs.** The plus4 build linked inside its

@@ -164,9 +164,35 @@ The comparison combines the faster emulated CPU, 45GS02 execution and
 LLVM-MOS code generation. It does not isolate those effects: the clock ratio
 is about 40x and the combined speed-up about 121x, but attributing the remaining
 factor to the compiler alone has not been measured. Physical MEGA65 timing
-and an A3010 comparison remain unmeasured. The A3010's lower clock rate alone
-cannot predict its relative chess performance.
+remains unmeasured. The subsequent A3010 emulator comparison is recorded below.
 
 Palette follow-up: the owner requested C64 colours. The port now programs
 VICE's Pepto PAL RGB values, including its standard green, and uses light gray
 for inactive menu text. The menu screenshot was rechecked after rebuilding.
+
+## A3010 comparison, 2026-10-12
+
+Arculator v2.2, A3010/ARM250 configuration, 4 MB RAM, RISC OS 3.11,
+normal 100% emulator speed. GCC 8.5.0, `-mcpu=arm2 -Os -funsigned-char`,
+the same size optimisation as the shipping Archie game. The RISC OS
+centisecond clock supplied guest time. All four node totals and checksums
+match the MEGA65 and host reference exactly.
+
+| Skill | A3010, Arculator | Native MEGA65, Xemu | MEGA65 speed-up |
+|---|---:|---:|---:|
+| Very Easy | 0.215 s | 0.118 s | 1.82x |
+| Easy | 0.800 s | 0.441 s | 1.81x |
+| Harder | 6.060 s | 3.350 s | 1.81x |
+| Very Hard | 37.387 s | 20.726 s | 1.80x |
+
+Six-position A3010 totals were 1290 / 4800 / 36360 / 224320 milliseconds;
+the MEGA65 totals were 707 / 2648 / 20102 / 124357. This puts the MEGA65
+about 1.8x ahead across every skill. The roughly 3.4x clock-rate ratio does
+not translate directly into chess throughput: this comparison also changes
+instruction set, memory system, integer width and compiler. Those factors
+have not been isolated.
+
+This is an emulator comparison of engine search time, excluding rendering
+and normal platform input polling. Physical A3010 and MEGA65 timing remain
+unverified. ARM build and run instructions are in
+[the Archie recipe](archie-archiesdk.md#search-benchmark).
