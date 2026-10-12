@@ -3300,6 +3300,38 @@ Kept here so they do not get relitigated.
 
 ---
 
+# Native MEGA65 port — 2026-10-12
+
+A new platform file and LLVM-MOS toolchain compile the existing engine for the
+45GS02 and enable VIC-IV fast mode. No shared engine bytes, budget changes,
+or evaluation/search candidates. Native BASIC 65, never GO64; the familiar
+Commodore layout and artwork, all keys and all four B-overlay values retained.
+Memory is capped below a reserved 2K stack, bitmap and screen matrix.
+
+Xemu exercised menus, e2-e4 plus an AI reply, undo/redo board restoration and
+log, B/A/D, and Quit back to an interactive BASIC READY prompt. The default
+LLVM-MOS exit restores mapping but spins; linking save-basic.o is required to
+return. This was found by running Quit, not by compiling it. The native suite
+is green and existing C64, C64 character, Apple II and Atari targets build.
+
+The test-only benchmark replays the retained profiler's six developed
+positions at all four actual budgets. Native and host counts/checksums match:
+2072/b72f, 7200/c703, 70225/8671, 362542/8936. CIA2 timers price the target
+search; elapsed ticks are divided to milliseconds before summing, because a
+32-bit microsecond total wraps on the C64 at level 4. The final native Xemu
+run totals 707, 2648, 20102 and 124357 nominal milliseconds. These are
+emulator measurements; real-machine confirmation remains with the owner.
+VICE completed the six-position C64 baseline at levels 1/2: 87474 and
+328221 nominal milliseconds, same nodes and checksums, about 121x slower
+than native Xemu after NTSC clock correction. The longer C64 baseline was
+stopped with partial rows discarded. This compares CPU plus compiler, not
+CPU alone. The owner then requested C64 colours: VICE's Pepto PAL palette
+and light-gray inactive menu entries replace the custom palette.
+Physical MEGA65 confirmation and an A3010 timing comparison remain unmeasured.
+`recipes/mega65-llvm-mos.md` has build/run and benchmark reproduction details.
+
+---
+
 # Closed portfolios
 
 The two working notes that drove Phases 14–42 (`doc/next-search.md`, then

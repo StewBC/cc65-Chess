@@ -1380,8 +1380,9 @@ and without this the reply would be identical every game.
 ### Where a 1 MHz machine finds entropy
 
 `plat_GetSeed()` is the only addition to `plat.h` since it was frozen, and it returns one
-byte. Each port reads a counter that is already running. The 6502 ports use names from
-cc65's own `asminc`:
+byte. Each port reads a counter that is already running. The cc65 ports use names
+from cc65's own `asminc`; native MEGA65 reads the VIC-IV raster counter ($D012).
+The MEGA65 platform implementation uses the LLVM-MOS register definitions:
 
 | Port | Source | Why it is live |
 |---|---|---|
@@ -1638,7 +1639,8 @@ nodes; that is not the question a player is asking.
 # Appendix A — Where the numbers live
 
 - **How well it plays** — `doc/strength.md`.
-- **Free space on each target** — `AGENTS.md`. All seven targets link at `optsize`.
+- **Free space on the cc65 targets, and the MEGA65 memory layout** — `AGENTS.md`.
+  Shipping builds use size optimisation (`optsize` for cc65, `-Oz` for LLVM-MOS).
 - **Where a C64 node goes** — §6.9.
 - **The engine this replaced** — `doc/original-engine.md`.
 

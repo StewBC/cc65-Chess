@@ -399,6 +399,26 @@ cl65 -t c64 -Oris -I../src -o c64search.prg \
 ./vice-run.sh c64search.prg /tmp/out.png 400000000
 ```
 
+### Native MEGA65 comparison
+
+`make mega65 mega65-bench` builds the same shipping engine for the 45GS02 and
+prices six fixed developed positions at all four actual skill budgets.
+`tests/mega65bench.c` also builds on the host and C64; node counts and result
+checksums must agree before timings are compared. Native Xemu matched the host
+at all four levels. The completed VICE C64 baseline covers levels 1 and 2;
+partial rows from levels 3/4 are not measurements.
+
+CIA2 timers supply machine time, independent of emulator warp or host elapsed
+time. The 32-bit elapsed count for each search is converted to nominal
+milliseconds before summing, avoiding a C64 level-4 aggregate overflow.
+Correct the nominal 1 MHz divisor for the NTSC C64's approximately 1.023 MHz
+CIA clock. The comparison changes both CPU and compiler, so it does not isolate
+the clock-rate gain or LLVM-MOS's contribution. Real MEGA65 confirmation and
+an A3010 comparison remain unmeasured.
+
+[The native MEGA65 recipe](../recipes/mega65-llvm-mos.md) records tool versions,
+commands, exact counts/checksums, average move times and verification scope.
+
 ### Under c64m, which is the easier rig
 
 `../c64m` has a control port very like `../a2m`'s, and for these benchmarks it is less

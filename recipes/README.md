@@ -5,10 +5,10 @@ the repo root — `make help` is the verb list, `make list` says what this
 machine can compile. Match output, profiles and other generated artifacts
 still go under `scratch/`, which is gitignored.
 
-Two ports need environment variables before `make list` will even admit they
-are available: `RETRO68` for mac68k and `PATH`/`ZCCCFG` for spectrum. Both
-notes below open with the exact settings. A shell that does not have them
-does not fail loudly — it silently builds the other nine ports and exits 0.
+Several ports need a compiler installation path or environment settings:
+for example `RETRO68` for mac68k, `PATH`/`ZCCCFG` for spectrum and
+`LLVM_MOS_SDK` for mega65. The notes below give those settings. Use `make list`
+to check availability; a default build skips unavailable compilers.
 
 *Running* uses a second set, one per emulator, prefixed to the binary so a
 `make <port> test` can reach an emulator that is not on `PATH`: `VICE_HOME`
@@ -16,7 +16,8 @@ does not fail loudly — it silently builds the other nine ports and exits 0.
 `RP6502_HOME`. Each is a prefix, so it needs a **trailing slash**:
 `VICE_HOME=/Applications/vice-arm64-gtk3-3.10/bin/`.  Agon is the
 exception: `FAE_HOME` is the Fab Agon Emulator *install root*, not a
-prefix, because the emulator has to be launched from that directory.
+prefix, because the emulator has to be launched from that directory. MEGA65
+uses full paths: `XEMU_MEGA65` for the executable and `MEGA65_ROM` for the ROM.
 
 | File | Target |
 |---|---|
@@ -29,6 +30,7 @@ prefix, because the emulator has to be launched from that directory.
 | [mac68k-retro68.md](mac68k-retro68.md) | Macintosh 68k (`make mac68k`), Basilisk II |
 | [ti99-mame.md](ti99-mame.md) | TI-99/4A (`make ti99`), Homebrew MAME |
 | [coco3-cmoc.md](coco3-cmoc.md) | Color Computer 3 (`make coco3`), XRoar |
+| [mega65-llvm-mos.md](mega65-llvm-mos.md) | Native MEGA65 (`make mega65`), LLVM-MOS and Xemu |
 | [agon-emulator.md](agon-emulator.md) | Agon Light (`make agon`), Fab Agon Emulator |
 | [run-agon.sh](run-agon.sh) | Fab Agon — also what `make agon test` runs |
 | [run-coco3.sh](run-coco3.sh) | XRoar coco3 — also what `make coco3 test` runs |

@@ -2,8 +2,9 @@
 
 A chess program in C, originally for ~1 MHz 6502 machines — Commodore 64, Apple II, Oric,
 Plus/4, Atari. Faster 6502s came later: the Commander X16 and the Picocomputer, at up to
-8 MHz. Then ports that cc65 does not cover — ZX Spectrum, Macintosh 68k. Each port is
-built with whichever compiler that machine needs. There is also a terminal build for
+8 MHz. Other toolchains cover ZX Spectrum, Macintosh 68k, TI-99/4A, Color Computer 3,
+Agon Light, Acorn A3010 and native MEGA65. Each port is built with whichever
+compiler that machine needs. There is also a terminal build for
 development.
 
 It used to be a cc65-only project, which is why it is called cc65 Chess. Newer ports
@@ -80,6 +81,8 @@ make coco3                  # Color Computer 3, CMOC → build/coco3/chess.bin
 make agon                   # Agon Light, agondev → build/agon/chess.bin
 make archie                 # Acorn A3010, ArchieSDK → RISC OS app + ZIPs
 make archie test            # private Arculator copy under build/archie/
+make mega65                 # native 45GS02, LLVM-MOS → build/mega65/chess.prg
+make mega65 test            # native MEGA65 under Xemu
 ```
 
 Products land in `build/<port>/`. Objects land in `build/obj/<port>/`. `make tidy` sweeps
@@ -97,6 +100,15 @@ installation directory. The port targets an A3010 with 2 MB RAM and RISC OS 3.11
 with the C64 board and colours in fullscreen Mode 9. Mouse hover and left click work
 alongside the original keys. Build, packaging and emulator instructions are in
 [recipes/archie-archiesdk.md](recipes/archie-archiesdk.md).
+
+`mega65` is opt-in and uses `LLVM_MOS_SDK`. It runs in native MEGA65 mode,
+with the same engine and budgets, compiled for the 45GS02 with size optimisation.
+Xemu measurements average 0.12 / 0.44 / 3.35 / 20.7 seconds per search at the
+four levels over six fixed middlegames. The completed C64 comparison at levels
+1/2 is about 121x slower; both sides return identical nodes and results. These
+are emulator figures, combining CPU and compiler effects; physical MEGA65
+timing and an A3010 comparison have not been measured. Details and instructions are in
+[recipes/mega65-llvm-mos.md](recipes/mega65-llvm-mos.md).
 
 Disk / tape / program images are a second goal, not a second invocation:
 
@@ -161,7 +173,8 @@ program.
 - **Oliver Schmidt** — the Apple II port, and the generic cc65 Makefile (with Patryk
   "Silver Dream !" Łogiewa) this tree grew from.
 - **[raxiss]** — the Oric-1 / Atmos / Telestrat port.
-- **Ullrich von Bassewitz and the cc65 team** — the compiler the 6502 ports still use.
+- **Ullrich von Bassewitz and the cc65 team** — the compiler for the original 6502 ports.
+- **The LLVM-MOS team** — the compiler and native MEGA65 SDK.
 
 The tag `v1-original-engine` marks the last commit before the engine rewrite, if you want to
 check out the original and compare.

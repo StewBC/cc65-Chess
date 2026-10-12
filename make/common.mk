@@ -6,7 +6,7 @@ BUILDDIR := build
 OBJDIR   := $(BUILDDIR)/obj
 
 # a port is a name, not a cc65 target.  toolchains and availability live elsewhere.
-PORT_NAMES := apple2 atari atmos c64 c64.chr plus4 cx16 rp6502 spectrum term mac68k ti99 coco3 agon archie
+PORT_NAMES := apple2 atari atmos c64 c64.chr plus4 cx16 rp6502 spectrum term mac68k ti99 coco3 agon archie mega65
 
 # built by a bare `make` when the compiler is present.  rp6502 stays off this
 # list even if the picocomputer fork is installed — it was never a default.
@@ -67,6 +67,9 @@ endif
 ifneq ($(findstring sh,$(SHELL)),)
   NO_CONV = MSYS_NO_PATHCONV=1
 endif
+
+LLVM_MOS_CC := $(if $(LLVM_MOS_SDK),$(LLVM_MOS_SDK)/bin/mos-mega65-clang,$(shell $(call WHICH,mos-mega65-clang)))
+HAVE_LLVM_MOS := $(if $(wildcard $(LLVM_MOS_CC)),1)
 
 CL65          := $(shell $(call WHICH,cl65))
 ZCC           := $(shell $(call WHICH,zcc))

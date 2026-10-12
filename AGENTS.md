@@ -1,9 +1,9 @@
 # Working on cc65 Chess
 
 A chess program in C, originally for ~1 MHz 6502 machines — c64, apple2, atmos, plus4,
-atari. Faster 6502s came later: cx16 and rp6502, at up to 8 MHz. Then ports that cc65
-does not cover — spectrum, mac68k — plus a terminal build used for development. Each
-port with whichever compiler that machine needs.
+atari. Faster 6502s came later: cx16 and rp6502, at up to 8 MHz. Other toolchains cover spectrum, mac68k, ti99, coco3, agon, archie and native
+mega65, plus a terminal build used for development. Each port uses whichever
+compiler that machine needs. The MEGA65 build uses LLVM-MOS, not cc65.
 
 `doc/engine.md` explains how the engine works and is the right thing to read first. This
 file is the short list of constraints that are easy to violate by accident.
@@ -25,9 +25,8 @@ because every machine has a free-running counter, cc65's own `asminc` names all 
 the implementation is three lines a port that reads a register and cannot fail visibly — a
 wrong address gives repeating openings, which is what the engine did anyway. Anything asking
 to be added here should be held to that: no writes to hardware on a port that cannot be run,
-and a failure mode nobody has to debug. Note there are **eleven** platform files, not seven —
-`c64.chr` is a separate port, `spectrum` and `mac68k` use other compilers, and `term` is
-the one that must return a constant.
+and a failure mode nobody has to debug. There are **sixteen** platform files now; `make list` names the ports.
+`c64.chr` is a separate port, and `term` is the one that must return a constant.
 
 **The frozen interface is wider than `plat.h`.** Every port also reads four globals
 directly, and this was discovered the hard way:
@@ -38,8 +37,8 @@ directly, and this was discovered the hard way:
   `undo_FindUndoLine` walk; see the log contract below
 
 There is a fifth, and it is the shape a new one has to be: `gGotoTile` is *written* by a port
-to jump the cursor from a pointing device, and it is behind `PLAT_CURSOR_JUMP` so that the ten
-machines with no mouse do not compile it at all.
+to jump the cursor from a pointing device, and it is behind `PLAT_CURSOR_JUMP` so that
+ports with no pointing-device support do not compile it at all.
 
 **`cx16` builds here now but is still not *run* here.** The build failure that predated the
 engine work was cc65 renaming the software stack pointer: `platCX16.c` used `(sp)` in inline
@@ -61,6 +60,8 @@ the real ceiling is `$EF00` and the last 2K of the linker's own area is not free
 spare that is a note, not a risk.
 
 **Every target is built at the same optimisation setting, and that setting is `optsize`.**
+Other compiler families use their size-optimisation equivalent (`-Os` or `-Oz`);
+the flag spelling differs, not the policy.
 Uniformity is the point - a port that is built differently is a port that behaves
 differently - so `optspeed` is not an option for one target while another cannot take it.
 Since the endgame tables it is also the only setting that fits:
@@ -83,7 +84,7 @@ exists.
 `ld65 -m` map rather than reading the free-space number on its own; the two tell different
 stories and only one of them predicts what the next change will cost. Free space is
 *ceiling − first unused* (`__MAIN_LAST__` on the Apple II, map End+1 elsewhere). The
-full picture, all eight targets, measured rather than remembered — free space to the
+full picture for the eight cc65 targets, measured rather than remembered — free space to the
 *real* ceiling, which on three of them is a framebuffer the linker cannot see:
 
 | target | ceiling | free |
@@ -120,7 +121,7 @@ options and they are in order of preference:
 3. **A compile-time switch defined in your own `make/ports/*.mk`,** if the thing genuinely
    cannot be reached from a port file. `gGotoTile` is the one that qualifies: a mouse has to
    move the cursor, and the cursor is a file static in `human.c`. It is behind
-   `PLAT_CURSOR_JUMP`, defined only in `make/ports/mac68k.mk`, exactly as `SEARCH_ARENA` is
+   `PLAT_CURSOR_JUMP`, defined in `make/ports/mac68k.mk` and `make/ports/archie.mk`, exactly as `SEARCH_ARENA` is
    `#ifndef`'d for the Spectrum and `EVAL_TUNING` is compiled out of the shipping build.
 
 **And the log has a contract, which is where this went wrong.** `plat_AddToLogWin` walks the
@@ -162,6 +163,26 @@ checks a canvas CRC and writes a PNG, all headless and all exiting non-zero on a
 Every screenshot in `recipes/rp6502-emulator.md` was produced that way. Note the one thing the
 script cannot be replaced by: `--input` feeds `RIA.rx` and leaves the HID bitmap clear, and
 this port reads the bitmap — so `press`/`release` are what move the cursor, not `type`.
+
+**Native MEGA65 is an opt-in LLVM-MOS target, not GO64.** `make mega65` produces
+`build/mega65/chess.prg`; `make mega65 test` launches Xemu. Set `LLVM_MOS_SDK`
+for the compiler, `XEMU_MEGA65` and `MEGA65_ROM` for the emulator and ROM.
+It uses `-Oz`, unsigned char and 16-bit int. The engine and budgets are unchanged.
+
+`src/mega65/link.ld` caps program/data/BSS below `$9800`, reserves a 2K stack
+up to `$A000`, and keeps the bitmap at `$A000-$BFFF` and screen matrix at
+`$C000-$C3FF` out of program RAM. The 2026-10-12 map has first unused `$8BFA`,
+leaving **3078 bytes below the stack reserve**. Link from the platform directory
+so the local `link.ld` wins over the SDK's default; adding a second script or
+an extra search directory was not enough. `save-basic.o` is required for Quit:
+the SDK's default exit restores mapping, then spins instead of returning.
+
+The port has been played in Xemu, including undo/redo, B/A/D and Quit back to
+BASIC. It has not been verified on the owner's physical MEGA65. Timings are
+emulator measurements, with exact result/node parity at all four budgets
+against the host. The completed C64 comparison covers levels 1/2 only; no
+A3010 comparison has been measured. Build, memory and reproduction details:
+`recipes/mega65-llvm-mos.md`.
 
 **Compiling a target says nothing about whether it runs.** The plus4 build linked inside its
 budget throughout the rework and was broken end to end — by a **cc65 bug**, not ours: in
@@ -304,6 +325,8 @@ make atari atr              # bootable build/atari/cc65-Chess.atr, needs dir2atr
 make rp6502 rom             # build/rp6502/cc65-Chess.rp6502, needs python3
 make spectrum               # z88dk → build/spectrum/chess.tap
 make term                   # host curses → build/term/chessterm
+make mega65                 # native 45GS02, LLVM-MOS → build/mega65/chess.prg
+make mega65 test            # native mode under Xemu
 ```
 
 Products land in `build/<port>/`. A port name selects that port, so `make apple2 po` is

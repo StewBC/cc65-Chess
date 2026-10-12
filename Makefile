@@ -36,6 +36,7 @@ ti99_AVAILABLE     := $(HAVE_TMS9900)
 coco3_AVAILABLE    := $(HAVE_CMOC)
 agon_AVAILABLE     := $(HAVE_AGONDEV)
 archie_AVAILABLE   := $(HAVE_ARCHIE)
+mega65_AVAILABLE   := $(HAVE_LLVM_MOS)
 
 apple2_SKIP   := cl65 not on PATH
 atari_SKIP    := cl65 not on PATH
@@ -52,6 +53,7 @@ ti99_SKIP     := tms9900-gcc not on PATH
 coco3_SKIP    := cmoc not on PATH
 agon_SKIP     := agondev-config not on PATH
 archie_SKIP   := ArchieSDK not found (set ARCHIESDK=)
+mega65_SKIP   := LLVM-MOS not found (set LLVM_MOS_SDK=)
 
 OPTIONAL_DEFAULTS := $(if $(HAVE_ZCC),spectrum) $(if $(HAVE_RETRO68),mac68k) $(if $(HAVE_TMS9900),ti99) $(if $(HAVE_CMOC),coco3) $(if $(HAVE_AGONDEV),agon) $(if $(HAVE_ARCHIE),archie)
 BUILD_PORTS := $(strip $(foreach p,$(DEFAULT_PORTS) $(OPTIONAL_DEFAULTS),$(if $($(p)_AVAILABLE),$(p))))
@@ -77,6 +79,7 @@ include make/toolchains/tms9900.mk
 include make/toolchains/cmoc.mk
 include make/toolchains/agondev.mk
 include make/toolchains/archiesdk.mk
+include make/toolchains/llvm-mos.mk
 
 # port files declare packaging first (po, atr, ...).  without this, a bare
 # `make TARGETS=c64` builds the first of those instead of the c64 binary.
@@ -141,7 +144,7 @@ help:
 	@echo "  make help            this text"
 	@echo "  make <port>          one port  (apple2 atari atmos c64 c64.chr"
 	@echo "                                  plus4 cx16 rp6502 spectrum term"
-	@echo "                                  mac68k ti99 coco3 agon archie)"
+	@echo "                                  mac68k ti99 coco3 agon archie mega65)"
 	@echo "  make apple2 po       Apple II + ProDOS image"
 	@echo "  make atari atr       Atari + ATR"
 	@echo "  make c64 d64         C64 + D64  (also: prg cprg cxprg tap rom dsk)"
@@ -157,6 +160,9 @@ help:
 	@echo "  make agon test       build and run Fab Agon emulator"
 	@echo "  make archie          Acorn A3010 (ArchieSDK) — RISC OS app + ZIPs"
 	@echo "  make archie test     build and run private Arculator A3010 copy"
+	@echo "  make mega65          native MEGA65 PRG (LLVM_MOS_SDK)"
+	@echo "  make mega65 test     build and run Xemu in native mode"
+	@echo "  make mega65 mega65-bench  search benchmark at all four budgets"
 	@echo "  make check           native suite (tests/)"
 	@echo "  make clean           this selection's products"
 	@echo "  make tidy            leftover binaries in the repo root"
