@@ -185,6 +185,21 @@ also matches all four levels and is about 1.8x slower than native Xemu. Neither
 physical machine has been timed. Build, memory and reproduction details:
 `recipes/mega65-llvm-mos.md`.
 
+**The Amiga 500 port is Kickstart 1.3 on a 68000, with its own startup.**
+`make amiga` writes `build/amiga/boot/`; `make amiga test` boots that
+directory under FS-UAE. Set `AMIGA_GCC` and `AMIGA_ELF2HUNK` for the
+compiler, and `AMIGA_FS_UAE` and `AMIGA_KICKSTART` for the emulator and
+ROM. It uses `-Os` and unsigned char. `-ffreestanding` stays on: gcc
+`-Os` rewrites a function named `strlen` into a builtin tail call, and
+this port has no libc. The executable carries a 32K stack because the DOS
+CLI stack is a few kilobytes, and that stack lives in the seglist DOS
+unloads on the way out, so the original stack pointer is restored before
+`rts`. Chip memory for the bitplanes is allocated at runtime. The mouse
+is `PLAT_CURSOR_JUMP`. Cursor keys stay on the keyboard; the FS-UAE
+config sets joystick port 1 to nothing, because otherwise those keys
+drive a joystick and never arrive. The engine is unchanged. Details are
+in `recipes/amiga-fs-uae.md`.
+
 **Compiling a target says nothing about whether it runs.** The plus4 build linked inside its
 budget throughout the rework and was broken end to end — by a **cc65 bug**, not ours: in
 bitmap mode `cgetc()` skips its own wait loop (the branch means to skip the cursor drawing)

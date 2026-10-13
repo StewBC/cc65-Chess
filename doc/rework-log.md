@@ -3354,6 +3354,26 @@ in scratch/ and build/. `recipes/archie-archiesdk.md` records reproduction.
 
 ---
 
+# Amiga 500 port — 2026-10-12
+
+A Bartman `m68k-amiga-elf-gcc` port for an A500 with Kickstart 1.3. The
+executable has its own startup and a 32K stack, because the DOS CLI stack
+is a few kilobytes and that stack lives in the seglist DOS unloads on the
+way out. The picture is a chunky frame converted onto four bitplanes, a
+320×256 low-resolution screen, the C64 piece data and colours, and the
+shared 8×8 font. The mouse uses `PLAT_CURSOR_JUMP`: the left button is
+Return, and the right button and Escape are Backup. The shared engine and
+`plat.h` are unchanged.
+
+The opening seed is the horizontal beam position at `$DFF007`.
+`-ffreestanding` is on because `-Os` rewrites a function named `strlen`
+into a libc builtin this port does not have. The FS-UAE config sets
+joystick port 1 to nothing, so the cursor keys stay on the keyboard for
+the menu. It was booted under FS-UAE. The recipe is
+`recipes/amiga-fs-uae.md`. The engine and budgets are unchanged.
+
+---
+
 # Closed portfolios
 
 The two working notes that drove Phases 14–42 (`doc/next-search.md`, then

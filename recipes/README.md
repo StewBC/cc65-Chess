@@ -18,6 +18,10 @@ to check availability; a default build skips unavailable compilers.
 exception: `FAE_HOME` is the Fab Agon Emulator *install root*, not a
 prefix, because the emulator has to be launched from that directory. MEGA65
 uses full paths: `XEMU_MEGA65` for the executable and `MEGA65_ROM` for the ROM.
+Amiga does the same: `AMIGA_FS_UAE` for the emulator and `AMIGA_KICKSTART`
+for the Kickstart 1.3 ROM. The compiler is the Bartman extension's
+`m68k-amiga-elf-gcc`, or `AMIGA_GCC` and `AMIGA_ELF2HUNK` when it lives
+somewhere else.
 
 | File | Target |
 |---|---|
@@ -32,7 +36,9 @@ uses full paths: `XEMU_MEGA65` for the executable and `MEGA65_ROM` for the ROM.
 | [coco3-cmoc.md](coco3-cmoc.md) | Color Computer 3 (`make coco3`), XRoar |
 | [mega65-llvm-mos.md](mega65-llvm-mos.md) | Native MEGA65 (`make mega65`), LLVM-MOS and Xemu |
 | [agon-emulator.md](agon-emulator.md) | Agon Light (`make agon`), Fab Agon Emulator |
+| [amiga-fs-uae.md](amiga-fs-uae.md) | Amiga 500 (`make amiga`), FS-UAE |
 | [run-agon.sh](run-agon.sh) | Fab Agon — also what `make agon test` runs |
+| [run-amiga.sh](run-amiga.sh) | FS-UAE A500 — also what `make amiga test` runs |
 | [run-coco3.sh](run-coco3.sh) | XRoar coco3 — also what `make coco3 test` runs |
 | [run-spectrum.sh](run-spectrum.sh) | ZEsarUX 48K — also what `make spectrum test` runs |
 | [build-a2m-profile.sh](build-a2m-profile.sh) | Bootable Apple II profile image |

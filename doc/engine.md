@@ -1395,6 +1395,7 @@ The MEGA65 platform implementation uses the LLVM-MOS register definitions:
 | rp6502 | RIA `VSYNC`, $FFE3 | a 60Hz frame counter in the RIA, running because the port put a mode on the VGA |
 | spectrum | `FRAMES` at 23672 | 50 Hz, the Spectrum's own frame counter |
 | mac68k | `TickCount()` | 60 Hz, System 7 |
+| amiga | VHPOSR, $DFF007 | horizontal beam position; it moves every colour clock |
 | term | constant zero | development plays against this build and wants its games repeatable |
 
 The Picocomputer is the one that could have done better and deliberately does not: `RIA_ATTR_LRAND`

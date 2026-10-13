@@ -3,7 +3,7 @@
 A chess program in C, originally for ~1 MHz 6502 machines — Commodore 64, Apple II, Oric,
 Plus/4, Atari. Faster 6502s came later: the Commander X16 and the Picocomputer, at up to
 8 MHz. Other toolchains cover ZX Spectrum, Macintosh 68k, TI-99/4A, Color Computer 3,
-Agon Light, Acorn A3010 and native MEGA65. Each port is built with whichever
+Agon Light, Acorn A3010, Amiga 500 and native MEGA65. Each port is built with whichever
 compiler that machine needs. There is also a terminal build for
 development.
 
@@ -83,6 +83,8 @@ make archie                 # Acorn A3010, ArchieSDK → RISC OS app + ZIPs
 make archie test            # private Arculator copy under build/archie/
 make mega65                 # native 45GS02, LLVM-MOS → build/mega65/chess.prg
 make mega65 test            # native MEGA65 under Xemu
+make amiga                  # Amiga 500 hunk → build/amiga/boot/
+make amiga test             # boot under FS-UAE
 ```
 
 Products land in `build/<port>/`. Objects land in `build/obj/<port>/`. `make tidy` sweeps
@@ -110,6 +112,13 @@ are emulator figures, combining CPU and compiler effects. An A3010 Arculator
 comparison matches all four levels and is about 1.8x slower than native Xemu;
 physical-machine timing has not been measured. Details and instructions are in
 [recipes/mega65-llvm-mos.md](recipes/mega65-llvm-mos.md).
+
+`amiga` joins the default build when Bartman's `m68k-amiga-elf-gcc` and
+`elf2hunk` are found, usually inside the Amiga debug extension. Set
+`AMIGA_GCC` and `AMIGA_ELF2HUNK` to point somewhere else. The port targets
+an Amiga 500 with Kickstart 1.3: a 320×256 low-resolution screen, the C64
+board and colours, and the mouse. Build and emulator instructions are in
+[recipes/amiga-fs-uae.md](recipes/amiga-fs-uae.md).
 
 Disk / tape / program images are a second goal, not a second invocation:
 
