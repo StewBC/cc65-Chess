@@ -1,7 +1,7 @@
 # Working on cc65 Chess
 
 A chess program in C, originally for ~1 MHz 6502 machines — c64, apple2, atmos, plus4,
-atari. Faster 6502s came later: cx16 and rp6502, at up to 8 MHz. Other toolchains cover spectrum, mac68k, ti99, coco3, agon, archie and native
+atari. Faster 6502s came later: cx16 and rp6502, at up to 8 MHz. Other toolchains cover spectrum, mac68k, ti99, coco3, agon, archie, amiga and native
 mega65, plus a terminal build used for development. Each port uses whichever
 compiler that machine needs. The MEGA65 build uses LLVM-MOS, not cc65.
 
@@ -25,7 +25,7 @@ because every machine has a free-running counter, cc65's own `asminc` names all 
 the implementation is three lines a port that reads a register and cannot fail visibly — a
 wrong address gives repeating openings, which is what the engine did anyway. Anything asking
 to be added here should be held to that: no writes to hardware on a port that cannot be run,
-and a failure mode nobody has to debug. There are **sixteen** platform files now; `make list` names the ports.
+and a failure mode nobody has to debug. There are **seventeen** platform files now; `make list` names the ports.
 `c64.chr` is a separate port, and `term` is the one that must return a constant.
 
 **The frozen interface is wider than `plat.h`.** Every port also reads four globals
@@ -121,7 +121,7 @@ options and they are in order of preference:
 3. **A compile-time switch defined in your own `make/ports/*.mk`,** if the thing genuinely
    cannot be reached from a port file. `gGotoTile` is the one that qualifies: a mouse has to
    move the cursor, and the cursor is a file static in `human.c`. It is behind
-   `PLAT_CURSOR_JUMP`, defined in `make/ports/mac68k.mk` and `make/ports/archie.mk`, exactly as `SEARCH_ARENA` is
+   `PLAT_CURSOR_JUMP`, defined in `make/ports/mac68k.mk`, `make/ports/archie.mk` and `make/ports/amiga.mk`, exactly as `SEARCH_ARENA` is
    `#ifndef`'d for the Spectrum and `EVAL_TUNING` is compiled out of the shipping build.
 
 **And the log has a contract, which is where this went wrong.** `plat_AddToLogWin` walks the
@@ -315,7 +315,7 @@ middlegame is about 25% slower per node. Anything that has to hold at the board 
 measured over a real game.
 
 Emulator how-tos for the targets that run here — Apple II, Plus/4, Atari, C64, Picocomputer,
-ZX Spectrum, Macintosh 68k — are in `recipes/`. Generated match output stays in `scratch/`.
+ZX Spectrum, Macintosh 68k, Amiga 500 — are in `recipes/`. Generated match output stays in `scratch/`.
 
 ## Building and testing
 
@@ -328,6 +328,8 @@ make spectrum               # z88dk → build/spectrum/chess.tap
 make term                   # host curses → build/term/chessterm
 make mega65                 # native 45GS02, LLVM-MOS → build/mega65/chess.prg
 make mega65 test            # native mode under Xemu
+make amiga                  # A500 hunk, Bartman m68k-amiga-elf-gcc
+make amiga test             # boot under FS-UAE
 ```
 
 Products land in `build/<port>/`. A port name selects that port, so `make apple2 po` is

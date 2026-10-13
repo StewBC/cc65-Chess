@@ -6,7 +6,7 @@ BUILDDIR := build
 OBJDIR   := $(BUILDDIR)/obj
 
 # a port is a name, not a cc65 target.  toolchains and availability live elsewhere.
-PORT_NAMES := apple2 atari atmos c64 c64.chr plus4 cx16 rp6502 spectrum term mac68k ti99 coco3 agon archie mega65
+PORT_NAMES := apple2 atari atmos c64 c64.chr plus4 cx16 rp6502 spectrum term mac68k ti99 coco3 agon archie mega65 amiga
 
 # built by a bare `make` when the compiler is present.  rp6502 stays off this
 # list even if the picocomputer fork is installed — it was never a default.
@@ -132,6 +132,12 @@ HAVE_AGONDEV := $(if $(AGONDEV_CONFIG),1)
 ARCHIESDK ?= $(HOME)/Develop/gitlab/archiesdk
 ARCHIE_CC := $(ARCHIESDK)/tools/bin/arm-archie-gcc
 HAVE_ARCHIE := $(if $(wildcard $(ARCHIE_CC)),1)
+
+# Bartman Abyss extension.  the gcc and elf2hunk are arm64; the copy of
+# FS-UAE next to them is not, so the run recipe uses a different emulator.
+AMIGA_GCC ?= $(lastword $(sort $(wildcard $(HOME)/.vscode/extensions/bartmanabyss.amiga-debug-*/bin/darwin/opt/bin/m68k-amiga-elf-gcc)))
+AMIGA_ELF2HUNK ?= $(lastword $(sort $(wildcard $(HOME)/.vscode/extensions/bartmanabyss.amiga-debug-*/bin/darwin/elf2hunk)))
+HAVE_AMIGA := $(if $(and $(wildcard $(AMIGA_GCC)),$(wildcard $(AMIGA_ELF2HUNK))),1)
 
 # Fab Agon emulator.  FAE_HOME is the install root, not a PATH prefix.
 FAE_HOME ?= $(HOME)/.local/share/fab-agon-emulator-v1.2.5-macos-arm64

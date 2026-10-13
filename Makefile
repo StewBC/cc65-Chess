@@ -37,6 +37,7 @@ coco3_AVAILABLE    := $(HAVE_CMOC)
 agon_AVAILABLE     := $(HAVE_AGONDEV)
 archie_AVAILABLE   := $(HAVE_ARCHIE)
 mega65_AVAILABLE   := $(HAVE_LLVM_MOS)
+amiga_AVAILABLE    := $(HAVE_AMIGA)
 
 apple2_SKIP   := cl65 not on PATH
 atari_SKIP    := cl65 not on PATH
@@ -54,8 +55,9 @@ coco3_SKIP    := cmoc not on PATH
 agon_SKIP     := agondev-config not on PATH
 archie_SKIP   := ArchieSDK not found (set ARCHIESDK=)
 mega65_SKIP   := LLVM-MOS not found (set LLVM_MOS_SDK=)
+amiga_SKIP     := Bartman gcc not found (install the Amiga extension, or set AMIGA_GCC and AMIGA_ELF2HUNK)
 
-OPTIONAL_DEFAULTS := $(if $(HAVE_ZCC),spectrum) $(if $(HAVE_RETRO68),mac68k) $(if $(HAVE_TMS9900),ti99) $(if $(HAVE_CMOC),coco3) $(if $(HAVE_AGONDEV),agon) $(if $(HAVE_ARCHIE),archie)
+OPTIONAL_DEFAULTS := $(if $(HAVE_ZCC),spectrum) $(if $(HAVE_RETRO68),mac68k) $(if $(HAVE_TMS9900),ti99) $(if $(HAVE_CMOC),coco3) $(if $(HAVE_AGONDEV),agon) $(if $(HAVE_ARCHIE),archie) $(if $(HAVE_AMIGA),amiga)
 BUILD_PORTS := $(strip $(foreach p,$(DEFAULT_PORTS) $(OPTIONAL_DEFAULTS),$(if $($(p)_AVAILABLE),$(p))))
 
 # `make spectrum` (and `make spectrum test`) selects that port.  TARGETS= on
@@ -80,6 +82,7 @@ include make/toolchains/cmoc.mk
 include make/toolchains/agondev.mk
 include make/toolchains/archiesdk.mk
 include make/toolchains/llvm-mos.mk
+include make/toolchains/amiga.mk
 
 # port files declare packaging first (po, atr, ...).  without this, a bare
 # `make TARGETS=c64` builds the first of those instead of the c64 binary.
@@ -144,7 +147,7 @@ help:
 	@echo "  make help            this text"
 	@echo "  make <port>          one port  (apple2 atari atmos c64 c64.chr"
 	@echo "                                  plus4 cx16 rp6502 spectrum term"
-	@echo "                                  mac68k ti99 coco3 agon archie mega65)"
+	@echo "                                  mac68k ti99 coco3 agon archie mega65 amiga)"
 	@echo "  make apple2 po       Apple II + ProDOS image"
 	@echo "  make atari atr       Atari + ATR"
 	@echo "  make c64 d64         C64 + D64  (also: prg cprg cxprg tap rom dsk)"
@@ -163,6 +166,8 @@ help:
 	@echo "  make mega65          native MEGA65 PRG (LLVM_MOS_SDK)"
 	@echo "  make mega65 test     build and run Xemu in native mode"
 	@echo "  make mega65 mega65-bench  search benchmark at all four budgets"
+	@echo "  make amiga           Amiga 500 hunk (Bartman m68k-amiga-elf-gcc)"
+	@echo "  make amiga test      build and boot under FS-UAE"
 	@echo "  make check           native suite (tests/)"
 	@echo "  make clean           this selection's products"
 	@echo "  make tidy            leftover binaries in the repo root"
