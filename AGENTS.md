@@ -2,7 +2,7 @@
 
 A chess program in C, originally for ~1 MHz 6502 machines — c64, apple2, atmos, plus4,
 atari. Faster 6502s came later: cx16 and rp6502, at up to 8 MHz. Other toolchains cover spectrum, mac68k, ti99, coco3, agon, archie, amiga and native
-mega65, plus a terminal build used for development. Each port uses whichever
+mega65, plus a native SDL2 desktop port and a terminal build used for development. Each port uses whichever
 compiler that machine needs. The MEGA65 build uses LLVM-MOS, not cc65.
 
 `doc/engine.md` explains how the engine works and is the right thing to read first. This
@@ -25,7 +25,7 @@ because every machine has a free-running counter, cc65's own `asminc` names all 
 the implementation is three lines a port that reads a register and cannot fail visibly — a
 wrong address gives repeating openings, which is what the engine did anyway. Anything asking
 to be added here should be held to that: no writes to hardware on a port that cannot be run,
-and a failure mode nobody has to debug. There are **seventeen** platform files now; `make list` names the ports.
+and a failure mode nobody has to debug. There are **eighteen** platform files now; `make list` names the ports.
 `c64.chr` is a separate port, and `term` is the one that must return a constant.
 
 **The frozen interface is wider than `plat.h`.** Every port also reads four globals
@@ -121,7 +121,8 @@ options and they are in order of preference:
 3. **A compile-time switch defined in your own `make/ports/*.mk`,** if the thing genuinely
    cannot be reached from a port file. `gGotoTile` is the one that qualifies: a mouse has to
    move the cursor, and the cursor is a file static in `human.c`. It is behind
-   `PLAT_CURSOR_JUMP`, defined in `make/ports/mac68k.mk`, `make/ports/archie.mk` and `make/ports/amiga.mk`, exactly as `SEARCH_ARENA` is
+   `PLAT_CURSOR_JUMP`, defined in `make/ports/mac68k.mk`, `make/ports/archie.mk`, `make/ports/amiga.mk` and
+   `make/ports/sdl.mk`, exactly as `SEARCH_ARENA` is
    `#ifndef`'d for the Spectrum and `EVAL_TUNING` is compiled out of the shipping build.
 
 **And the log has a contract, which is where this went wrong.** `plat_AddToLogWin` walks the
@@ -199,6 +200,17 @@ is `PLAT_CURSOR_JUMP`. Cursor keys stay on the keyboard; the FS-UAE
 config sets joystick port 1 to nothing, because otherwise those keys
 drive a joystick and never arrive. The engine is unchanged. Details are
 in `recipes/amiga-fs-uae.md`.
+
+**The SDL2 port is native desktop, with the C64 graphics.** `make sdl test` builds
+and launches `build/sdl/chess` in a resizable 960×720 window. SDL2 is found through
+`pkg-config`; the port is opt-in and uses `-Os`, unsigned char and the unchanged
+skill budgets. It links the C64 pieces and the existing portable font directly.
+Mouse input uses `PLAT_CURSOR_JUMP`; all SDL code and flags stay in the port.
+Expose/resize events present the cached framebuffer, and board redraws save and
+restore the log globals around the undo-ring walk. `make sdl sdl-check` exercises
+real menus, mouse/keyboard moves, undo/redo, B/A/D, resizing and CPU turns at all
+four levels. It passed with both the dummy driver and the native macOS renderer;
+other desktop systems are unverified. See `recipes/sdl-desktop.md`.
 
 **Compiling a target says nothing about whether it runs.** The plus4 build linked inside its
 budget throughout the rework and was broken end to end — by a **cc65 bug**, not ours: in
@@ -341,6 +353,8 @@ make atari atr              # bootable build/atari/cc65-Chess.atr, needs dir2atr
 make rp6502 rom             # build/rp6502/cc65-Chess.rp6502, needs python3
 make spectrum               # z88dk → build/spectrum/chess.tap
 make term                   # host curses → build/term/chessterm
+make sdl test               # native SDL2 → build/sdl/chess
+make sdl sdl-check          # SDL input/rendering integration checks
 make mega65                 # native 45GS02, LLVM-MOS → build/mega65/chess.prg
 make mega65 test            # native mode under Xemu
 make amiga                  # A500 hunk, Bartman m68k-amiga-elf-gcc

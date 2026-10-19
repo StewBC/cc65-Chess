@@ -6,12 +6,12 @@ BUILDDIR := build
 OBJDIR   := $(BUILDDIR)/obj
 
 # a port is a name, not a cc65 target.  toolchains and availability live elsewhere.
-PORT_NAMES := apple2 atari atmos c64 c64.chr plus4 cx16 rp6502 spectrum term mac68k ti99 coco3 agon archie mega65 amiga
+PORT_NAMES := apple2 atari atmos c64 c64.chr plus4 cx16 rp6502 spectrum term mac68k ti99 coco3 agon archie mega65 amiga sdl
 
 # built by a bare `make` when the compiler is present.  rp6502 stays off this
 # list even if the picocomputer fork is installed — it was never a default.
 # spectrum joins in when zcc is on PATH.  mac68k joins when Retro68 is found.
-# term is host-only: `make term`.
+# term and sdl are opt-in native builds: `make term`, `make sdl`.
 DEFAULT_PORTS := apple2 atari atmos c64 c64.chr plus4 cx16
 
 ENGINE_C := $(sort $(wildcard $(SRCDIR)/*.c))

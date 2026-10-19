@@ -4,8 +4,8 @@ A chess program in C, originally for ~1 MHz 6502 machines — Commodore 64, Appl
 Plus/4, Atari. Faster 6502s came later: the Commander X16 and the Picocomputer, at up to
 8 MHz. Other toolchains cover ZX Spectrum, Macintosh 68k, TI-99/4A, Color Computer 3,
 Agon Light, Acorn A3010, Amiga 500 and native MEGA65. Each port is built with whichever
-compiler that machine needs. There is also a terminal build for
-development.
+compiler that machine needs. There is also a native SDL2 desktop version with the C64
+graphics, and a terminal build for development.
 
 It used to be a cc65-only project, which is why it is called cc65 Chess. Newer ports
 target machines cc65 does not, but the name is what it is.
@@ -65,6 +65,18 @@ around. `B` overlays every square with how many white and black pieces attack it
 highlights every enemy piece attacking the square under the cursor. `D` highlights every
 friendly piece defending it. Attackers in cyan, defenders in red.
 
+## Native desktop version
+
+`make sdl test` builds and runs the SDL2 port. It opens a resizable 960×720 window
+with the original C64 bitmap pieces, black-and-white board and green surround.
+The display scales with the window, keeping its aspect ratio and crisp pixels.
+Mouse hover moves the cursor, left click selects, and right click backs out.
+The original keyboard controls and all four numbers in the `B` overlay remain available.
+
+The build needs a C compiler, `pkg-config` and SDL2 development files. No ROM, emulator,
+font installation or external graphics files are needed. See
+[recipes/sdl-desktop.md](recipes/sdl-desktop.md) for build and verification details.
+
 ## Building
 
 `make help` is the verb list. `make list` says which ports this machine can compile — a
@@ -77,6 +89,7 @@ make apple2 po              # Apple II + ProDOS image
 make spectrum               # ZX Spectrum, tap + sna
 make spectrum test          # build and run it
 make term                   # host curses binary → build/term/chessterm
+make sdl test                # native SDL2 window → build/sdl/chess
 make coco3                  # Color Computer 3, CMOC → build/coco3/chess.bin
 make agon                   # Agon Light, agondev → build/agon/chess.bin
 make archie                 # Acorn A3010, ArchieSDK → RISC OS app + ZIPs
@@ -159,6 +172,9 @@ standard correctness test — exactly to depth 5 on all five reference positions
 measuring whether a change actually made the engine stronger, on-target benchmarks that run
 under VICE, and a UCI adapter so the engine can be played against other engines or opened in
 any chess GUI. [doc/measuring.md](doc/measuring.md) covers all of it.
+
+The SDL port has an additional input/rendering check: `make sdl sdl-check`. It also
+writes screenshots to `scratch/` for visual inspection.
 
 ## Porting
 

@@ -3374,6 +3374,32 @@ the menu. It was booted under FS-UAE. The recipe is
 
 ---
 
+# Native SDL2 desktop port — 2026-10-18
+
+The graphical ports all targeted retro machines; the only native desktop game was
+curses. Added an opt-in `sdl` port using the installed SDL2 library, the original
+C64 piece bitmaps and the portable 8×8 font already used by the Amiga and CoCo 3.
+`make sdl test` opens a resizable 960×720 window, with a 320×240 logical canvas,
+nearest-neighbour scaling and high-DPI support. The C64 board, colours, cursor,
+move log and all four B-overlay numbers remain, with mouse hover/click alongside
+the existing keys. Title and control hints occupy the extra margins.
+
+No engine source or frozen interface changed. `PLAT_CURSOR_JUMP` is enabled only
+in this port's flags; compilation uses `-Os` and unsigned char. Expose and resize
+present cached pixels, and board redraws preserve the log globals around the undo
+walk. The original four skill budgets remain.
+
+The engine suite passed. `make sdl sdl-check` exercised real SDL events through the
+menus and human code: mouse and keyboard moves, undo/redo, B/A/D, menu cancellation,
+resize mapping, ignored mouse input during CPU polls, and CPU turns at every skill.
+The same harness passed with the native macOS renderer, and rendered board, overlay
+and menu captures were inspected. Two clipped footer labels were corrected during
+that inspection. Atari and terminal build invocations also succeeded. No claim of
+Linux or Windows runtime verification; this was macOS with SDL2 2.32.74.
+
+Instructions: [recipes/sdl-desktop.md](../recipes/sdl-desktop.md). Generated captures
+remain in `scratch/`.
+
 # Closed portfolios
 
 The two working notes that drove Phases 14–42 (`doc/next-search.md`, then

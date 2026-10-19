@@ -31,6 +31,7 @@ cx16_AVAILABLE     := $(HAVE_CL65)
 rp6502_AVAILABLE   := $(HAVE_RP6502)
 spectrum_AVAILABLE := $(HAVE_ZCC)
 term_AVAILABLE     := $(HAVE_CC)
+sdl_AVAILABLE      := $(if $(HAVE_CC),$(shell $(PKG_CONFIG) --exists sdl2 2>/dev/null && echo 1))
 mac68k_AVAILABLE   := $(HAVE_RETRO68)
 ti99_AVAILABLE     := $(HAVE_TMS9900)
 coco3_AVAILABLE    := $(HAVE_CMOC)
@@ -49,6 +50,7 @@ cx16_SKIP     := cl65 not on PATH
 rp6502_SKIP   := cl65 has no rp6502 target (needs the picocomputer fork)
 spectrum_SKIP := zcc not on PATH
 term_SKIP     := $(CC) not on PATH
+sdl_SKIP      := SDL2 development files not found by $(PKG_CONFIG), or $(CC) missing
 mac68k_SKIP   := Retro68 not found (set RETRO68= or put m68k-apple-macos-gcc on PATH)
 ti99_SKIP     := tms9900-gcc not on PATH
 coco3_SKIP    := cmoc not on PATH
@@ -76,6 +78,7 @@ endif
 include make/toolchains/cc65.mk
 include make/toolchains/z88dk.mk
 include make/toolchains/host.mk
+include make/toolchains/sdl.mk
 include make/toolchains/retro68.mk
 include make/toolchains/tms9900.mk
 include make/toolchains/cmoc.mk
@@ -147,13 +150,14 @@ help:
 	@echo "  make help            this text"
 	@echo "  make <port>          one port  (apple2 atari atmos c64 c64.chr"
 	@echo "                                  plus4 cx16 rp6502 spectrum term"
-	@echo "                                  mac68k ti99 coco3 agon archie mega65 amiga)"
+	@echo "                                  mac68k ti99 coco3 agon archie mega65 amiga sdl)"
 	@echo "  make apple2 po       Apple II + ProDOS image"
 	@echo "  make atari atr       Atari + ATR"
 	@echo "  make c64 d64         C64 + D64  (also: prg cprg cxprg tap rom dsk)"
 	@echo "  make spectrum        ZX Spectrum tap + sna (z88dk)"
 	@echo "  make spectrum test   build and run ZEsarUX"
 	@echo "  make term            host curses binary"
+	@echo "  make sdl test        native SDL2 window, C64 graphics"
 	@echo "  make mac68k          Macintosh 68k (Retro68) — .bin .APPL .dsk"
 	@echo "  make ti99            TI-99/4A (tms9900-gcc) — .ea5 .rpk"
 	@echo "  make ti99 test       build and run Homebrew MAME with 32K"

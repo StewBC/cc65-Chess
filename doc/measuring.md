@@ -540,6 +540,26 @@ The unit tests cover the engine; this covers whether the game is a game. Read it
 that things are being drawn, not as a pixel-accurate reference — partial redraws can leave
 stale glyphs in its terminal model that a real terminal would not show.
 
+### Native SDL2 desktop
+
+From the repository root:
+
+```bash
+make sdl test               # interactive native window
+make sdl sdl-check          # SDL dummy driver, software rendering
+./build/sdl/check          # same checks with the native window and renderer
+```
+
+`tests/sdl.c` drives SDL events through the real menu and human-player code, checks
+mouse and keyboard moves, undo/redo and the log globals, toggles B/A/D, tests resize
+coordinates and mouse isolation during CPU polls, and plays CPU turns at each of the
+four skill levels. It captures board, overlay and menu frames in `scratch/sdl-*.bmp`
+for visual inspection. Both driver paths passed on macOS with SDL2 2.32.74.
+
+This is an additional platform check, separate from `make -C tests test`. It does
+not measure 6502 timing or replace playing the retro ports. Build details and
+controls are in [the SDL recipe](../recipes/sdl-desktop.md).
+
 ### On the real Apple II
 
 Full notes are in `recipes/apple2-debugging.md`. `../a2m` (https://github.com/StewBC/a2m) is

@@ -1,4 +1,4 @@
-# Emulator recipes
+# Platform recipes
 
 How to *run* the ports this machine can actually run. Building is `make` from
 the repo root — `make help` is the verb list, `make list` says what this
@@ -23,8 +23,11 @@ for the Kickstart 1.3 ROM. The compiler is the Bartman extension's
 `m68k-amiga-elf-gcc`, or `AMIGA_GCC` and `AMIGA_ELF2HUNK` when it lives
 somewhere else.
 
+The SDL2 desktop port runs directly, with no emulator or ROM.
+
 | File | Target |
 |---|---|
+| [sdl-desktop.md](sdl-desktop.md) | Native SDL2 desktop (`make sdl test`) |
 | [apple2-debugging.md](apple2-debugging.md) | Apple II under `../a2m` |
 | [plus4-debugging.md](plus4-debugging.md) | Plus/4 under VICE `xplus4` |
 | [altirra-bridge-usage.md](altirra-bridge-usage.md) | Atari under AltirraSDL / AltirraBridge |
@@ -44,5 +47,5 @@ somewhere else.
 | [build-a2m-profile.sh](build-a2m-profile.sh) | Bootable Apple II profile image |
 | [vice/](vice/) | Plus/4 binary-monitor helpers used by the Plus/4 note |
 
-`doc/measuring.md` is the instrument list. This folder is the emulator how-to
+`doc/measuring.md` is the instrument list. This folder contains the platform how-tos
 those instruments assume.
