@@ -390,8 +390,9 @@ static void paint_splash(void)
 	/* the two kings sit either side of the text block, and the gaps have
 	 * to match or the black one reads as floating.  draw_text's y is a
 	 * baseline, so the block is about 109..138 for Monaco 10 at 118/136:
-	 * 48+32=80 leaves 29 above it and 168 leaves 30 below */
-	cx = (short)(BOARD_LEFT + 3 * SQUARE + 16);
+	 * 48+32=80 leaves 29 above it and 168 leaves 30 below.
+	 * the title is one pane, so the stack is centred on the window */
+	cx = (short)((sc_winW - SQUARE) / 2);
 	blit_piece(cx, (short)(BOARD_TOP + 48), KING, 0);
 	blit_piece(cx, (short)(BOARD_TOP + 168), KING, 1);
 
