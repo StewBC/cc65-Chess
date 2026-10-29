@@ -49,18 +49,65 @@ def parse_ascii(path):
     return art
 
 
+def sym_map(n_src, n_dst):
+    """Which source pixel each destination pixel copies.
+
+    The map is its own mirror, so a round edge grows on both sides.
+    ``x * n_src // n_dst`` is not: it copies columns 0, 3, 6, 9, 12,
+    15 and 18 twice and their mirrors once, and the pawn's head grew
+    a pixel on the right.  The spare pixels sit beside the centre,
+    in pairs.
+    """
+    if n_dst == n_src:
+        return list(range(n_src))
+    if n_dst < n_src:
+        out = [0] * n_dst
+        for i in range(n_dst // 2):
+            s = ((2 * i + 1) * n_src) // (2 * n_dst)
+            out[i] = s
+            out[n_dst - 1 - i] = n_src - 1 - s
+        if n_dst % 2:
+            out[n_dst // 2] = n_src // 2
+        return out
+    extra = n_dst - n_src
+    counts = [1] * n_src
+    if n_src % 2:
+        if extra % 2 == 0:
+            raise SystemExit("sym_map %d -> %d is an even growth" % (n_src, n_dst))
+        counts[n_src // 2] += 1
+        extra -= 1
+        half = n_src // 2
+    else:
+        if extra % 2:
+            raise SystemExit("sym_map %d -> %d is an odd growth" % (n_src, n_dst))
+        half = n_src // 2
+    n_pairs = extra // 2
+    step = (half - 1) // n_pairs
+    if n_pairs and step < 1:
+        raise SystemExit("sym_map %d -> %d has nowhere to put the pixels" % (n_src, n_dst))
+    for k in range(n_pairs):
+        dist = 1 + k * step
+        if n_src % 2:
+            counts[n_src // 2 - dist] += 1
+            counts[n_src // 2 + dist] += 1
+        else:
+            left = half - dist
+            counts[left] += 1
+            counts[n_src - 1 - left] += 1
+    seq = []
+    for i, c in enumerate(counts):
+        seq.extend([i] * c)
+    if len(seq) != n_dst:
+        raise SystemExit("sym_map %d -> %d produced %d" % (n_src, n_dst, len(seq)))
+    return seq
+
+
 def scale(grid, dw, dh):
     sh = len(grid)
     sw = len(grid[0])
-    out = []
-    for y in range(dh):
-        sy = y * sh // dh
-        row = []
-        for x in range(dw):
-            sx = x * sw // dw
-            row.append(grid[sy][sx])
-        out.append(row)
-    return out
+    xs = sym_map(sw, dw)
+    ys = sym_map(sh, dh)
+    return [[grid[ys[y]][xs[x]] for x in range(dw)] for y in range(dh)]
 
 
 def pad_center(grid, dw, dh):

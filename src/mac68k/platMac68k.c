@@ -27,13 +27,21 @@
 #include "../plat.h"
 #include "dataMac68k.h"
 
+/* the Retro68 QuickDraw header does not declare CharWidth */
+DEFINE_API( short )
+CharWidth(short ch)												ONEWORDINLINE(0xA88D);
+
 /*-----------------------------------------------------------------------*/
 #define SQUARE				32
 #define BOARD_LEFT			22
 #define BOARD_TOP			16
-#define WIN_W				470
 #define WIN_H				296
+/* board ends at 278.  six pixels of felt, eight of panel margin,
+ * then the text.  eight columns: a move is six (e4xd5+) and the
+ * longest message is seven ("No Undo"). */
 #define LOG_X				292
+#define LOG_CHARS			8
+#define LOG_PAD				8
 #define LOG_TOP				16
 #define LOG_LINE			14
 #define LOG_LINES			16
@@ -85,6 +93,7 @@ static char sc_boardCursor;
 static char sc_haveMouse;
 static char sc_pendingSelect;
 static Point sc_lastMouse;
+static short sc_winW;
 static short sc_menuL, sc_menuR, sc_menuT, sc_menuB;
 static char sc_menuN;
 static char sc_menuDirty;
@@ -242,9 +251,9 @@ static void paint_chrome(void)
 	Rect r;
 
 	set_port();
-	SetRect(&r, 0, 0, WIN_W, WIN_H);
+	SetRect(&r, 0, 0, sc_winW, WIN_H);
 	fill_rgb(&r, &sc_felt, &qd.black);
-	SetRect(&r, LOG_X - 8, 0, WIN_W, WIN_H);
+	SetRect(&r, LOG_X - 8, 0, sc_winW, WIN_H);
 	fill_rgb(&r, &sc_panel, &qd.black);
 }
 
@@ -290,7 +299,7 @@ static void paint_log(void)
 	set_port();
 	TextFont(FONT_MONACO);
 	TextSize(10);
-	SetRect(&r, LOG_X, LOG_TOP, WIN_W - 8, LOG_TOP + LOG_LINES * LOG_LINE);
+	SetRect(&r, LOG_X, LOG_TOP, sc_winW - 8, LOG_TOP + LOG_LINES * LOG_LINE);
 	fill_rgb(&r, &sc_panel, &qd.black);
 
 	for(i = 0; i < LOG_LINES; ++i)
@@ -319,7 +328,7 @@ static void paint_message(void)
 	Rect r;
 
 	set_port();
-	SetRect(&r, LOG_X, MSG_Y - 12, WIN_W - 8, WIN_H);
+	SetRect(&r, LOG_X, MSG_Y - 12, sc_winW - 8, WIN_H);
 	fill_rgb(&r, &sc_panel, &qd.black);
 	if(sc_msg[0])
 	{
@@ -370,10 +379,13 @@ static void blit_piece(short dx, short dy, char piece, char white)
 /*-----------------------------------------------------------------------*/
 static void paint_splash(void)
 {
+	Rect r;
 	short cx;
 
 	set_port();
-	paint_chrome();
+	/* the log colour arrives with the board.  the title is all felt */
+	SetRect(&r, 0, 0, sc_winW, WIN_H);
+	fill_rgb(&r, &sc_felt, &qd.black);
 
 	/* the two kings sit either side of the text block, and the gaps have
 	 * to match or the black one reads as floating.  draw_text's y is a
@@ -495,6 +507,27 @@ static void handle_update(WindowPtr win)
 }
 
 /*-----------------------------------------------------------------------*/
+/* Monaco has no 10-point bitmap on every System 7, so the column
+ * width is whatever TextSize(10) actually draws. */
+static short measure_win_w(void)
+{
+	GrafPort port;
+	GrafPtr saved;
+	short cw;
+
+	GetPort(&saved);
+	OpenPort(&port);
+	TextFont(FONT_MONACO);
+	TextSize(10);
+	cw = CharWidth('0');
+	ClosePort(&port);
+	SetPort(saved);
+	if(cw < 6)
+		cw = 6;
+	return (short)(LOG_X + cw * LOG_CHARS + LOG_PAD);
+}
+
+/*-----------------------------------------------------------------------*/
 void plat_Init(void)
 {
 	long response;
@@ -525,8 +558,9 @@ void plat_Init(void)
 	sc_boardCursor = 255;
 	sc_haveMouse = 0;
 	sc_pendingSelect = 0;
+	sc_winW = measure_win_w();
 
-	SetRect(&bounds, 20, 44, 20 + WIN_W, 44 + WIN_H);
+	SetRect(&bounds, 20, 44, 20 + sc_winW, 44 + WIN_H);
 	if(sc_color)
 		sc_win = NewCWindow(0, &bounds, "\pcc65 Chess", 1, noGrowDocProc,
 			(WindowPtr)-1L, 1, 0);
@@ -702,7 +736,7 @@ char plat_Menu(char **menuItems, char height, char *scroller)
 
 	boxW = (short)(maxLen * 7 + 28);
 	boxH = (short)((height + 3) * 16);
-	sc_menuL = (short)((WIN_W - boxW) / 2);
+	sc_menuL = (short)((sc_winW - boxW) / 2);
 	sc_menuR = (short)(sc_menuL + boxW);
 	sc_menuT = (short)((WIN_H - boxH) / 2);
 	sc_menuB = (short)(sc_menuT + boxH);
@@ -844,7 +878,7 @@ void plat_ShowSideToGoLabel(char side)
 	set_port();
 	TextFont(FONT_MONACO);
 	TextSize(10);
-	SetRect(&r, LOG_X, 2, WIN_W - 8, LOG_TOP);
+	SetRect(&r, LOG_X, 2, sc_winW - 8, LOG_TOP);
 	fill_rgb(&r, &sc_panel, &qd.black);
 	draw_text(LOG_X, 12, gszSideLabel[side],
 		side ? COL_WHITE : COL_YELLOW);
