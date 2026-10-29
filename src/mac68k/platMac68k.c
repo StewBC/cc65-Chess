@@ -85,8 +85,9 @@ static char sc_boardCursor;
 static char sc_haveMouse;
 static char sc_pendingSelect;
 static Point sc_lastMouse;
-static short sc_menuL, sc_menuR, sc_menuT;
+static short sc_menuL, sc_menuR, sc_menuT, sc_menuB;
 static char sc_menuN;
+static char sc_menuDirty;
 
 /*-----------------------------------------------------------------------*/
 static void square_rect(char position, Rect *r)
@@ -239,15 +240,23 @@ static void set_port(void)
 static void paint_chrome(void)
 {
 	Rect r;
-	char i;
-	char label[2];
 
 	set_port();
 	SetRect(&r, 0, 0, WIN_W, WIN_H);
 	fill_rgb(&r, &sc_felt, &qd.black);
 	SetRect(&r, LOG_X - 8, 0, WIN_W, WIN_H);
 	fill_rgb(&r, &sc_panel, &qd.black);
+}
 
+/*-----------------------------------------------------------------------*/
+/* files and ranks.  the splash uses the felt and has no board, so the
+ * letters wait until paint_all. */
+static void paint_coords(void)
+{
+	char i;
+	char label[2];
+
+	set_port();
 	TextFont(FONT_MONACO);
 	TextSize(9);
 	label[1] = 0;
@@ -326,6 +335,7 @@ static void paint_all(void)
 	char i;
 
 	paint_chrome();
+	paint_coords();
 	for(i = 0; i < 64; ++i)
 		plat_DrawSquare(i);
 	plat_ShowSideToGoLabel(sc_side);
@@ -475,7 +485,11 @@ static void handle_update(WindowPtr win)
 	set_port();
 	if(sc_splash)
 		paint_splash();
-	else if(sc_ready && !sc_inMenu)
+	else if(sc_inMenu)
+		/* the damage is validated here.  the menu loop repaints its
+		 * box afterwards; the board stays as it was */
+		sc_menuDirty = 1;
+	else if(sc_ready)
 		paint_all();
 	EndUpdate(win);
 }
@@ -574,21 +588,102 @@ void plat_UpdateScreen(void)
 }
 
 /*-----------------------------------------------------------------------*/
+/* one selectable row.  the yellow bar is the selection.  leaving it
+ * has to paint the blue back, or the bar stays behind the white text. */
+static void menu_row(char n, char selected, const char *text)
+{
+	Rect inner;
+	short top;
+
+	set_port();
+	TextFont(FONT_MONACO);
+	TextSize(10);
+	PenSize(1, 1);
+	top = (short)(sc_menuT + n * 16);
+	SetRect(&inner, sc_menuL + 6, top + 8, sc_menuR - 6, top + 24);
+	fill_index(&inner, selected ? COL_YELLOW : COL_BLUE);
+	draw_ntext((short)(sc_menuL + 12), (short)(top + 22),
+		text, (char)strlen(text), selected ? COL_BLACK : COL_WHITE);
+}
+
+/*-----------------------------------------------------------------------*/
+/* srcCopy paints the whole character cell, background included, so a
+ * step replaces the previous glyphs instead of leaving them behind.
+ * srcOr would need the strip wiped first, and that wipe is a flash. */
+static void menu_ticker(const char *scroller, const char *pScroller, char maxLen)
+{
+	char buf[40];
+	char si;
+	const char *sp;
+
+	set_port();
+	TextFont(FONT_MONACO);
+	TextSize(10);
+	PenSize(1, 1);
+	sp = pScroller;
+	for(si = 0; si < maxLen + 2 && si < 38; ++si)
+	{
+		if(!*sp)
+			sp = scroller;
+		buf[si] = *sp ? *sp : ' ';
+		if(*sp)
+			++sp;
+	}
+	buf[si] = 0;
+	set_fore(COL_CYAN);
+	if(sc_color)
+		RGBBackColor(&sc_rgb[COL_BLUE]);
+	else
+		BackColor(sc_qdcolor[COL_BLUE]);
+	TextMode(srcCopy);
+	MoveTo((short)(sc_menuL + 10), (short)(sc_menuB - 8));
+	DrawText(buf, 0, si);
+	TextMode(srcOr);
+	if(sc_color)
+		RGBBackColor(&sc_rgb[COL_WHITE]);
+	else
+		BackColor(whiteColor);
+}
+
+/*-----------------------------------------------------------------------*/
+static void menu_paint(char **menuItems, char nItems, char selected,
+	const char *scroller, const char *pScroller, char maxLen)
+{
+	Rect box;
+	char n;
+
+	set_port();
+	SetRect(&box, sc_menuL, sc_menuT, sc_menuR, sc_menuB);
+	fill_index(&box, COL_BLUE);
+	PenSize(2, 2);
+	set_fore(COL_YELLOW);
+	FrameRect(&box);
+	PenSize(1, 1);
+
+	TextFont(FONT_MONACO);
+	TextSize(10);
+	draw_ntext((short)(sc_menuL + 10), (short)(sc_menuT + 16),
+		menuItems[0], (char)strlen(menuItems[0]), COL_YELLOW);
+	for(n = 1; n < nItems; ++n)
+		menu_row(n, (char)(n == selected), menuItems[n]);
+	menu_ticker(scroller, pScroller, maxLen);
+}
+
+/*-----------------------------------------------------------------------*/
 char plat_Menu(char **menuItems, char height, char *scroller)
 {
 	static char *prevScroller;
 	static char *pScroller;
 	int keyMask;
-	char i, n, maxLen, len;
-	short boxW, boxH, boxL, boxT;
-	Rect box, inner;
+	char i, n, maxLen, len, painted;
+	short boxW, boxH;
 	unsigned long lastTick;
-	char buf[40];
-	char si;
-	char *sp;
 	unsigned long ignore;
+	Point pt;
+	char hit;
 
 	sc_inMenu = 1;
+	sc_menuDirty = 0;
 	if(prevScroller != scroller)
 	{
 		prevScroller = scroller;
@@ -607,76 +702,59 @@ char plat_Menu(char **menuItems, char height, char *scroller)
 
 	boxW = (short)(maxLen * 7 + 28);
 	boxH = (short)((height + 3) * 16);
-	boxL = (short)((WIN_W - boxW) / 2);
-	boxT = (short)((WIN_H - boxH) / 2);
-	SetRect(&box, boxL, boxT, boxL + boxW, boxT + boxH);
-	sc_menuL = boxL;
-	sc_menuR = (short)(boxL + boxW);
-	sc_menuT = boxT;
+	sc_menuL = (short)((WIN_W - boxW) / 2);
+	sc_menuR = (short)(sc_menuL + boxW);
+	sc_menuT = (short)((WIN_H - boxH) / 2);
+	sc_menuB = (short)(sc_menuT + boxH);
 	sc_menuN = n;
 	sc_haveMouse = 0;
 
 	lastTick = TickCount();
 	i = 1;
+	painted = 0;
 	do
 	{
+		/* the box is filled once.  a ticker step redraws its glyphs,
+		 * and a selection change rewrites the old row and the new one.
+		 * refilling the box on every pass is the flash */
+		if(!painted || sc_menuDirty)
+		{
+			menu_paint(menuItems, n, i, scroller, pScroller, maxLen);
+			painted = i;
+			sc_menuDirty = 0;
+			lastTick = TickCount();
+		}
+		else
+		{
+			if(painted != i)
+			{
+				menu_row(painted, 0, menuItems[painted]);
+				menu_row(i, 1, menuItems[i]);
+				painted = i;
+			}
+			if(TickCount() - lastTick >= SCROLL_TICKS)
+			{
+				lastTick = TickCount();
+				++pScroller;
+				if(!*pScroller)
+					pScroller = scroller;
+				menu_ticker(scroller, pScroller, maxLen);
+			}
+		}
+
 		set_port();
-		fill_index(&box, COL_BLUE);
-		PenSize(2, 2);
-		set_fore(COL_YELLOW);
-		FrameRect(&box);
-		PenSize(1, 1);
-
-		TextFont(FONT_MONACO);
-		TextSize(10);
-		draw_ntext((short)(boxL + 10), (short)(boxT + 16),
-			menuItems[0], (char)strlen(menuItems[0]), COL_YELLOW);
-
-		for(n = 1; menuItems[n]; ++n)
+		GetMouse(&pt);
+		if(!sc_haveMouse)
 		{
-			if(n == i)
-			{
-				SetRect(&inner, boxL + 6, boxT + 8 + n * 16,
-					boxL + boxW - 6, boxT + 24 + n * 16);
-				fill_index(&inner, COL_YELLOW);
-				draw_ntext((short)(boxL + 12), (short)(boxT + 22 + n * 16),
-					menuItems[n], (char)strlen(menuItems[n]), COL_BLACK);
-			}
-			else
-				draw_ntext((short)(boxL + 12), (short)(boxT + 22 + n * 16),
-					menuItems[n], (char)strlen(menuItems[n]), COL_WHITE);
+			sc_haveMouse = 1;
+			sc_lastMouse = pt;
 		}
-
-		sp = pScroller;
-		for(si = 0; si < maxLen + 2 && si < 38; ++si)
+		else if(pt.h != sc_lastMouse.h || pt.v != sc_lastMouse.v)
 		{
-			if(!*sp)
-				sp = scroller;
-			buf[si] = *sp ? *sp : ' ';
-			if(*sp)
-				++sp;
-		}
-		buf[si] = 0;
-		draw_text((short)(boxL + 10), (short)(boxT + boxH - 8), buf, COL_CYAN);
-
-		{
-			Point pt;
-			char hit;
-
-			set_port();
-			GetMouse(&pt);
-			if(!sc_haveMouse)
-			{
-				sc_haveMouse = 1;
-				sc_lastMouse = pt;
-			}
-			else if(pt.h != sc_lastMouse.h || pt.v != sc_lastMouse.v)
-			{
-				sc_lastMouse = pt;
-				hit = hit_menu_item(pt);
-				if(hit)
-					i = hit;
-			}
+			sc_lastMouse = pt;
+			hit = hit_menu_item(pt);
+			if(hit)
+				i = hit;
 		}
 
 		keyMask = plat_ReadKeys(0);
@@ -696,13 +774,6 @@ char plat_Menu(char **menuItems, char height, char *scroller)
 		}
 		keyMask &= (INPUT_SELECT | INPUT_BACKUP);
 
-		if(TickCount() - lastTick >= SCROLL_TICKS)
-		{
-			lastTick = TickCount();
-			++pScroller;
-			if(!*pScroller)
-				pScroller = scroller;
-		}
 		if(!keyMask)
 			Delay(1, &ignore);
 	} while(keyMask != INPUT_SELECT && keyMask != INPUT_BACKUP);
